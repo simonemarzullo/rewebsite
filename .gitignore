@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.vercel
+.env
+.env.local
+.DS_Store
+.claude/
+
+# Original source images (large/uncompressed) -- optimized copies used by
+# the site live in assets/ and are committed instead.
+/The Agency LOGO.PNG
+/The_Agency_Primary_Logo_RGB_360x.webp
+/Simone Marzullo Headshot 2025.JPG
+/Main photo.jpeg
+/City photo.jpeg

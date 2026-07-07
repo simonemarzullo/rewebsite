@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Simone Marzullo | REALTOR® | The Agency Los Angeles</title>
+<meta name="description" content="Simone Marzullo, REALTOR® with The Agency in Beverly Hills, helps buyers and sellers across Los Angeles — from Beverly Hills to Malibu. Get a free home valuation, request a cash offer, or start your search today.">
+<link rel="canonical" href="https://home.simonemarzullo.com/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Simone Marzullo | REALTOR® | The Agency Los Angeles">
+<meta property="og:description" content="From Beverly Hills to Malibu — expertise, discretion, and results for every real estate transaction.">
+<meta property="og:url" content="https://home.simonemarzullo.com/">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Simone Marzullo">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#000000;--white:#FFFFFF;--red:#C8102E;--red-h:#a50d24;
+  --g1:#111111;--g2:#1C1C1C;--g3:#2E2E2E;--g4:#555555;--g5:#888888;--g6:#BBBBBB;--g7:#E5E5E5;
+  --serif:'EB Garamond',Georgia,serif;--sans:'Inter',system-ui,sans-serif
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:var(--sans);background:var(--black);color:var(--white);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webkit-tap-highlight-color:transparent}
+input,textarea,select{font-family:var(--sans)}
+.label{font-size:.6875rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--g5)}
+.label-red{color:var(--red)}
+.divider{width:100%;height:1px;background:var(--g3)}
+.wrap{max-width:1200px;margin:0 auto;padding:0 48px}
+
+/* NAV */
+#nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:72px;background:rgba(0,0,0,0.94);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,0.06)}
+.nav-brand{display:flex;align-items:center;gap:12px}
+.nav-agency-logo{height:34px;width:34px;object-fit:cover;border-radius:6px;flex-shrink:0}
+.nav-brand-text{display:flex;flex-direction:column;gap:2px}
+.nav-name{font-family:var(--serif);font-size:1.1rem;font-weight:400;letter-spacing:.06em;color:var(--white);line-height:1}
+.nav-sub{font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;color:var(--g5)}
+.nav-links{display:flex;align-items:center;gap:28px;list-style:none}
+.nav-links a{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--g6);transition:color .2s;background:none;border:none;cursor:pointer}
+.nav-links a:hover{color:var(--white)}
+.nav-cta{display:inline-flex;align-items:center;background:var(--red);color:var(--white);padding:10px 22px;font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;transition:background .2s}
+.nav-cta:hover{background:var(--red-h)}
+.nav-toggle{display:none;flex-direction:column;justify-content:center;gap:5px;width:32px;height:32px;padding:0}
+.nav-toggle span{display:block;width:22px;height:1.5px;background:var(--white);transition:transform .2s,opacity .2s}
+.nav-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
+.nav-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
+.nav-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
+.nav-mobile{display:none;position:fixed;top:72px;left:0;right:0;bottom:0;z-index:199;background:rgba(0,0,0,0.98);backdrop-filter:blur(16px);flex-direction:column;padding:32px 28px;gap:4px;overflow-y:auto}
+@media(max-width:768px){.nav-mobile.on{display:flex}}
+.nav-mobile a{font-size:.95rem;letter-spacing:.04em;color:var(--g7);font-weight:400;padding:18px 4px;border-bottom:1px solid var(--g3);background:none;border-left:none;border-right:none;border-top:none;text-align:left;width:100%}
+.nav-mobile a.nav-cta{background:var(--red);color:var(--white);border-bottom:none;justify-content:center;margin-top:20px;padding:16px 22px}
+.nav-mobile a.nav-cta:hover{background:var(--red-h)}
+
+/* HERO */
+#hero{min-height:88vh;display:flex;align-items:center;position:relative;overflow:hidden;padding-top:72px;padding-bottom:64px}
+.hero-bg{position:absolute;inset:0;background:linear-gradient(160deg,#0d0d0d 0%,#000 60%)}
+.hero-bg::after{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px);background-size:80px 80px}
+.hero-photo-area{position:absolute;right:0;top:0;bottom:0;width:44%;overflow:hidden}
+.hero-photo-placeholder{width:100%;height:100%;background:linear-gradient(170deg,#181818,#080808);display:none;align-items:center;justify-content:center}
+.hero-photo-placeholder span{font-size:.62rem;letter-spacing:.4em;color:rgba(255,255,255,.06);font-weight:500}
+.hero-photo-img{width:100%;height:100%;object-fit:cover;object-position:50% 22%}
+.hero-fade{position:absolute;inset:0;background:linear-gradient(to right,#000 0%,transparent 38%),linear-gradient(to top,#000 0%,transparent 22%)}
+.hero-content{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:0 48px;width:100%}
+.hero-eyebrow{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.hero-eyebrow-line{width:32px;height:1px;background:var(--red)}
+.hero-eyebrow-text{font-size:.62rem;letter-spacing:.28em;text-transform:uppercase;color:var(--red);font-weight:500}
+.hero-headline{font-family:var(--serif);font-size:clamp(3.5rem,6.5vw,7.5rem);font-weight:400;line-height:.95;color:var(--white);max-width:620px;margin-bottom:28px}
+.hero-headline em{font-style:italic;color:rgba(255,255,255,.65)}
+.hero-sub{font-size:.88rem;line-height:1.8;color:var(--g5);max-width:380px;font-weight:300;margin-bottom:44px}
+.hero-actions{display:flex;gap:16px;flex-wrap:wrap}
+.btn-primary{display:inline-flex;align-items:center;background:var(--red);color:var(--white);padding:14px 32px;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;transition:background .2s,transform .15s}
+.btn-primary:hover{background:var(--red-h);transform:translateY(-1px)}
+.hero-scroll{position:absolute;right:48px;bottom:80px;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:2}
+.hero-scroll span{font-size:.56rem;letter-spacing:.28em;text-transform:uppercase;color:var(--g5);writing-mode:vertical-rl}
+.scroll-bar{width:1px;height:48px;background:var(--g3);position:relative;overflow:hidden}
+.scroll-bar::after{content:'';position:absolute;top:-100%;width:1px;height:100%;background:var(--red);animation:scrollDown 1.8s ease-in-out infinite}
+@keyframes scrollDown{0%{top:-100%}100%{top:200%}}
+
+/* ACTION FLOW */
+#action{padding:96px 0;background:var(--g1);border-bottom:1px solid var(--g3)}
+.action-head{text-align:center;max-width:640px;margin:0 auto 56px}
+.action-title{font-family:var(--serif);font-size:clamp(2rem,3.6vw,3rem);font-weight:400;color:var(--white);margin-top:14px}
+.action-sub{font-size:.85rem;color:var(--g5);font-weight:300;line-height:1.7;margin-top:14px}
+.stage{display:none}
+.stage.on{display:block}
+.stage-back{display:inline-flex;align-items:center;gap:8px;font-size:.67rem;letter-spacing:.15em;text-transform:uppercase;color:var(--g5);font-weight:500;margin-bottom:36px;transition:color .2s}
+.stage-back:hover{color:var(--white)}
+.choice-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:1100px;margin:0 auto}
+.choice-btn{background:var(--black);border:1px solid var(--g3);padding:36px 28px;text-align:left;display:flex;flex-direction:column;gap:16px;min-height:190px;transition:border-color .2s,background .2s,transform .15s;width:100%}
+.choice-btn:hover{border-color:var(--red);background:rgba(200,16,46,.06);transform:translateY(-2px)}
+.choice-btn:active{transform:translateY(0)}
+.choice-icon{width:44px;height:44px;border:1px solid var(--g3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:1.3rem;color:var(--red);flex-shrink:0}
+.choice-title{font-family:var(--serif);font-size:1.35rem;font-weight:400;color:var(--white);line-height:1.2}
+.choice-desc{font-size:.78rem;color:var(--g5);line-height:1.65;font-weight:300}
+.choice-arrow{margin-top:auto;font-size:.63rem;letter-spacing:.18em;text-transform:uppercase;color:var(--red);font-weight:500}
+.form-shell{max-width:620px;margin:0 auto}
+
+/* SERVICES TABS (legacy classes retained, unused) */
+.section{padding:96px 0}
+.section-alt{background:var(--g1)}
+
+/* FORM CARD */
+.form-card{background:var(--g2);border:1px solid var(--g3);padding:44px}
+.form-title{font-family:var(--serif);font-size:1.55rem;font-weight:400;color:var(--white);margin-bottom:8px}
+.form-sub{font-size:.8rem;color:var(--g5);font-weight:300;line-height:1.65;margin-bottom:32px}
+.step-dots{display:flex;gap:6px;margin-bottom:28px}
+.step-dot{width:24px;height:2px;background:var(--g3);transition:background .2s}
+.step-dot.on{background:var(--red)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+.field:last-child{margin-bottom:0}
+.field-label{font-size:.59rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--g5)}
+.fi,.fs,.ft{background:var(--g1);border:1px solid var(--g3);color:var(--white);padding:13px 16px;font-size:.87rem;font-weight:300;outline:none;transition:border-color .2s;width:100%;-webkit-appearance:none}
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--red)}
+.fi::placeholder,.ft::placeholder{color:var(--g4)}
+.fs{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23555' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
+.fs option{background:var(--g1)}
+.ft{resize:vertical;min-height:100px}
+.opts{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+.opts2{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:4px}
+.opts3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-top:4px}
+.opt{display:flex;align-items:center;gap:10px;padding:13px 16px;background:var(--g1);border:1px solid var(--g3);color:var(--g6);font-size:.78rem;font-weight:300;cursor:pointer;transition:border-color .2s,color .2s,background .2s;text-align:left}
+.opt:hover{border-color:var(--g5);color:var(--white)}
+.opt.on{border-color:var(--red);color:var(--white);background:rgba(200,16,46,.07)}
+.odot{width:13px;height:13px;flex-shrink:0;border:1px solid currentColor;border-radius:50%;position:relative}
+.opt.on .odot::after{content:'';position:absolute;inset:3px;background:var(--red);border-radius:50%}
+.form-nav{display:flex;justify-content:space-between;align-items:center;margin-top:28px;padding-top:24px;border-top:1px solid var(--g3)}
+.btn-back{font-size:.67rem;letter-spacing:.15em;text-transform:uppercase;color:var(--g5);font-weight:500;transition:color .2s;background:none;border:none;cursor:pointer;padding:0}
+.btn-back:hover{color:var(--white)}
+.btn-next{background:var(--white);color:var(--black);padding:13px 32px;font-size:.67rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background .2s}
+.btn-next:hover{background:var(--g7)}
+.btn-next:disabled,.btn-sub:disabled{opacity:.55;cursor:default;transform:none!important}
+.btn-sub{background:var(--red);color:var(--white);padding:13px 32px;font-size:.67rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background .2s,transform .15s}
+.btn-sub:hover{background:var(--red-h);transform:translateY(-1px)}
+.success-msg{display:none;text-align:center;padding:40px 20px}
+.s-icon{font-size:2rem;margin-bottom:14px}
+.s-title{font-family:var(--serif);font-size:1.7rem;color:var(--white);margin-bottom:10px}
+.s-sub{font-size:.82rem;color:var(--g5);font-weight:300;line-height:1.7}
+.hp-field{position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;overflow:hidden}
+.form-error{margin-top:16px;padding:14px 16px;background:rgba(200,16,46,.08);border:1px solid var(--red);color:var(--g7);font-size:.78rem;line-height:1.6}
+
+/* ABOUT */
+.about-text{display:flex;flex-direction:column;gap:18px;max-width:760px}
+.about-copy{font-size:.88rem;line-height:1.88;color:var(--g5);font-weight:300}
+.about-copy strong{color:var(--g7);font-weight:500}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--g3);margin-top:8px}
+.stat-block{background:var(--black);padding:22px 14px}
+.stat-val{font-family:var(--serif);font-size:1.9rem;font-weight:400;color:var(--white);line-height:1;margin-bottom:5px}
+.stat-lbl{font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--g5);font-weight:400}
+
+/* POWER OF THE AGENCY */
+.agency-head{text-align:center;max-width:680px;margin:0 auto 48px}
+.agency-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--g3);max-width:1000px;margin:0 auto}
+.agency-stat{background:var(--black);padding:32px 18px;text-align:center}
+.agency-stat .stat-val{font-size:2.1rem;margin-bottom:8px}
+.agency-stat .stat-lbl{line-height:1.5}
+.agency-link{display:inline-flex;align-items:center;font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--red);font-weight:500;transition:color .2s}
+.agency-link:hover{color:var(--white)}
+
+/* CONTACT */
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start}
+.contact-left{display:flex;flex-direction:column;gap:32px}
+.ci-label{font-size:.59rem;letter-spacing:.24em;text-transform:uppercase;color:var(--g5);font-weight:500;margin-bottom:7px}
+.ci-value{font-family:var(--serif);font-size:1.1rem;color:var(--white);font-weight:400;line-height:1.5}
+.ci-value a{transition:color .2s}
+.ci-value a:hover{color:var(--red)}
+.contact-signoff{display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:64px;padding-top:36px;border-top:1px solid var(--g3);text-align:center}
+.contact-signoff-photo{width:84px;height:84px;border-radius:50%;object-fit:cover;object-position:center top;border:1px solid var(--g3)}
+.contact-signoff-name{font-family:var(--serif);font-size:1rem;color:var(--white)}
+.contact-signoff-title{font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--g5)}
+
+/* FOOTER */
+footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
+.footer-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1fr;gap:40px;align-items:start}
+.f-name{font-family:var(--serif);font-size:1.25rem;color:var(--white);margin-bottom:6px;font-weight:400}
+.f-line{font-size:.63rem;color:var(--g5);font-weight:300;line-height:1.85;letter-spacing:.04em}
+.f-agency-name{font-family:var(--serif);font-size:.95rem;color:var(--g7);margin-bottom:8px;font-weight:400}
+.f-legal{text-align:right}
+.f-eq{font-size:1.1rem;opacity:.25;margin-bottom:8px}
+.f-copy{font-size:.6rem;color:var(--g5);font-weight:300;line-height:1.9}
+
+/* RESPONSIVE */
+@media(max-width:1024px){
+  .wrap{padding:0 32px}
+  .contact-grid{grid-template-columns:1fr;gap:48px}
+  .choice-grid{grid-template-columns:1fr;max-width:480px}
+  .footer-inner{grid-template-columns:1fr}
+  .f-legal{text-align:left}
+  .hero-photo-area{display:none}
+  .agency-stats-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:768px){
+  #nav{padding:0 20px}
+  .nav-links{display:none}
+  .nav-toggle{display:flex}
+  .wrap{padding:0 20px}
+  .section{padding:56px 0}
+  #action{padding:56px 0}
+  .form-card{padding:24px 20px}
+  .frow,.frow3,.opts2,.opts3{grid-template-columns:1fr}
+  footer{padding:36px 24px}
+  .stats-grid{grid-template-columns:1fr}
+  .agency-stats-grid{grid-template-columns:1fr}
+  .choice-btn{min-height:150px;padding:28px 22px}
+  .fi,.fs,.ft,.opt,.btn-next,.btn-sub{font-size:16px}
+}
+@media(prefers-reduced-motion:reduce){
+  .scroll-bar::after{animation:none}
+  *{transition-duration:0ms!important}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-brand">
+    <img src="assets/agency-logo.png" alt="The Agency" class="nav-agency-logo" onerror="this.style.display='none'">
+    <div class="nav-brand-text">
+      <span class="nav-name">Simone Marzullo</span>
+      <span class="nav-sub">REALTOR® · The Agency · Los Angeles</span>
+    </div>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#action" onclick="showStageAndScroll(event,'stage-valuation-form')">Home Value</a></li>
+    <li><a href="#action" onclick="showStageAndScroll(event,'stage-sell-menu')">Sellers</a></li>
+    <li><a href="#action" onclick="showStageAndScroll(event,'stage-buy-menu')">Buyers</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <button type="button" class="nav-toggle" aria-expanded="false" aria-label="Menu" onclick="toggleMobileNav()">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<div class="nav-mobile" id="nav-mobile">
+  <a href="#action" onclick="closeMobileNavAndGo(event,'stage-valuation-form')">Home Value</a>
+  <a href="#action" onclick="closeMobileNavAndGo(event,'stage-sell-menu')">Sellers</a>
+  <a href="#action" onclick="closeMobileNavAndGo(event,'stage-buy-menu')">Buyers</a>
+  <a href="#about" onclick="closeMobileNav()">About</a>
+  <a href="#contact" onclick="closeMobileNav()">Contact</a>
+  <a href="#action" class="nav-cta" onclick="closeMobileNavAndGo(event,'stage-home')">Get Started</a>
+</div>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-photo-area">
+    <img class="hero-photo-img" src="assets/hero-skyline.jpg" alt="Downtown Los Angeles skyline at night" onerror="this.style.display='none';document.getElementById('hero-photo-ph').style.display='flex'">
+    <div class="hero-photo-placeholder" id="hero-photo-ph"><span>LOS ANGELES</span></div>
+    <div class="hero-fade"></div>
+  </div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">
+      <div class="hero-eyebrow-line"></div>
+      <span class="hero-eyebrow-text">The Agency · Los Angeles</span>
+    </div>
+    <h1 class="hero-headline">
+      Your Los Angeles<br><em>Real Estate</em><br>Expert
+    </h1>
+    <p class="hero-sub">From Beverly Hills to Malibu — Simone Marzullo brings expertise, discretion, and results to every transaction.</p>
+    <div class="hero-actions">
+      <a href="#action" class="btn-primary">Get Started</a>
+    </div>
+  </div>
+  <div class="hero-scroll">
+    <div class="scroll-bar"></div>
+    <span>Scroll</span>
+  </div>
+</section>
+
+<!-- ACTION FLOW -->
+<section id="action" style="scroll-margin-top:72px">
+  <div class="wrap">
+
+    <!-- STAGE: HOME (3 main buttons) -->
+    <div class="stage on" id="stage-home">
+      <div class="action-head">
+        <span class="label label-red">How Can I Help You Today?</span>
+        <h2 class="action-title">Let's Get Started</h2>
+        <p class="action-sub">Choose an option below — it only takes a minute.</p>
+      </div>
+      <div class="choice-grid">
+        <button type="button" class="choice-btn" onclick="showStage('stage-sell-menu')">
+          <div class="choice-icon">S</div>
+          <div class="choice-title">I Want to Sell</div>
+          <div class="choice-desc">Get expert guidance to list, sell privately, or receive a cash offer.</div>
+          <span class="choice-arrow">Continue →</span>
+        </button>
+        <button type="button" class="choice-btn" onclick="showStage('stage-buy-menu')">
+          <div class="choice-icon">B</div>
+          <div class="choice-title">I Want to Buy</div>
+          <div class="choice-desc">Find your next home, an income property, or your next project.</div>
+          <span class="choice-arrow">Continue →</span>
+        </button>
+        <button type="button" class="choice-btn" onclick="showStage('stage-valuation-form')">
+          <div class="choice-icon">V</div>
+          <div class="choice-title">Home Valuation</div>
+          <div class="choice-desc">Get a free, no-obligation estimate of your property's value.</div>
+          <span class="choice-arrow">Continue →</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- STAGE: SELL MENU -->
+    <div class="stage" id="stage-sell-menu">
+      <button type="button" class="stage-back" onclick="showStage('stage-home')">← Back</button>
+      <div class="action-head">
+        <span class="label label-red">I Want to Sell</span>
+        <h2 class="action-title">What Best Describes Your Sale?</h2>
+      </div>
+      <div class="choice-grid">
+        <button type="button" class="choice-btn" onclick="openSellForm('list-market')">
+          <div class="choice-icon">1</div>
+          <div class="choice-title">List My House on the Market</div>
+          <div class="choice-desc">Full-service listing with professional marketing and negotiation.</div>
+          <span class="choice-arrow">Continue →</span>
+        </button>
+        <button type="button" class="choice-btn" onclick="openSellForm('sell-privately')">
+          <div class="choice-icon">2</div>
+          <div class="choice-title">Sell My House Privately</div>
+          <div class="choice-desc">A discreet, off-market sale without a public listing.</div>
+          <span class="choice-arrow">Continue →</span>
+        </button>
+        <button type="button" class="choice-btn" onclick="openSellForm('cash-offer')">
+          <div class="choice-icon">3</div>
+          <div class="choice-title">Get a Cash Offer</div>
+          <div class="choice-desc">Skip the showings — get a competitive cash offer in 48 hours.</div>
+          <span class="choice-arrow">Continue →</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- STAGE: BUY MENU -->
+    <div class="stage" id="stage-buy-menu">
+      <button type="button" class="stage-back" onclick="showStage('stage-home')">← Back</button>
+      <div class="action-head">
+        <span class="label label-red">I Want to Buy</span>
+        <h2 class="action-title">What Are You Looking to Do?</h2>
+      </div>
+      <div class="choice-grid">
+        <button type="button" class="choice-btn" onclick="openBuyForm('new-home')">
+          <div class="choice-icon">1</div>
+          <div class="choice-title">I'm Looking for a New Home</div>
+          <div class="choice-desc">Your primary residence or forever home.</div>
+          <span class="choice-arrow">Continue →</span>
+        </button>
+        <button type="button" class="choice-btn" onclick="openBuyForm('income-property')">
+          <div class="choice-icon">2</div>
+          <div class="choice-title">I'm Looking to Buy an Income Property</div>
+          <div class="choice-desc">Rental income, appreciation, or long-term investment.</div>
+          <span class="choice-arrow">Continue →</span>
+        </button>
+        <button type="button" class="choice-btn" onclick="openBuyForm('flip-builder')">
+          <div class="choice-icon">3</div>
+          <div class="choice-title">I'm a Flipper or a Builder Looking for My Next Project</div>
+          <div class="choice-desc">Your next renovation or ground-up project.</div>
+          <span class="choice-arrow">Continue →</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- STAGE: HOME VALUATION FORM -->
+    <div class="stage" id="stage-valuation-form">
+      <button type="button" class="stage-back" onclick="showStage('stage-home')">← Back</button>
+      <div class="form-shell">
+        <div class="form-card" id="val-card">
+          <div class="step-dots"><div class="step-dot on" id="vd1"></div><div class="step-dot" id="vd2"></div><div class="step-dot" id="vd3"></div></div>
+
+          <div id="vs1">
+            <div class="form-title">Your Property Address</div>
+            <div class="form-sub">Let's start with the address of the property you'd like valued.</div>
+            <div class="field"><span class="field-label">Property Address</span><input class="fi" id="val_address" required type="text" placeholder="123 Mulholland Drive" autocomplete="address-line1"></div>
+            <div class="form-nav"><span></span><button class="btn-next" onclick="goIfValid('vs',2,3,'vd',['val_address'])">Next</button></div>
+          </div>
+
+          <div id="vs2" style="display:none">
+            <div class="form-title">Property Condition</div>
+            <div class="form-sub">This helps me give you the most accurate valuation.</div>
+            <div class="field"><span class="field-label">Property Condition</span>
+              <div class="opts" id="val-c-opts">
+                <button type="button" class="opt" onclick="pick(this,'val-c-opts','val_condition')"><div class="odot"></div>Original condition</button>
+                <button type="button" class="opt" onclick="pick(this,'val-c-opts','val_condition')"><div class="odot"></div>Renovated</button>
+                <button type="button" class="opt" onclick="pick(this,'val-c-opts','val_condition')"><div class="odot"></div>Recently built</button>
+              </div>
+              <input type="hidden" id="val_condition">
+            </div>
+            <div class="field" style="margin-top:16px"><span class="field-label">Notes (optional)</span><textarea class="ft" id="val_notes" placeholder="Anything notable — views, pool, ADU, upgrades…" style="min-height:80px"></textarea></div>
+            <div class="form-nav"><button class="btn-back" onclick="go('vs',1,3,'vd')">← Back</button><button class="btn-next" onclick="go('vs',3,3,'vd')">Next</button></div>
+          </div>
+
+          <div id="vs3" style="display:none">
+            <div class="form-title">Your Contact Info</div>
+            <div class="form-sub">I'll send your valuation report within 48 hours.</div>
+            <div class="field"><span class="field-label">Full Name</span><input class="fi" id="val_name" required type="text" placeholder="First and last name" autocomplete="name"></div>
+            <div class="frow">
+              <div class="field"><span class="field-label">Email</span><input class="fi" id="val_email" required type="email" placeholder="you@email.com" autocomplete="email" inputmode="email"></div>
+              <div class="field"><span class="field-label">Phone</span><input class="fi" id="val_phone" required type="tel" placeholder="(310) 000-0000" autocomplete="tel" inputmode="tel"></div>
+            </div>
+            <input type="text" class="hp-field" id="val_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <div class="form-nav"><button class="btn-back" onclick="go('vs',2,3,'vd')">← Back</button><button class="btn-sub" onclick="submitValuation(this)">Send Request</button></div>
+          </div>
+
+          <div id="vsucc" class="success-msg">
+            <div class="s-icon">✓</div>
+            <div class="s-title">Request Received</div>
+            <div class="s-sub">Thank you for reaching out! I'll be in touch with you very shortly.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STAGE: SELL FORM -->
+    <div class="stage" id="stage-sell-form">
+      <button type="button" class="stage-back" onclick="showStage('stage-sell-menu')">← Back</button>
+      <div class="form-shell">
+        <div class="form-card" id="sell-card">
+          <div class="step-dots"><div class="step-dot on" id="sd1"></div><div class="step-dot" id="sd2"></div><div class="step-dot" id="sd3"></div></div>
+
+          <div id="ss1">
+            <div class="form-title">Your Property Address</div>
+            <div class="form-sub">Let's start with the address of the property you'd like to sell.</div>
+            <input type="hidden" id="sell_saleType">
+            <div class="field"><span class="field-label">Property Address</span><input class="fi" id="sell_address" required type="text" placeholder="Full property address" autocomplete="address-line1"></div>
+            <div class="form-nav"><span></span><button class="btn-next" onclick="goIfValid('ss',2,3,'sd',['sell_address'])">Next</button></div>
+          </div>
+
+          <div id="ss2" style="display:none">
+            <div class="form-title">A Few More Details</div>
+            <div class="form-sub">This helps me build the right strategy for your property.</div>
+            <div class="frow">
+              <div class="field"><span class="field-label">Property Type</span>
+                <select class="fs" id="sell_propertyType"><option value="">Select…</option><option>Single Family Home</option><option>Condo / Townhouse</option><option>Multi-Family</option><option>Land / Lot</option></select>
+              </div>
+              <div class="field"><span class="field-label">Estimated Value</span>
+                <select class="fs" id="sell_estValue"><option value="">Range…</option><option>Under $500K</option><option>$500K – $1M</option><option>$1M – $3M</option><option>$3M – $7M</option><option>$7M – $15M</option><option>$15M+</option></select>
+              </div>
+            </div>
+            <div class="field"><span class="field-label">Property Condition</span>
+              <div class="opts" id="sc-opts">
+                <button type="button" class="opt" onclick="pick(this,'sc-opts','sell_condition')"><div class="odot"></div>Needs work — original condition or deferred maintenance</button>
+                <button type="button" class="opt" onclick="pick(this,'sc-opts','sell_condition')"><div class="odot"></div>Recently updated — renovated kitchen, baths, or finishes</button>
+                <button type="button" class="opt" onclick="pick(this,'sc-opts','sell_condition')"><div class="odot"></div>Newer construction — built or rebuilt within 10 years</button>
+                <button type="button" class="opt" onclick="pick(this,'sc-opts','sell_condition')"><div class="odot"></div>Move-in ready — well maintained, no major updates needed</button>
+              </div>
+              <input type="hidden" id="sell_condition">
+            </div>
+            <div class="field" style="margin-top:18px"><span class="field-label">When Are You Looking to Sell?</span>
+              <div class="opts3" id="st-opts">
+                <button type="button" class="opt" onclick="pick(this,'st-opts','sell_timeline')"><div class="odot"></div>Ready now</button>
+                <button type="button" class="opt" onclick="pick(this,'st-opts','sell_timeline')"><div class="odot"></div>3 – 6 months</button>
+                <button type="button" class="opt" onclick="pick(this,'st-opts','sell_timeline')"><div class="odot"></div>6 – 12 months</button>
+              </div>
+              <input type="hidden" id="sell_timeline">
+            </div>
+            <div class="form-nav"><button class="btn-back" onclick="go('ss',1,3,'sd')">← Back</button><button class="btn-next" onclick="go('ss',3,3,'sd')">Next</button></div>
+          </div>
+
+          <div id="ss3" style="display:none">
+            <div class="form-title">Let's Connect</div>
+            <div class="form-sub">I'll reach out within 24 hours to schedule a private consultation.</div>
+            <div class="field"><span class="field-label">Full Name</span><input class="fi" id="sell_name" required type="text" placeholder="First and last name" autocomplete="name"></div>
+            <div class="frow">
+              <div class="field"><span class="field-label">Email</span><input class="fi" id="sell_email" required type="email" placeholder="you@email.com" autocomplete="email" inputmode="email"></div>
+              <div class="field"><span class="field-label">Phone</span><input class="fi" id="sell_phone" required type="tel" placeholder="(310) 000-0000" autocomplete="tel" inputmode="tel"></div>
+            </div>
+            <div class="field"><span class="field-label">Anything else? (Optional)</span><textarea class="ft" id="sell_notes" placeholder="Any additional context about your property or situation…" style="min-height:80px"></textarea></div>
+            <input type="text" class="hp-field" id="sell_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <div class="form-nav"><button class="btn-back" onclick="go('ss',2,3,'sd')">← Back</button><button class="btn-sub" onclick="submitSell(this)">Request a Consultation</button></div>
+          </div>
+
+          <div id="sellsucc" class="success-msg">
+            <div class="s-icon">✓</div>
+            <div class="s-title">Message Received</div>
+            <div class="s-sub">Thank you for reaching out! I'll be in touch with you very shortly.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STAGE: BUY FORM -->
+    <div class="stage" id="stage-buy-form">
+      <button type="button" class="stage-back" onclick="showStage('stage-buy-menu')">← Back</button>
+      <div class="form-shell">
+        <div class="form-card" id="buy-card">
+          <div class="step-dots"><div class="step-dot on" id="bd1"></div><div class="step-dot" id="bd2"></div></div>
+
+          <div id="bs1">
+            <div class="form-title">Tell Me More</div>
+            <div class="form-sub">Specs, area, budget, and timeline — so I can tailor my search for you.</div>
+            <input type="hidden" id="buy_intent">
+            <div class="frow">
+              <div class="field"><span class="field-label">Property Type</span>
+                <select class="fs" id="buy_propertyType"><option value="">Select…</option><option>Single Family Home</option><option>Condo / Townhouse</option><option>Multi-Family</option><option>Estate / Compound</option><option>Land / Dev Site</option><option>Open to anything</option></select>
+              </div>
+              <div class="field"><span class="field-label">Budget Range</span>
+                <select class="fs" id="buy_budget"><option value="">Select…</option><option>Under $1M</option><option>$1M – $3M</option><option>$3M – $7M</option><option>$7M – $15M</option><option>$15M+</option><option>Flexible / TBD</option></select>
+              </div>
+            </div>
+            <div class="frow">
+              <div class="field"><span class="field-label">Min Bedrooms</span>
+                <select class="fs" id="buy_minBeds"><option>Any</option><option>1+</option><option>2+</option><option>3+</option><option>4+</option><option>5+</option></select>
+              </div>
+              <div class="field"><span class="field-label">Min Bathrooms</span>
+                <select class="fs" id="buy_minBaths"><option>Any</option><option>1+</option><option>2+</option><option>3+</option><option>4+</option></select>
+              </div>
+            </div>
+            <div class="field"><span class="field-label">Preferred Neighborhoods / Areas</span><input class="fi" id="buy_areas" type="text" placeholder="e.g. Beverly Hills, Silver Lake, Malibu…"></div>
+            <div class="field" style="margin-top:16px"><span class="field-label">When Are You Looking to Buy?</span>
+              <div class="opts3" id="bt-opts">
+                <button type="button" class="opt" onclick="pick(this,'bt-opts','buy_timeline')"><div class="odot"></div>ASAP</button>
+                <button type="button" class="opt" onclick="pick(this,'bt-opts','buy_timeline')"><div class="odot"></div>3 – 6 months</button>
+                <button type="button" class="opt" onclick="pick(this,'bt-opts','buy_timeline')"><div class="odot"></div>6 – 12 months</button>
+              </div>
+              <input type="hidden" id="buy_timeline">
+            </div>
+            <div class="field" style="margin-top:16px"><span class="field-label">Pre-Approval</span>
+              <div class="opts2" id="bf-opts">
+                <button type="button" class="opt" onclick="pick(this,'bf-opts','buy_financing')"><div class="odot"></div>Pre-approved for a loan</button>
+                <button type="button" class="opt" onclick="pick(this,'bf-opts','buy_financing')"><div class="odot"></div>Paying cash</button>
+              </div>
+              <input type="hidden" id="buy_financing">
+            </div>
+            <div class="form-nav"><span></span><button class="btn-next" onclick="go('bs',2,2,'bd')">Next</button></div>
+          </div>
+
+          <div id="bs2" style="display:none">
+            <div class="form-title">Let's Connect</div>
+            <div class="form-sub">A few final details so I can best prepare for our conversation.</div>
+            <div class="field"><span class="field-label">Full Name</span><input class="fi" id="buy_name" required type="text" placeholder="First and last name" autocomplete="name"></div>
+            <div class="frow">
+              <div class="field"><span class="field-label">Email</span><input class="fi" id="buy_email" required type="email" placeholder="you@email.com" autocomplete="email" inputmode="email"></div>
+              <div class="field"><span class="field-label">Phone</span><input class="fi" id="buy_phone" required type="tel" placeholder="(310) 000-0000" autocomplete="tel" inputmode="tel"></div>
+            </div>
+            <input type="text" class="hp-field" id="buy_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <div class="form-nav"><button class="btn-back" onclick="go('bs',1,2,'bd')">← Back</button><button class="btn-sub" onclick="submitBuy(this)">Start My Search</button></div>
+          </div>
+
+          <div id="buysucc" class="success-msg">
+            <div class="s-icon">✓</div>
+            <div class="s-title">Let's Find Your Home</div>
+            <div class="s-sub">Thank you for reaching out! I'll be in touch with you very shortly.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about" class="section" style="scroll-margin-top:72px">
+  <div class="wrap">
+    <div class="about-text">
+      <span class="label label-red">About Simone</span>
+      <h2 class="action-title" style="font-size:clamp(2.2rem,4vw,3.6rem);line-height:1.1">Built on Strategy.<br>Driven by Results.</h2>
+      <p class="about-copy">With a <strong>global perspective</strong> shaped by years of international experience and over a decade of living in Los Angeles, Simone Marzullo brings a unique and competitive edge to <strong>The Agency Beverly Hills</strong>. Backed by deep market insight and the powerful resources of one of the world's top real estate firms, he delivers seamless, results-driven experiences for buyers, sellers, and investors alike.</p>
+      <p class="about-copy">From high-net-worth individuals and seasoned developers to first-time homebuyers, Simone <strong>tailors every strategy to meet the unique needs of each client</strong>. Known for building lasting relationships, he ensures every client feels supported, informed, and confident throughout the process.</p>
+      <p class="about-copy">With a thoughtful, hands-on approach and a relentless drive to achieve exceptional results, Simone Marzullo makes every real estate experience <strong>both strategic and rewarding</strong>.</p>
+      <div class="stats-grid">
+        <div class="stat-block"><div class="stat-val">10+ Yrs</div><div class="stat-lbl">In LA Market</div></div>
+        <div class="stat-block"><div class="stat-val">EN / IT</div><div class="stat-lbl">Languages Spoken</div></div>
+        <div class="stat-block"><div class="stat-val">Global</div><div class="stat-lbl">Perspective</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- POWER OF THE AGENCY -->
+<section id="the-agency" class="section section-alt" style="scroll-margin-top:72px">
+  <div class="wrap">
+    <div class="agency-head">
+      <span class="label label-red">Backed By</span>
+      <h2 class="action-title" style="font-size:clamp(2.2rem,4vw,3.6rem);line-height:1.1">The Power of<br>The Agency</h2>
+      <p class="about-copy" style="max-width:640px;margin-top:18px">Every listing Simone represents carries the reach of a global boutique brokerage — giving buyers and sellers access to a network, marketing platform, and reputation that few firms can match.</p>
+    </div>
+    <div class="agency-stats-grid">
+      <div class="agency-stat"><div class="stat-val">130+</div><div class="stat-lbl">Offices Worldwide</div></div>
+      <div class="agency-stat"><div class="stat-val">13+</div><div class="stat-lbl">Countries</div></div>
+      <div class="agency-stat"><div class="stat-val">No. 1</div><div class="stat-lbl">Top Luxury Brokerage<br>Inman Golden I Awards</div></div>
+      <div class="agency-stat"><div class="stat-val">No. 1</div><div class="stat-lbl">RealTrends Top 50<br>Avg. Sales Price ($2.5M)</div></div>
+    </div>
+    <p class="about-copy" style="text-align:center;margin-top:8px">Recognized 7 years running on the Inc. 5000 list of America's fastest-growing private companies.</p>
+    <div style="text-align:center;margin-top:20px">
+      <a href="https://www.theagencyre.com/" target="_blank" rel="noopener" class="agency-link">Learn More About The Agency →</a>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CONTACT -->
+<section id="contact" class="section" style="scroll-margin-top:72px">
+  <div class="wrap">
+    <div class="contact-grid">
+      <div class="contact-left">
+        <div>
+          <span class="label label-red">Get in Touch</span>
+          <h2 class="action-title" style="font-size:clamp(2.2rem,4vw,3.6rem);line-height:1.1">Let's Talk</h2>
+          <p style="font-size:.87rem;color:var(--g5);font-weight:300;line-height:1.8;margin-top:18px">Whether you're ready to make a move or just beginning to explore, I'm happy to connect and answer any questions.</p>
+        </div>
+        <div>
+          <div class="ci-label">Phone / Text</div>
+          <div class="ci-value"><a href="tel:+13106966596">310-696-6596</a></div>
+        </div>
+        <div>
+          <div class="ci-label">Email</div>
+          <div class="ci-value"><a href="mailto:Simone@SimoneMarzullo.com">Simone@SimoneMarzullo.com</a></div>
+        </div>
+        <div>
+          <div class="ci-label">Office</div>
+          <div class="ci-value">The Agency<br>331 Foothill Rd. #100<br>Beverly Hills, CA 90210</div>
+        </div>
+      </div>
+      <div class="form-card" id="con-card">
+        <div class="form-title">Send a Message</div>
+        <div class="form-sub">I personally respond to every inquiry, typically within a few hours.</div>
+        <div class="field"><span class="field-label">Full Name</span><input class="fi" id="contact_name" required type="text" placeholder="First and last name" autocomplete="name"></div>
+        <div class="frow">
+          <div class="field"><span class="field-label">Email</span><input class="fi" id="contact_email" required type="email" placeholder="you@email.com" autocomplete="email" inputmode="email"></div>
+          <div class="field"><span class="field-label">Phone</span><input class="fi" id="contact_phone" required type="tel" placeholder="(310) 000-0000" autocomplete="tel" inputmode="tel"></div>
+        </div>
+        <div class="field"><span class="field-label">How Can I Help?</span><textarea class="ft" id="contact_message" placeholder="Tell me what you're looking for — I'm here to help."></textarea></div>
+        <input type="text" class="hp-field" id="contact_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div style="display:flex;justify-content:flex-end;margin-top:4px">
+          <button class="btn-sub" onclick="submitContact(this)">Send Message</button>
+        </div>
+        <div id="consucc" class="success-msg">
+          <div class="s-icon">✓</div>
+          <div class="s-title">Message Sent</div>
+          <div class="s-sub">Thank you for reaching out! I'll be in touch with you very shortly.</div>
+        </div>
+      </div>
+    </div>
+    <div class="contact-signoff">
+      <img class="contact-signoff-photo" src="assets/headshot.jpg" alt="Simone Marzullo" onerror="this.style.display='none'">
+      <div class="contact-signoff-name">Simone Marzullo</div>
+      <div class="contact-signoff-title">REALTOR® · The Agency Beverly Hills</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="f-name">Simone Marzullo</div>
+      <div class="f-line">REALTOR® | DRE# 02174253</div>
+      <div class="f-line">310-696-6596</div>
+      <div class="f-line">Simone@SimoneMarzullo.com</div>
+    </div>
+    <div>
+      <img src="assets/agency-logo.png" alt="The Agency" style="height:28px;margin-bottom:8px" onerror="this.style.display='none';document.getElementById('f-agency-text').style.display='block'">
+      <div class="f-agency-name" id="f-agency-text" style="display:none">The Agency</div>
+      <div class="f-line">DRE# 01904054</div>
+      <div class="f-line">331 Foothill Rd. #100</div>
+      <div class="f-line">Beverly Hills, CA 90210</div>
+    </div>
+    <div class="f-legal">
+      <div class="f-eq">⌂</div>
+      <div class="f-copy">Equal Housing Opportunity<br>© 2026 Simone Marzullo. All rights reserved.<br>Information deemed reliable but not guaranteed.<br>CA DRE# 02174253</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+const API_ENDPOINT = '/api/submit-lead';
+
+/* ---------- Stage navigation ---------- */
+function showStage(stageId) {
+  document.querySelectorAll('.stage').forEach(s => s.classList.remove('on'));
+  const el = document.getElementById(stageId);
+  if (el) el.classList.add('on');
+}
+function showStageAndScroll(evt, stageId) {
+  evt.preventDefault();
+  showStage(stageId);
+  document.getElementById('action').scrollIntoView({ behavior: 'smooth' });
+}
+function openSellForm(saleType) {
+  document.getElementById('sell_saleType').value = saleType;
+  go('ss', 1, 3, 'sd');
+  showStage('stage-sell-form');
+}
+function openBuyForm(intent) {
+  document.getElementById('buy_intent').value = intent;
+  go('bs', 1, 2, 'bd');
+  showStage('stage-buy-form');
+}
+
+/* ---------- Mobile nav ---------- */
+function toggleMobileNav() {
+  const menu = document.getElementById('nav-mobile');
+  const btn = document.querySelector('.nav-toggle');
+  const willOpen = !menu.classList.contains('on');
+  menu.classList.toggle('on', willOpen);
+  btn.setAttribute('aria-expanded', String(willOpen));
+}
+function closeMobileNav() {
+  document.getElementById('nav-mobile').classList.remove('on');
+  document.querySelector('.nav-toggle').setAttribute('aria-expanded', 'false');
+}
+function closeMobileNavAndGo(evt, stageId) {
+  closeMobileNav();
+  showStageAndScroll(evt, stageId);
+}
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768) closeMobileNav();
+});
+
+/* ---------- Multi-step form helpers ---------- */
+function go(prefix, step, total, dotPrefix) {
+  for (let i = 1; i <= total; i++) {
+    const el = document.getElementById(prefix + i);
+    if (el) el.style.display = i === step ? 'block' : 'none';
+    const dot = document.getElementById(dotPrefix + i);
+    if (dot) dot.classList.toggle('on', i <= step);
+  }
+}
+function requireValid(ids) {
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el && !el.checkValidity()) {
+      el.reportValidity();
+      el.focus();
+      return false;
+    }
+  }
+  return true;
+}
+function goIfValid(prefix, step, total, dotPrefix, requiredIds) {
+  if (requiredIds && !requireValid(requiredIds)) return;
+  go(prefix, step, total, dotPrefix);
+}
+function pick(btn, groupId, hiddenId) {
+  const group = document.getElementById(groupId);
+  if (!group) return;
+  group.querySelectorAll('.opt').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  if (hiddenId) {
+    const hidden = document.getElementById(hiddenId);
+    if (hidden) hidden.value = btn.textContent.trim();
+  }
+}
+function val(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+/* ---------- Submission + success/error UI ---------- */
+function showSuccess(cardId, succId) {
+  const card = document.getElementById(cardId);
+  card.querySelectorAll('.step-dots,.form-title,.form-sub').forEach(e => e.style.display = 'none');
+  card.querySelectorAll('[id$="s1"],[id$="s2"],[id$="s3"]').forEach(e => e.style.display = 'none');
+  card.querySelectorAll('input,textarea,select,.opts,.opts2,.opts3,.form-nav,.frow,.frow3,.field,button:not(.btn-back)').forEach(e => e.style.display = 'none');
+  const errEl = card.querySelector('.form-error');
+  if (errEl) errEl.remove();
+  const succ = document.getElementById(succId);
+  if (succ) succ.style.display = 'block';
+}
+function showError(cardId, button, originalText) {
+  button.disabled = false;
+  button.textContent = originalText;
+  const card = document.getElementById(cardId);
+  let err = card.querySelector('.form-error');
+  if (!err) {
+    err = document.createElement('div');
+    err.className = 'form-error';
+    card.appendChild(err);
+  }
+  err.textContent = "Something went wrong sending your request. Please call/text 310-696-6596 or email Simone@SimoneMarzullo.com directly.";
+}
+async function submitLead(payload, opts) {
+  const { honeypotId, cardId, succId, button, formKey } = opts;
+  const hp = document.getElementById(honeypotId);
+  if (hp && hp.value) {
+    showSuccess(cardId, succId);
+    return;
+  }
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Sending…';
+  const card = document.getElementById(cardId);
+  const existingErr = card.querySelector('.form-error');
+  if (existingErr) existingErr.remove();
+
+  try {
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Request failed with status ' + res.status);
+    if (formKey) markSubmitted(formKey);
+    showSuccess(cardId, succId);
+  } catch (err) {
+    showError(cardId, button, originalText);
+  }
+}
+
+/* ---------- Per-form payload builders ---------- */
+function submitValuation(btn) {
+  if (!requireValid(['val_address', 'val_name', 'val_email', 'val_phone'])) return;
+  submitLead(buildValuationPayload(), { honeypotId: 'val_hp', cardId: 'val-card', succId: 'vsucc', button: btn, formKey: 'valuation' });
+}
+function buildValuationPayload() {
+  return {
+    formType: 'valuation',
+    address: val('val_address'), name: val('val_name'),
+    email: val('val_email'), phone: val('val_phone'),
+    condition: val('val_condition'), notes: val('val_notes'),
+    hp: val('val_hp')
+  };
+}
+
+function submitSell(btn) {
+  if (!requireValid(['sell_address', 'sell_name', 'sell_email', 'sell_phone'])) return;
+  submitLead(buildSellPayload(), { honeypotId: 'sell_hp', cardId: 'sell-card', succId: 'sellsucc', button: btn, formKey: 'sell' });
+}
+function buildSellPayload() {
+  return {
+    formType: 'sell',
+    saleType: val('sell_saleType'), address: val('sell_address'),
+    propertyType: val('sell_propertyType'), estValue: val('sell_estValue'),
+    condition: val('sell_condition'), timeline: val('sell_timeline'), notes: val('sell_notes'),
+    name: val('sell_name'), email: val('sell_email'), phone: val('sell_phone'),
+    hp: val('sell_hp')
+  };
+}
+
+function submitBuy(btn) {
+  if (!requireValid(['buy_name', 'buy_email', 'buy_phone'])) return;
+  submitLead(buildBuyPayload(), { honeypotId: 'buy_hp', cardId: 'buy-card', succId: 'buysucc', button: btn, formKey: 'buy' });
+}
+function buildBuyPayload() {
+  return {
+    formType: 'buy',
+    intent: val('buy_intent'),
+    propertyType: val('buy_propertyType'), budget: val('buy_budget'),
+    minBeds: val('buy_minBeds'), minBaths: val('buy_minBaths'), areas: val('buy_areas'),
+    timeline: val('buy_timeline'), financing: val('buy_financing'),
+    name: val('buy_name'), email: val('buy_email'), phone: val('buy_phone'),
+    hp: val('buy_hp')
+  };
+}
+
+function submitContact(btn) {
+  if (!requireValid(['contact_name', 'contact_email', 'contact_phone'])) return;
+  submitLead(buildContactPayload(), { honeypotId: 'contact_hp', cardId: 'con-card', succId: 'consucc', button: btn, formKey: 'contact' });
+}
+function buildContactPayload() {
+  return {
+    formType: 'contact',
+    name: val('contact_name'), email: val('contact_email'),
+    phone: val('contact_phone'), message: val('contact_message'),
+    hp: val('contact_hp')
+  };
+}
+
+/* ---------- Abandoned-form capture ----------
+   If a visitor enters data into a form but leaves the page without
+   completing it, fire a best-effort beacon so no lead is silently lost. */
+const FORM_BUILDERS = {
+  valuation: buildValuationPayload,
+  sell: buildSellPayload,
+  buy: buildBuyPayload,
+  contact: buildContactPayload
+};
+const submittedForms = new Set();
+const abandonReported = new Set();
+function markSubmitted(formKey) {
+  submittedForms.add(formKey);
+}
+function hasMeaningfulData(payload) {
+  const skipKeys = new Set(['formType', 'intent', 'saleType', 'hp']);
+  return Object.entries(payload).some(([k, v]) => !skipKeys.has(k) && typeof v === 'string' && v.trim().length > 0);
+}
+function reportAbandonedForms() {
+  for (const [formKey, buildFn] of Object.entries(FORM_BUILDERS)) {
+    if (submittedForms.has(formKey) || abandonReported.has(formKey)) continue;
+    const payload = buildFn();
+    if (payload.hp) continue;
+    if (!hasMeaningfulData(payload)) continue;
+    payload.abandoned = true;
+    abandonReported.add(formKey);
+    try {
+      navigator.sendBeacon(API_ENDPOINT, new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+    } catch (e) { /* best effort */ }
+  }
+}
+window.addEventListener('pagehide', reportAbandonedForms);
+// iOS Safari and most mobile browsers back-ground tabs without ever firing
+// pagehide, so this is the primary signal on phones/tablets.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') reportAbandonedForms();
+});
+</script>
+</body>
+</html>
