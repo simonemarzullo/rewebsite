@@ -371,7 +371,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
             <div class="form-title">Your Property Address</div>
             <div class="form-sub">Let's start with the address of the property you'd like valued.</div>
             <div class="field"><span class="field-label">Property Address</span><input class="fi" id="val_address" required type="text" placeholder="123 Mulholland Drive" autocomplete="address-line1"></div>
-            <div class="form-nav"><span></span><button class="btn-next" onclick="goIfValid('vs',2,3,'vd',['val_address'])">Next</button></div>
+            <div class="form-nav"><span></span><button class="btn-next" onclick="valAddressNext(this)">Next</button></div>
           </div>
 
           <div id="vs2" style="display:none">
@@ -422,7 +422,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
             <div class="form-sub">Let's start with the address of the property you'd like to sell.</div>
             <input type="hidden" id="sell_saleType">
             <div class="field"><span class="field-label">Property Address</span><input class="fi" id="sell_address" required type="text" placeholder="Full property address" autocomplete="address-line1"></div>
-            <div class="form-nav"><span></span><button class="btn-next" onclick="goIfValid('ss',2,3,'sd',['sell_address'])">Next</button></div>
+            <div class="form-nav"><span></span><button class="btn-next" onclick="sellAddressNext(this)">Next</button></div>
           </div>
 
           <div id="ss2" style="display:none">
@@ -668,6 +668,29 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 <script>
 const API_ENDPOINT = '/api/submit-lead';
 
+/* ---------- Early lead capture (Sell + Valuation) ----------
+   As soon as the address step is complete, send what we have to
+   FollowUpBoss right away instead of waiting for the full form. The
+   returned leadId is reused on the final submit (and on abandonment) so
+   FollowUpBoss updates that same record instead of creating a duplicate. */
+let sellLeadId = null;
+let valLeadId = null;
+async function captureEarlyLead(currentLeadId, buildPayloadFn, setLeadId) {
+  if (currentLeadId) return;
+  const payload = buildPayloadFn();
+  payload.early = true;
+  try {
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) return;
+    const result = await res.json();
+    if (result && result.leadId) setLeadId(result.leadId);
+  } catch (e) { /* best effort -- final submit still works without a leadId */ }
+}
+
 /* ---------- Stage navigation ---------- */
 function showStage(stageId) {
   document.querySelectorAll('.stage').forEach(s => s.classList.remove('on'));
@@ -729,10 +752,6 @@ function requireValid(ids) {
     }
   }
   return true;
-}
-function goIfValid(prefix, step, total, dotPrefix, requiredIds) {
-  if (requiredIds && !requireValid(requiredIds)) return;
-  go(prefix, step, total, dotPrefix);
 }
 function pick(btn, groupId, hiddenId) {
   const group = document.getElementById(groupId);
@@ -801,6 +820,11 @@ async function submitLead(payload, opts) {
 }
 
 /* ---------- Per-form payload builders ---------- */
+function valAddressNext(btn) {
+  if (!requireValid(['val_address'])) return;
+  go('vs', 2, 3, 'vd');
+  captureEarlyLead(valLeadId, buildValuationPayload, (id) => { valLeadId = id; });
+}
 function submitValuation(btn) {
   if (!requireValid(['val_address', 'val_name', 'val_email', 'val_phone'])) return;
   submitLead(buildValuationPayload(), { honeypotId: 'val_hp', cardId: 'val-card', succId: 'vsucc', button: btn, formKey: 'valuation' });
@@ -808,6 +832,7 @@ function submitValuation(btn) {
 function buildValuationPayload() {
   return {
     formType: 'valuation',
+    leadId: valLeadId,
     address: val('val_address'), name: val('val_name'),
     email: val('val_email'), phone: val('val_phone'),
     condition: val('val_condition'), notes: val('val_notes'),
@@ -815,6 +840,11 @@ function buildValuationPayload() {
   };
 }
 
+function sellAddressNext(btn) {
+  if (!requireValid(['sell_address'])) return;
+  go('ss', 2, 3, 'sd');
+  captureEarlyLead(sellLeadId, buildSellPayload, (id) => { sellLeadId = id; });
+}
 function submitSell(btn) {
   if (!requireValid(['sell_address', 'sell_name', 'sell_email', 'sell_phone'])) return;
   submitLead(buildSellPayload(), { honeypotId: 'sell_hp', cardId: 'sell-card', succId: 'sellsucc', button: btn, formKey: 'sell' });
@@ -822,6 +852,7 @@ function submitSell(btn) {
 function buildSellPayload() {
   return {
     formType: 'sell',
+    leadId: sellLeadId,
     saleType: val('sell_saleType'), address: val('sell_address'),
     propertyType: val('sell_propertyType'), estValue: val('sell_estValue'),
     condition: val('sell_condition'), timeline: val('sell_timeline'), notes: val('sell_notes'),

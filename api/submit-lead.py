@@ -95,11 +95,24 @@ def build_message(form_type, data, intent_desc=None):
     return "\n".join(parts)
 
 
-def build_person(data, tag, extra_tags=None):
+def get_lead_id(data):
+    """Extracts a previously-captured FollowUpBoss person id from the payload,
+    if present, so a later call can update that exact record instead of
+    creating a duplicate person."""
+    raw = data.get("leadId")
+    try:
+        return int(raw) if raw else None
+    except (TypeError, ValueError):
+        return None
+
+
+def build_person(data, tag, extra_tags=None, person_id=None):
     tags = [tag, "Website Lead"]
     if extra_tags:
         tags.extend(extra_tags)
     person = {"tags": tags}
+    if person_id:
+        person["id"] = person_id
     name = clean(data.get("name"))
     if name:
         first, _, last = name.partition(" ")
@@ -129,19 +142,22 @@ def build_property(form_type, data):
     return prop
 
 
-def push_to_followupboss(form_type, event_type, tag, data, message_body, extra_tags=None):
-    """Best-effort FollowUpBoss sync. Returns True on success, never raises."""
+def push_to_followupboss(form_type, event_type, tag, data, message_body, extra_tags=None, person_id=None):
+    """Best-effort FollowUpBoss sync. Returns the parsed person record (which
+    includes the FollowUpBoss person "id") on success, or None. Never raises.
+    Passing person_id targets that exact existing record for an update
+    instead of creating a new person."""
     api_key = os.environ.get("FUB_API_KEY")
     if not api_key:
         print("submit-lead: FUB_API_KEY is not configured")
-        return False
+        return None
 
     event_payload = {
         "source": os.environ.get("FUB_SOURCE", "Simone Marzullo Website"),
         "system": os.environ.get("FUB_SYSTEM", "Simone Marzullo Website"),
         "type": event_type,
         "message": message_body,
-        "person": build_person(data, tag, extra_tags),
+        "person": build_person(data, tag, extra_tags, person_id),
     }
     prop = build_property(form_type, data)
     if prop:
@@ -166,15 +182,15 @@ def push_to_followupboss(form_type, event_type, tag, data, message_body, extra_t
 
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
-            resp.read()
-        return True
+            body = resp.read()
+        return json.loads(body) if body else {}
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
         print(f"submit-lead: FollowUpBoss API error {e.code}: {body}")
-        return False
+        return None
     except Exception as e:
         print(f"submit-lead: unexpected error calling FollowUpBoss: {e}")
-        return False
+        return None
 
 
 def send_notification_email(subject, body):
@@ -238,21 +254,43 @@ class handler(BaseHTTPRequestHandler):
         form_type = clean(data.get("formType"))
         event_type, tag, title, intent_desc = resolve_form_meta(form_type, data)
         abandoned = bool(data.get("abandoned"))
+        early = bool(data.get("early"))
         message_body = build_message(form_type, data, intent_desc)
+
+        # Early capture: Sell/Valuation forms send this the moment the
+        # address step is completed, well before name/email/phone exist, so
+        # Simone gets the lead in FollowUpBoss immediately. The returned
+        # leadId lets the later (real) submission update this exact record
+        # instead of creating a second one.
+        if early:
+            if event_type is None:
+                self._send_json(400, {"ok": False, "error": "Unknown form type"})
+                return
+            result = push_to_followupboss(form_type, event_type, tag, data, message_body)
+            if result:
+                self._send_json(200, {"ok": True, "leadId": result.get("id")})
+            else:
+                self._send_json(502, {"ok": False, "error": "Failed to reach FollowUpBoss"})
+            return
 
         # A visitor who left the page before finishing: always try the direct
         # "Dropped out" email (a no-op until SMTP_* env vars are set), and
         # also sync to FollowUpBoss whenever there's an email or phone to
         # de-dup on -- so with email notifications off, FollowUpBoss (and its
         # own notification settings) is still the guaranteed catch for any
-        # drop-off that left contact info.
+        # drop-off that left contact info. If an early-capture lead already
+        # exists (leadId present), this updates that same record.
         if abandoned:
             send_notification_email(f"Dropped out - {title}", message_body)
             email_v = clean(data.get("email"))
             phone_v = digits_only(data.get("phone"))
-            if event_type and (email_v or phone_v):
+            lead_id = get_lead_id(data)
+            if event_type and (email_v or phone_v or lead_id):
                 dropped_message = "Visitor left the page before finishing this form.\n\n" + message_body
-                push_to_followupboss(form_type, event_type, tag, data, dropped_message, extra_tags=["Dropped Off"])
+                push_to_followupboss(
+                    form_type, event_type, tag, data, dropped_message,
+                    extra_tags=["Dropped Off"], person_id=lead_id,
+                )
             self._send_json(200, {"ok": True})
             return
 
@@ -270,8 +308,8 @@ class handler(BaseHTTPRequestHandler):
             return
 
         lead_name = clean(data.get("name")) or "Website Visitor"
-        ok = push_to_followupboss(form_type, event_type, tag, data, message_body)
-        if ok:
+        result = push_to_followupboss(form_type, event_type, tag, data, message_body, person_id=get_lead_id(data))
+        if result:
             send_notification_email(f"New Lead: {title} - {lead_name}", message_body)
             self._send_json(200, {"ok": True})
         else:
