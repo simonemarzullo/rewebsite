@@ -226,13 +226,13 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 
 <!-- NAV -->
 <nav id="nav">
-  <div class="nav-brand">
+  <a href="index.html" class="nav-brand" onclick="goHome(event)" aria-label="Go to homepage">
     <img src="assets/agency-logo.png" alt="The Agency" class="nav-agency-logo" onerror="this.style.display='none'">
     <div class="nav-brand-text">
       <span class="nav-name">Simone Marzullo</span>
       <span class="nav-sub">REALTOR® · The Agency · Los Angeles</span>
     </div>
-  </div>
+  </a>
   <ul class="nav-links">
     <li><a href="#action" onclick="showStageAndScroll(event,'stage-valuation-form')">Home Value</a></li>
     <li><a href="#action" onclick="showStageAndScroll(event,'stage-sell-menu')">Sellers</a></li>
@@ -709,6 +709,12 @@ function showStageAndScroll(evt, stageId) {
   evt.preventDefault();
   showStage(stageId);
   document.getElementById('action').scrollIntoView({ behavior: 'smooth' });
+}
+function goHome(evt) {
+  if (evt) evt.preventDefault();
+  showStage('stage-home');
+  closeMobileNav();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function openSellForm(saleType) {
   document.getElementById('sell_saleType').value = saleType;
