@@ -146,6 +146,9 @@ input,textarea,select{font-family:var(--sans)}
 .s-title{font-family:var(--serif);font-size:1.7rem;color:var(--white);margin-bottom:10px}
 .s-sub{font-size:.82rem;color:var(--g5);font-weight:300;line-height:1.7}
 .hp-field{position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;overflow:hidden}
+.consent-note{font-size:.68rem;line-height:1.6;color:var(--g5);font-weight:300;margin-top:14px}
+.consent-note a{color:var(--g6);text-decoration:underline;transition:color .2s}
+.consent-note a:hover{color:var(--white)}
 .form-error{margin-top:16px;padding:14px 16px;background:rgba(200,16,46,.08);border:1px solid var(--red);color:var(--g7);font-size:.78rem;line-height:1.6}
 
 /* ABOUT */
@@ -398,6 +401,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               <div class="field"><span class="field-label">Phone</span><input class="fi" id="val_phone" required type="tel" placeholder="(310) 000-0000" autocomplete="tel" inputmode="tel"></div>
             </div>
             <input type="text" class="hp-field" id="val_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <div class="consent-note">By submitting, you agree to receive calls and text messages from Simone Marzullo regarding your inquiry. Message and data rates may apply. See our <a href="privacy.html">Privacy Policy</a>.</div>
             <div class="form-nav"><button class="btn-back" onclick="go('vs',2,3,'vd')">← Back</button><button class="btn-sub" onclick="submitValuation(this)">Send Request</button></div>
           </div>
 
@@ -466,6 +470,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
             </div>
             <div class="field"><span class="field-label">Anything else? (Optional)</span><textarea class="ft" id="sell_notes" placeholder="Any additional context about your property or situation…" style="min-height:80px"></textarea></div>
             <input type="text" class="hp-field" id="sell_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <div class="consent-note">By submitting, you agree to receive calls and text messages from Simone Marzullo regarding your inquiry. Message and data rates may apply. See our <a href="privacy.html">Privacy Policy</a>.</div>
             <div class="form-nav"><button class="btn-back" onclick="go('ss',2,3,'sd')">← Back</button><button class="btn-sub" onclick="submitSell(this)">Request a Consultation</button></div>
           </div>
 
@@ -533,6 +538,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               <div class="field"><span class="field-label">Phone</span><input class="fi" id="buy_phone" required type="tel" placeholder="(310) 000-0000" autocomplete="tel" inputmode="tel"></div>
             </div>
             <input type="text" class="hp-field" id="buy_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <div class="consent-note">By submitting, you agree to receive calls and text messages from Simone Marzullo regarding your inquiry. Message and data rates may apply. See our <a href="privacy.html">Privacy Policy</a>.</div>
             <div class="form-nav"><button class="btn-back" onclick="go('bs',1,2,'bd')">← Back</button><button class="btn-sub" onclick="submitBuy(this)">Start My Search</button></div>
           </div>
 
@@ -624,6 +630,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
         </div>
         <div class="field"><span class="field-label">How Can I Help?</span><textarea class="ft" id="contact_message" placeholder="Tell me what you're looking for — I'm here to help."></textarea></div>
         <input type="text" class="hp-field" id="contact_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div class="consent-note">By submitting, you agree to receive calls and text messages from Simone Marzullo regarding your inquiry. Message and data rates may apply. See our <a href="privacy.html">Privacy Policy</a>.</div>
         <div style="display:flex;justify-content:flex-end;margin-top:4px">
           <button class="btn-sub" onclick="submitContact(this)">Send Message</button>
         </div>
@@ -661,6 +668,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
     <div class="f-legal">
       <div class="f-eq">⌂</div>
       <div class="f-copy">Equal Housing Opportunity<br>© 2026 Simone Marzullo. All rights reserved.<br>Information deemed reliable but not guaranteed.<br>CA DRE# 02174253</div>
+      <div class="f-copy" style="margin-top:10px"><a href="privacy.html" style="color:var(--g5);text-decoration:underline">Privacy Policy</a></div>
     </div>
   </div>
 </footer>
