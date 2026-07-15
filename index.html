@@ -436,7 +436,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           <div class="step-dots"><div class="step-dot on" id="sd1"></div><div class="step-dot" id="sd2"></div><div class="step-dot" id="sd3"></div></div>
 
           <div id="ss1">
-            <div class="form-title">Your Property Address</div>
+            <div class="form-title" id="ss1-title">Your Property Address</div>
             <div class="form-sub">Let's start with the address of the property you'd like to sell.</div>
             <input type="hidden" id="sell_saleType">
             <div class="field"><span class="field-label">Property Address</span><input class="fi" id="sell_address" required type="text" placeholder="Full property address" autocomplete="address-line1"></div>
@@ -475,7 +475,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           </div>
 
           <div id="ss3" style="display:none">
-            <div class="form-title">Let's Connect</div>
+            <div class="form-title" id="ss3-title">Let's Connect</div>
             <div class="form-sub">I'll reach out within 24 hours to schedule a private consultation.</div>
             <div class="field"><span class="field-label">Full Name</span><input class="fi" id="sell_name" required type="text" placeholder="First and last name" autocomplete="name"></div>
             <div class="frow">
@@ -485,7 +485,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
             <div class="field"><span class="field-label">Anything else? (Optional)</span><textarea class="ft" id="sell_notes" placeholder="Any additional context about your property or situation…" style="min-height:80px"></textarea></div>
             <input type="text" class="hp-field" id="sell_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
             <div class="consent-note">By submitting, you agree to receive calls and text messages from Simone Marzullo regarding your inquiry. Message and data rates may apply. See our <a href="privacy.html">Privacy Policy</a>.</div>
-            <div class="form-nav"><button class="btn-back" onclick="go('ss',2,3,'sd')">← Back</button><button class="btn-sub" onclick="submitSell(this)">Request a Consultation</button></div>
+            <div class="form-nav"><button class="btn-back" onclick="go('ss',2,3,'sd')">← Back</button><button class="btn-sub" id="sell-submit-btn" onclick="submitSell(this)">Request a Consultation</button></div>
           </div>
 
           <div id="sellsucc" class="success-msg">
@@ -865,7 +865,11 @@ function openSellForm(saleType) {
   document.getElementById('sell_saleType').value = saleType;
   go('ss', 1, 3, 'sd');
   showStage('stage-sell-form');
-  if (saleType === 'cash-offer') {
+  const isCashOffer = saleType === 'cash-offer';
+  document.getElementById('ss1-title').textContent = isCashOffer ? 'Get a Cash Offer' : 'Your Property Address';
+  document.getElementById('ss3-title').textContent = isCashOffer ? 'Get a Cash Offer' : "Let's Connect";
+  document.getElementById('sell-submit-btn').textContent = isCashOffer ? 'Submit Request' : 'Request a Consultation';
+  if (isCashOffer) {
     document.title = 'Get a Cash Offer | Simone Marzullo';
     if (window.location.pathname !== '/cashoffer') {
       history.pushState({ stageId: 'stage-sell-form', saleType }, '', '/cashoffer');
