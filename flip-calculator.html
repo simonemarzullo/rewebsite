@@ -121,7 +121,9 @@ input,textarea,select{font-family:var(--sans)}
 
 /* ADDRESS GATE */
 .calc-gate{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:24px}
-.calc-gate-card{background:var(--g2);border:1px solid var(--g3);padding:40px 36px;max-width:440px;width:100%;text-align:center}
+.calc-gate-card{position:relative;background:var(--g2);border:1px solid var(--g3);padding:40px 36px;max-width:440px;width:100%;text-align:center}
+.calc-gate-close{position:absolute;top:12px;right:12px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;line-height:1;color:var(--g5);background:none;border:none;cursor:pointer;transition:color .2s}
+.calc-gate-close:hover{color:var(--white)}
 .calc-gate-title{font-family:var(--serif);font-size:1.7rem;font-weight:400;color:var(--white);margin-top:12px;line-height:1.15}
 .calc-gate .field{text-align:left;margin-top:24px;margin-bottom:20px}
 .calc-locked{opacity:.4;pointer-events:none;user-select:none}
@@ -193,6 +195,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 <!-- ADDRESS GATE -->
 <div class="calc-gate" id="calc-gate">
   <div class="calc-gate-card">
+    <button type="button" class="calc-gate-close" aria-label="Close and go back" onclick="closeGateGoBack()">×</button>
     <span class="label label-red">Get Started</span>
     <h2 class="calc-gate-title">Enter the Property Address</h2>
     <input type="text" class="hp-field" id="flip_gate_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
@@ -225,8 +228,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           <div class="calc-sec-head">Property Details</div>
           <div class="calc-sec-body">
             <div class="frow">
-              <div class="field"><span class="field-label">After Repair Value (ARV)</span><input class="fi" id="c_arv" type="number" min="0" step="1000" value="2375000"></div>
-              <div class="field"><span class="field-label">Square Footage</span><input class="fi" id="c_sqft" type="number" min="1" step="1" value="2309"></div>
+              <div class="field"><span class="field-label">After Repair Value (ARV)</span><input class="fi" id="c_arv" type="number" min="0" step="1000" placeholder="e.g. 1500000"></div>
+              <div class="field"><span class="field-label">Square Footage</span><input class="fi" id="c_sqft" type="number" min="1" step="1" placeholder="e.g. 2000"></div>
             </div>
             <div class="field"><span class="field-label">ARV / SQFT</span><div class="fo" id="o_arvsqft">$0.00</div></div>
           </div>
@@ -238,9 +241,10 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
             <div class="frow">
               <div class="field"><span class="field-label">Rehab Type</span>
                 <select class="fs" id="c_rehabtype">
+                  <option value="" selected>Select…</option>
                   <option value="25">Light — $25/sqft</option>
                   <option value="45">Medium — $45/sqft</option>
-                  <option value="65" selected>Heavy — $65/sqft</option>
+                  <option value="65">Heavy — $65/sqft</option>
                 </select>
               </div>
               <div class="field"><span class="field-label">Est. per SQFT</span><div class="fo" id="o_persqft">$0.00</div></div>
@@ -249,10 +253,11 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
             <div class="frow">
               <div class="field"><span class="field-label">Neighborhood</span>
                 <select class="fs" id="c_neighborhood">
+                  <option value="" selected>Select…</option>
                   <option value="95">Low End — 95%</option>
                   <option value="100">Average End — 100%</option>
                   <option value="120">High End — 120%</option>
-                  <option value="135" selected>Luxury — 135%</option>
+                  <option value="135">Luxury — 135%</option>
                 </select>
               </div>
               <div class="field"><span class="field-label">Total Rehab Estimate</span><div class="fo" id="o_rehabtotal">$0.00</div></div>
@@ -281,8 +286,9 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           <div class="calc-sec-body">
             <div class="field"><span class="field-label">Length of Project</span>
               <select class="fs" id="c_length">
+                <option value="" selected>Select…</option>
                 <option value="2">0 – 3 Months</option>
-                <option value="5" selected>3 – 6 Months</option>
+                <option value="5">3 – 6 Months</option>
                 <option value="7">6 Months – 1 Year</option>
                 <option value="12">1 Year+</option>
               </select>
@@ -316,9 +322,10 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
             <div class="frow">
               <div class="field"><span class="field-label">Minimum Profit %</span>
                 <select class="fs" id="c_profitpct">
+                  <option value="" selected>Select…</option>
                   <option value="8">8%</option>
                   <option value="10">10%</option>
-                  <option value="12" selected>12%</option>
+                  <option value="12">12%</option>
                 </select>
               </div>
               <div class="field"><span class="field-label">Value</span><div class="fo" id="o_profitval">$0.00</div></div>
@@ -562,6 +569,14 @@ function closeGate() {
     const banner = document.getElementById('calc-address-banner');
     banner.textContent = 'Analyzing: ' + flipAddress;
     banner.style.display = 'block';
+  }
+}
+
+function closeGateGoBack() {
+  if (document.referrer) {
+    window.history.back();
+  } else {
+    window.location.href = 'index.html';
   }
 }
 
