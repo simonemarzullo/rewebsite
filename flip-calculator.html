@@ -72,10 +72,10 @@ input,textarea,select{font-family:var(--sans)}
 
 /* CALCULATOR LAYOUT */
 #calc{padding:64px 0 96px}
-.calc-grid{display:grid;grid-template-columns:1fr 380px;gap:36px;align-items:start}
+.calc-grid{display:block;max-width:720px;margin:0 auto}
 .calc-form{display:flex;flex-direction:column;gap:24px}
 
-.calc-summary{position:sticky;top:96px;background:var(--g2);border:1px solid var(--g3)}
+.calc-summary{background:var(--g2);border:1px solid var(--g3)}
 .calc-summary-hero{padding:28px 26px;text-align:center;border-bottom:1px solid var(--g3)}
 .calc-summary-hero-val{font-family:var(--serif);font-size:2.3rem;font-weight:400;color:var(--white);line-height:1.05;margin-top:10px;word-break:break-word}
 .calc-summary-hero-note{font-size:.68rem;color:var(--g5);font-weight:300;margin-top:8px;line-height:1.6}
@@ -90,12 +90,12 @@ input,textarea,select{font-family:var(--sans)}
 .field{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
 .field:last-child{margin-bottom:0}
 .field-label{font-size:.59rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--g5)}
-.fi,.fs{background:var(--g1);border:1px solid var(--g3);color:var(--white);padding:13px 16px;font-size:.87rem;font-weight:300;outline:none;transition:border-color .2s;width:100%;-webkit-appearance:none}
-.fi:focus,.fs:focus{border-color:var(--red)}
+.fi,.fs{background:rgba(200,16,46,.1);border:1px solid var(--red);color:var(--white);padding:13px 16px;font-size:.87rem;font-weight:300;outline:none;transition:border-color .2s;width:100%;-webkit-appearance:none}
+.fi:focus,.fs:focus{border-color:var(--white)}
 .fi::placeholder{color:var(--g4)}
 .fs{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23555' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
 .fs option{background:var(--g1)}
-.fo{background:rgba(200,16,46,.1);border:1px solid var(--red);color:var(--white);padding:13px 16px;font-size:.87rem;font-weight:500;width:100%;min-height:44px;display:flex;align-items:center}
+.fo{background:var(--g1);border:1px solid var(--g3);color:var(--white);padding:13px 16px;font-size:.87rem;font-weight:500;width:100%;min-height:44px;display:flex;align-items:center}
 .field-hint{font-size:.66rem;color:var(--g5);font-weight:300;margin-top:2px;line-height:1.5}
 .calc-note{font-size:.72rem;color:var(--g5);font-weight:300;line-height:1.8;max-width:760px;margin-top:8px}
 .btn-sub{background:var(--red);color:var(--white);padding:14px 24px;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background .2s,transform .15s;width:100%}
@@ -123,8 +123,6 @@ input,textarea,select{font-family:var(--sans)}
 /* RESPONSIVE */
 @media(max-width:1024px){
   .wrap{padding:0 32px}
-  .calc-grid{grid-template-columns:1fr}
-  .calc-summary{position:static;order:-1}
 }
 @media(max-width:768px){
   #nav{padding:0 20px}
@@ -338,6 +336,21 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           </div>
         </div>
 
+        <!-- SUMMARY -->
+        <div class="calc-summary">
+          <div class="calc-summary-hero">
+            <span class="label label-red">Estimated Buyer Investment</span>
+            <div class="calc-summary-hero-val" id="o_buyerinv">$0.00</div>
+            <div class="calc-summary-hero-note">Suggested purchase-price ceiling, after rehab, financing, selling costs &amp; target profit.</div>
+          </div>
+          <div class="calc-stat-grid">
+            <div class="stat-block"><div class="stat-val" id="o_roi">0%</div><div class="stat-lbl">Return on Investment</div></div>
+            <div class="stat-block"><div class="stat-val" id="o_renocost">$0</div><div class="stat-lbl">Renovation Cost</div></div>
+            <div class="stat-block"><div class="stat-val" id="o_dp">$0</div><div class="stat-lbl">Down Payment</div></div>
+            <div class="stat-block"><div class="stat-val" id="o_hmloan">$0</div><div class="stat-lbl">Hard Money Loan</div></div>
+          </div>
+        </div>
+
         <p class="calc-note">This calculator provides a rough estimate for planning purposes only and does not constitute financial, legal, or investment advice. Actual rehab costs, financing terms, and market value can vary. Talk to Simone for a detailed opinion on any specific property.</p>
 
         <div class="calc-sec" id="flip-cta-sec">
@@ -368,21 +381,6 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               <p class="s-sub" style="margin-top:12px">Have a property in mind? I work with flippers and builders across Los Angeles.</p>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- SUMMARY -->
-      <div class="calc-summary">
-        <div class="calc-summary-hero">
-          <span class="label label-red">Estimated Buyer Investment</span>
-          <div class="calc-summary-hero-val" id="o_buyerinv">$0.00</div>
-          <div class="calc-summary-hero-note">Suggested purchase-price ceiling, after rehab, financing, selling costs &amp; target profit.</div>
-        </div>
-        <div class="calc-stat-grid">
-          <div class="stat-block"><div class="stat-val" id="o_roi">0%</div><div class="stat-lbl">Return on Investment</div></div>
-          <div class="stat-block"><div class="stat-val" id="o_renocost">$0</div><div class="stat-lbl">Renovation Cost</div></div>
-          <div class="stat-block"><div class="stat-val" id="o_dp">$0</div><div class="stat-lbl">Down Payment</div></div>
-          <div class="stat-block"><div class="stat-val" id="o_hmloan">$0</div><div class="stat-lbl">Hard Money Loan</div></div>
         </div>
       </div>
 
