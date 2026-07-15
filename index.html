@@ -168,6 +168,8 @@ input,textarea,select{font-family:var(--sans)}
 /* FOOTER */
 footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 .footer-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1fr;gap:40px;align-items:start}
+.f-profile{display:flex;align-items:flex-start;gap:16px}
+.f-photo{width:56px;height:56px;border-radius:50%;object-fit:cover;object-position:center top;border:1px solid var(--g3);flex-shrink:0}
 .f-name{font-family:var(--serif);font-size:1.25rem;color:var(--white);margin-bottom:6px;font-weight:400}
 .f-line{font-size:.63rem;color:var(--g5);font-weight:300;line-height:1.85;letter-spacing:.04em}
 .f-agency-name{font-family:var(--serif);font-size:.95rem;color:var(--g7);margin-bottom:8px;font-weight:400}
@@ -746,11 +748,14 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 <!-- FOOTER -->
 <footer>
   <div class="footer-inner">
-    <div>
-      <div class="f-name">Simone Marzullo</div>
-      <div class="f-line">REALTOR® | DRE# 02174253</div>
-      <div class="f-line">310-696-6596</div>
-      <div class="f-line">Simone@SimoneMarzullo.com</div>
+    <div class="f-profile">
+      <img class="f-photo" src="assets/headshot.jpg" alt="Simone Marzullo" onerror="this.style.display='none'">
+      <div>
+        <div class="f-name">Simone Marzullo</div>
+        <div class="f-line">REALTOR® | DRE# 02174253</div>
+        <div class="f-line">310-696-6596</div>
+        <div class="f-line">Simone@SimoneMarzullo.com</div>
+      </div>
     </div>
     <div>
       <img src="assets/agency-logo.png" alt="The Agency" style="height:28px;margin-bottom:8px" onerror="this.style.display='none';document.getElementById('f-agency-text').style.display='block'">
