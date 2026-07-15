@@ -918,6 +918,12 @@ function go(prefix, step, total, dotPrefix) {
     const dot = document.getElementById(dotPrefix + i);
     if (dot) dot.classList.toggle('on', i <= step);
   }
+  // Same reasoning as showStage(): switching steps doesn't move the scroll
+  // position on its own, so without this, a longer/shorter next step (e.g.
+  // the cash-offer disclaimer making step 3 taller) leaves you scrolled to
+  // wherever you were on the previous step instead of at the new step's top.
+  const action = document.getElementById('action');
+  if (action) action.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function requireValid(ids) {
   for (const id of ids) {
