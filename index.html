@@ -164,10 +164,6 @@ input,textarea,select{font-family:var(--sans)}
 .ci-label{font-size:.59rem;letter-spacing:.24em;text-transform:uppercase;color:var(--g5);font-weight:500;margin-bottom:7px}
 .ci-value{font-family:var(--serif);font-size:1.1rem;color:var(--white);font-weight:400;line-height:1.5}
 .ci-value a{transition:color .2s}
-.contact-signoff{display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:64px;padding-top:36px;border-top:1px solid var(--g3);text-align:center}
-.contact-signoff-photo{width:84px;height:84px;border-radius:50%;object-fit:cover;object-position:center top;border:1px solid var(--g3)}
-.contact-signoff-name{font-family:var(--serif);font-size:1rem;color:var(--white)}
-.contact-signoff-title{font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--g5)}
 
 /* FOOTER */
 footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
@@ -744,11 +740,6 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
         </div>
       </div>
     </div>
-    <div class="contact-signoff">
-      <img class="contact-signoff-photo" src="assets/headshot.jpg" alt="Simone Marzullo" onerror="this.style.display='none'">
-      <div class="contact-signoff-name">Simone Marzullo</div>
-      <div class="contact-signoff-title">REALTOR® · The Agency Beverly Hills</div>
-    </div>
   </div>
 </section>
 
@@ -807,11 +798,18 @@ function showStage(stageId) {
   document.querySelectorAll('.stage').forEach(s => s.classList.remove('on'));
   const el = document.getElementById(stageId);
   if (el) el.classList.add('on');
+  // Every stage switch scrolls back to the top of the action section --
+  // otherwise if you'd scrolled down to tap a card lower in the previous
+  // stage (e.g. the bottom-right card of a 2x2 grid), you'd land mid-way
+  // down the new stage's differently-arranged content instead of at its
+  // heading, since swapping which .stage is visible doesn't move the
+  // scroll position on its own.
+  const action = document.getElementById('action');
+  if (action) action.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function showStageAndScroll(evt, stageId) {
   evt.preventDefault();
   showStage(stageId);
-  document.getElementById('action').scrollIntoView({ behavior: 'smooth' });
 }
 function goHome(evt) {
   if (evt) evt.preventDefault();
