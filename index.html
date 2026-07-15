@@ -800,10 +800,36 @@ async function captureEarlyLead(currentLeadId, buildPayloadFn, setLeadId) {
 }
 
 /* ---------- Stage navigation ---------- */
-function showStage(stageId) {
+/* ---------- URL routing for the 4 top-level stages ----------
+   Only stage-home and the 4 main menu stages get their own real,
+   shareable URL (/seller, /buyer, /homevaluation, /investor); deeper
+   sub-stages (e.g. stage-sell-form) stay nested under their parent's
+   path since they weren't asked to have their own URL. Vercel rewrites
+   these paths to /index.html so a direct visit/shared link still
+   works -- see vercel.json. */
+const STAGE_PATHS = {
+  'stage-home': '/',
+  'stage-sell-menu': '/seller',
+  'stage-buy-menu': '/buyer',
+  'stage-valuation-form': '/homevaluation',
+  'stage-investor-menu': '/investor',
+};
+const STAGE_TITLES = {
+  'stage-home': 'Simone Marzullo | REALTOR® | The Agency Los Angeles',
+  'stage-sell-menu': 'Sell Your Home | Simone Marzullo',
+  'stage-buy-menu': 'Find Your Next Home | Simone Marzullo',
+  'stage-valuation-form': 'Free Home Valuation | Simone Marzullo',
+  'stage-investor-menu': 'Investment Opportunities | Simone Marzullo',
+};
+
+function showStage(stageId, updateUrl = true) {
   document.querySelectorAll('.stage').forEach(s => s.classList.remove('on'));
   const el = document.getElementById(stageId);
   if (el) el.classList.add('on');
+  if (updateUrl && STAGE_PATHS[stageId] && window.location.pathname !== STAGE_PATHS[stageId]) {
+    history.pushState({ stageId }, '', STAGE_PATHS[stageId]);
+  }
+  if (STAGE_TITLES[stageId]) document.title = STAGE_TITLES[stageId];
   // Every stage switch scrolls back to the top of the action section --
   // otherwise if you'd scrolled down to tap a card lower in the previous
   // stage (e.g. the bottom-right card of a 2x2 grid), you'd land mid-way
@@ -817,6 +843,16 @@ function showStageAndScroll(evt, stageId) {
   evt.preventDefault();
   showStage(stageId);
 }
+window.addEventListener('popstate', () => {
+  const path = window.location.pathname;
+  const stageId = Object.keys(STAGE_PATHS).find(k => STAGE_PATHS[k] === path) || 'stage-home';
+  showStage(stageId, false);
+});
+(function initFromPath() {
+  const path = window.location.pathname;
+  const stageId = Object.keys(STAGE_PATHS).find(k => STAGE_PATHS[k] === path);
+  if (stageId && stageId !== 'stage-home') showStage(stageId, false);
+})();
 function goHome(evt) {
   if (evt) evt.preventDefault();
   showStage('stage-home');

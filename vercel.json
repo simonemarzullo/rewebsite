@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    { "source": "/seller", "destination": "/index.html" },
+    { "source": "/buyer", "destination": "/index.html" },
+    { "source": "/homevaluation", "destination": "/index.html" },
+    { "source": "/investor", "destination": "/index.html" }
+  ]
+}
