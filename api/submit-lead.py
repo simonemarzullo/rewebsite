@@ -114,10 +114,11 @@ def build_message(form_type, data, intent_desc=None):
     parts = []
     if intent_desc:
         parts.append(intent_desc)
+    bullet = "• " if form_type == "flip" else ""
     for label, key in FIELD_LABELS.get(form_type, []):
         v = clean(data.get(key))
         if v:
-            parts.append(f"{label}: {v}")
+            parts.append(f"{bullet}{label}: {v}")
     if not parts:
         parts.append("(No information was entered before the visitor left the page.)")
     return "\n".join(parts)

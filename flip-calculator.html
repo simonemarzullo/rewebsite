@@ -109,6 +109,8 @@ input,textarea,select{font-family:var(--sans)}
 .btn-sub:disabled{opacity:.55;cursor:default;transform:none!important}
 .btn-outline{background:var(--white);color:var(--black);padding:14px 24px;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background .2s;width:100%}
 .btn-outline:hover{background:var(--g7)}
+.btn-reset{display:block;margin:14px auto 0;background:none;border:none;color:var(--g5);font-size:.66rem;letter-spacing:.15em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:color .2s;padding:6px}
+.btn-reset:hover{color:var(--white)}
 .consent-note{font-size:.68rem;line-height:1.6;color:var(--g5);font-weight:300;margin-top:14px}
 .consent-note a{color:var(--g6);text-decoration:underline;transition:color .2s}
 .consent-note a:hover{color:var(--white)}
@@ -339,6 +341,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           <div class="calc-sec-body">
             <input type="text" class="hp-field" id="flip_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
             <button type="button" class="btn-sub" id="flip-calc-btn" onclick="calculateDeal(this)">Calculate Deal</button>
+            <button type="button" class="btn-reset" onclick="resetCalculator()">Reset Calculator</button>
           </div>
         </div>
 
@@ -357,6 +360,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
             <div id="flip-email-success" class="success-msg">
               <div class="s-icon">✓</div>
               <div class="s-title">Got It!</div>
+              <button type="button" class="btn-sub" style="margin-top:16px" onclick="calculateNewDeal()">Calculate New Deal</button>
             </div>
           </div>
         </div>
@@ -666,6 +670,47 @@ async function submitEmailDeal(btn) {
     errEl.textContent = 'Something went wrong sending your request. Please call/text 310-696-6596 or email Simone@SimoneMarzullo.com directly.';
     sec.appendChild(errEl);
   }
+}
+
+/* ---------- Reset / start over ---------- */
+function resetCalculatorFields() {
+  document.getElementById('c_arv').value = '';
+  document.getElementById('c_sqft').value = '';
+  document.getElementById('c_rehabtype').value = '';
+  document.getElementById('c_neighborhood').value = '';
+  document.getElementById('c_adutype').value = '0';
+  document.getElementById('c_length').value = '';
+  document.getElementById('c_profitpct').value = '';
+  recalc();
+}
+function resetCtaState() {
+  const calcBtn = document.getElementById('flip-calc-btn');
+  calcBtn.disabled = false;
+  calcBtn.textContent = 'Calculate Deal';
+  document.getElementById('flip-email-sec').style.display = 'none';
+  document.getElementById('flip-email-toggle-btn').style.display = '';
+  document.getElementById('flip-email-form').style.display = 'none';
+  document.getElementById('flip-email-success').style.display = 'none';
+  document.getElementById('flip_email_email').value = '';
+  document.getElementById('flip_email_name').value = '';
+  document.getElementById('flip_email_phone').value = '';
+  document.querySelectorAll('#flip-cta-sec .form-error, #flip-email-sec .form-error').forEach(e => e.remove());
+}
+function resetCalculator() {
+  resetCalculatorFields();
+  resetCtaState();
+}
+function calculateNewDeal() {
+  resetCalculatorFields();
+  resetCtaState();
+  flipAddress = '';
+  flipLeadId = null;
+  document.getElementById('calc-address-banner').style.display = 'none';
+  document.getElementById('c_gate_address').value = '';
+  document.getElementById('calc-grid').classList.add('calc-locked');
+  document.getElementById('calc-gate').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 </script>
 </body>
