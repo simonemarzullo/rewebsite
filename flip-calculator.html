@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Flip &amp; Investment Calculator | Simone Marzullo</title>
+<meta name="description" content="Estimate rehab cost, hard money financing, selling costs, and return on investment for your next fix-and-flip project in Los Angeles — built by Simone Marzullo, The Agency.">
+<link rel="canonical" href="https://home.simonemarzullo.com/flip-calculator.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Flip &amp; Investment Calculator | Simone Marzullo">
+<meta property="og:description" content="Estimate rehab cost, hard money financing, and ROI for your next flip project.">
+<meta property="og:url" content="https://home.simonemarzullo.com/flip-calculator.html">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Simone Marzullo">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#000000;--white:#FFFFFF;--red:#C8102E;--red-h:#a50d24;
+  --g1:#111111;--g2:#1C1C1C;--g3:#2E2E2E;--g4:#555555;--g5:#888888;--g6:#BBBBBB;--g7:#E5E5E5;
+  --serif:'EB Garamond',Georgia,serif;--sans:'Inter',system-ui,sans-serif
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:var(--sans);background:var(--black);color:var(--white);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webkit-tap-highlight-color:transparent}
+input,textarea,select{font-family:var(--sans)}
+.label{font-size:.6875rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--g5)}
+.label-red{color:var(--red)}
+.divider{width:100%;height:1px;background:var(--g3)}
+.wrap{max-width:1200px;margin:0 auto;padding:0 48px}
+.section{padding:96px 0}
+
+/* NAV (shared with index.html) */
+#nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:72px;background:rgba(0,0,0,0.94);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,0.06)}
+.nav-brand{display:flex;align-items:center;gap:12px}
+.nav-agency-logo{height:34px;width:34px;object-fit:cover;border-radius:6px;flex-shrink:0}
+.nav-brand-text{display:flex;flex-direction:column;gap:2px}
+.nav-name{font-family:var(--serif);font-size:1.1rem;font-weight:400;letter-spacing:.06em;color:var(--white);line-height:1}
+.nav-sub{font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;color:var(--g5)}
+.nav-links{display:flex;align-items:center;gap:28px;list-style:none}
+.nav-links a{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--g6);transition:color .2s;background:none;border:none;cursor:pointer}
+.nav-links a:hover,.nav-links a.active{color:var(--white)}
+.nav-cta{display:inline-flex;align-items:center;background:var(--red);color:var(--white);padding:10px 22px;font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;transition:background .2s}
+.nav-cta:hover{background:var(--red-h)}
+.nav-toggle{display:none;flex-direction:column;justify-content:center;gap:5px;width:32px;height:32px;padding:0}
+.nav-toggle span{display:block;width:22px;height:1.5px;background:var(--white);transition:transform .2s,opacity .2s}
+.nav-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
+.nav-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
+.nav-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
+.nav-mobile{display:none;position:fixed;top:72px;left:0;right:0;bottom:0;z-index:199;background:rgba(0,0,0,0.98);backdrop-filter:blur(16px);flex-direction:column;padding:32px 28px;gap:4px;overflow-y:auto}
+@media(max-width:768px){.nav-mobile.on{display:flex}}
+.nav-mobile a{font-size:.95rem;letter-spacing:.04em;color:var(--g7);font-weight:400;padding:18px 4px;border-bottom:1px solid var(--g3);background:none;border-left:none;border-right:none;border-top:none;text-align:left;width:100%}
+.nav-mobile a.nav-cta{background:var(--red);color:var(--white);border-bottom:none;justify-content:center;margin-top:20px;padding:16px 22px}
+.nav-mobile a.nav-cta:hover{background:var(--red-h)}
+
+/* PAGE HEADER */
+#calc-hero{padding:150px 0 56px;background:linear-gradient(160deg,#0d0d0d 0%,#000 60%);border-bottom:1px solid var(--g3)}
+.calc-hero-head{max-width:680px}
+.calc-hero-title{font-family:var(--serif);font-size:clamp(2.4rem,4.6vw,4rem);font-weight:400;color:var(--white);line-height:1.05;margin-top:14px}
+.calc-hero-sub{font-size:.88rem;line-height:1.8;color:var(--g5);font-weight:300;margin-top:18px;max-width:560px}
+
+/* STAT TILES (reused visual language) */
+.stat-block{background:var(--black);padding:22px 14px}
+.stat-val{font-family:var(--serif);font-size:1.9rem;font-weight:400;color:var(--white);line-height:1;margin-bottom:5px}
+.stat-lbl{font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--g5);font-weight:400}
+
+/* CALCULATOR LAYOUT */
+#calc{padding:64px 0 96px}
+.calc-grid{display:grid;grid-template-columns:1fr 380px;gap:36px;align-items:start}
+.calc-form{display:flex;flex-direction:column;gap:24px}
+
+.calc-summary{position:sticky;top:96px;background:var(--g2);border:1px solid var(--g3)}
+.calc-summary-hero{padding:28px 26px;text-align:center;border-bottom:1px solid var(--g3)}
+.calc-summary-hero-val{font-family:var(--serif);font-size:2.3rem;font-weight:400;color:var(--white);line-height:1.05;margin-top:10px;word-break:break-word}
+.calc-summary-hero-note{font-size:.68rem;color:var(--g5);font-weight:300;margin-top:8px;line-height:1.6}
+.calc-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--g3)}
+.calc-stat-grid .stat-block{padding:20px 16px}
+.calc-summary-cta{padding:22px 26px}
+.calc-summary-cta a{display:flex;align-items:center;justify-content:center;background:var(--red);color:var(--white);padding:13px 20px;font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;font-weight:500;transition:background .2s}
+.calc-summary-cta a:hover{background:var(--red-h)}
+.calc-summary-cta p{font-size:.66rem;color:var(--g5);font-weight:300;line-height:1.6;margin-top:12px;text-align:center}
+
+/* FORM SECTION CARDS */
+.calc-sec{background:var(--g2);border:1px solid var(--g3)}
+.calc-sec-head{background:var(--black);padding:15px 24px;font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--white);text-align:center;border-bottom:1px solid var(--g3)}
+.calc-sec-body{padding:26px 24px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.field{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+.field:last-child{margin-bottom:0}
+.field-label{font-size:.59rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--g5)}
+.fi,.fs{background:var(--g1);border:1px solid var(--g3);color:var(--white);padding:13px 16px;font-size:.87rem;font-weight:300;outline:none;transition:border-color .2s;width:100%;-webkit-appearance:none}
+.fi:focus,.fs:focus{border-color:var(--red)}
+.fi::placeholder{color:var(--g4)}
+.fs{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23555' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
+.fs option{background:var(--g1)}
+.fo{background:rgba(200,16,46,.1);border:1px solid var(--red);color:var(--white);padding:13px 16px;font-size:.87rem;font-weight:500;width:100%;min-height:44px;display:flex;align-items:center}
+.field-hint{font-size:.66rem;color:var(--g5);font-weight:300;margin-top:2px;line-height:1.5}
+.calc-note{font-size:.72rem;color:var(--g5);font-weight:300;line-height:1.8;max-width:760px;margin-top:8px}
+.btn-sub{background:var(--red);color:var(--white);padding:14px 24px;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background .2s,transform .15s;width:100%}
+.btn-sub:hover{background:var(--red-h)}
+.btn-sub:disabled{opacity:.55;cursor:default;transform:none!important}
+.btn-outline{background:var(--white);color:var(--black);padding:14px 24px;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background .2s;width:100%}
+.btn-outline:hover{background:var(--g7)}
+.consent-note{font-size:.68rem;line-height:1.6;color:var(--g5);font-weight:300;margin-top:14px}
+.consent-note a{color:var(--g6);text-decoration:underline;transition:color .2s}
+.consent-note a:hover{color:var(--white)}
+.form-error{margin-top:16px;padding:14px 16px;background:rgba(200,16,46,.08);border:1px solid var(--red);color:var(--g7);font-size:.78rem;line-height:1.6}
+.success-msg{display:none;text-align:center;padding:24px 4px}
+.s-icon{font-size:1.8rem;margin-bottom:10px}
+.s-title{font-family:var(--serif);font-size:1.2rem;color:var(--white);margin-bottom:8px}
+.s-sub{font-size:.8rem;color:var(--g5);font-weight:300;line-height:1.6}
+.hp-field{position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;overflow:hidden}
+
+/* ADDRESS GATE */
+.calc-gate{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:24px}
+.calc-gate-card{background:var(--g2);border:1px solid var(--g3);padding:40px 36px;max-width:440px;width:100%;text-align:center}
+.calc-gate-title{font-family:var(--serif);font-size:1.7rem;font-weight:400;color:var(--white);margin-top:12px;line-height:1.15}
+.calc-gate .field{text-align:left;margin-top:24px;margin-bottom:20px}
+.calc-locked{opacity:.4;pointer-events:none;user-select:none}
+.calc-address-banner{font-size:.7rem;letter-spacing:.08em;color:var(--g6);font-weight:300;margin-top:18px}
+
+/* RESPONSIVE */
+@media(max-width:1024px){
+  .wrap{padding:0 32px}
+  .calc-grid{grid-template-columns:1fr}
+  .calc-summary{position:static;order:-1}
+}
+@media(max-width:768px){
+  #nav{padding:0 20px}
+  .nav-links{display:none}
+  .nav-toggle{display:flex}
+  .wrap{padding:0 20px}
+  #calc-hero{padding:120px 0 40px}
+  #calc{padding:40px 0 64px}
+  .frow{grid-template-columns:1fr}
+  .calc-stat-grid{grid-template-columns:1fr 1fr}
+  .fi,.fs{font-size:16px}
+  footer{padding:36px 24px}
+}
+
+/* FOOTER (shared with index.html) */
+footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
+.footer-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1fr;gap:40px;align-items:start}
+.f-name{font-family:var(--serif);font-size:1.25rem;color:var(--white);margin-bottom:6px;font-weight:400}
+.f-line{font-size:.63rem;color:var(--g5);font-weight:300;line-height:1.85;letter-spacing:.04em}
+.f-agency-name{font-family:var(--serif);font-size:.95rem;color:var(--g7);margin-bottom:8px;font-weight:400}
+.f-legal{text-align:right}
+.f-eq{font-size:1.1rem;opacity:.25;margin-bottom:8px}
+.f-copy{font-size:.6rem;color:var(--g5);font-weight:300;line-height:1.9}
+@media(max-width:1024px){.footer-inner{grid-template-columns:1fr}.f-legal{text-align:left}}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <a href="index.html" class="nav-brand" aria-label="Go to homepage">
+    <img src="assets/agency-logo.png" alt="The Agency" class="nav-agency-logo" onerror="this.style.display='none'">
+    <div class="nav-brand-text">
+      <span class="nav-name">Simone Marzullo</span>
+      <span class="nav-sub">REALTOR® · The Agency · Los Angeles</span>
+    </div>
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html#action">Home Value</a></li>
+    <li><a href="index.html#action">Buyers &amp; Sellers</a></li>
+    <li><a href="flip-calculator.html" class="active">Flip Calculator</a></li>
+    <li><a href="index.html#about">About</a></li>
+    <li><a href="index.html#contact">Contact</a></li>
+  </ul>
+  <button type="button" class="nav-toggle" aria-expanded="false" aria-label="Menu" onclick="toggleMobileNav()">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<div class="nav-mobile" id="nav-mobile">
+  <a href="index.html#action">Home Value</a>
+  <a href="index.html#action">Buyers &amp; Sellers</a>
+  <a href="flip-calculator.html">Flip Calculator</a>
+  <a href="index.html#about">About</a>
+  <a href="index.html#contact">Contact</a>
+  <a href="index.html#contact" class="nav-cta">Get Started</a>
+</div>
+
+<!-- ADDRESS GATE -->
+<div class="calc-gate" id="calc-gate">
+  <div class="calc-gate-card">
+    <span class="label label-red">Get Started</span>
+    <h2 class="calc-gate-title">Enter the Property Address</h2>
+    <input type="text" class="hp-field" id="flip_gate_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <div class="field"><span class="field-label">Property Address</span><input class="fi" id="c_gate_address" required type="text" placeholder="123 Mulholland Drive" autocomplete="address-line1"></div>
+    <button type="button" class="btn-sub" id="calc-gate-btn" onclick="unlockCalculator(this)">Access Calculator</button>
+  </div>
+</div>
+
+<!-- PAGE HEADER -->
+<section id="calc-hero">
+  <div class="wrap">
+    <div class="calc-hero-head">
+      <span class="label label-red">Investor Tools</span>
+      <h1 class="calc-hero-title">Flip &amp; Investment Calculator</h1>
+      <p class="calc-hero-sub">Estimate rehab cost, hard money financing, carrying cost, and projected return for your next fix-and-flip project. Adjust any field below — every number updates live.</p>
+      <p class="calc-address-banner" id="calc-address-banner" style="display:none"></p>
+    </div>
+  </div>
+</section>
+
+<!-- CALCULATOR -->
+<section id="calc">
+  <div class="wrap">
+    <div class="calc-grid calc-locked" id="calc-grid">
+
+      <!-- INPUT FORM -->
+      <div class="calc-form">
+
+        <div class="calc-sec">
+          <div class="calc-sec-head">Property Details</div>
+          <div class="calc-sec-body">
+            <div class="frow">
+              <div class="field"><span class="field-label">After Repair Value (ARV)</span><input class="fi" id="c_arv" type="number" min="0" step="1000" value="2375000"></div>
+              <div class="field"><span class="field-label">Square Footage</span><input class="fi" id="c_sqft" type="number" min="1" step="1" value="2309"></div>
+            </div>
+            <div class="field"><span class="field-label">ARV / SQFT</span><div class="fo" id="o_arvsqft">$0.00</div></div>
+          </div>
+        </div>
+
+        <div class="calc-sec">
+          <div class="calc-sec-head">Rehab Cost</div>
+          <div class="calc-sec-body">
+            <div class="frow">
+              <div class="field"><span class="field-label">Rehab Type</span>
+                <select class="fs" id="c_rehabtype">
+                  <option value="25">Light — $25/sqft</option>
+                  <option value="45">Medium — $45/sqft</option>
+                  <option value="65" selected>Heavy — $65/sqft</option>
+                </select>
+              </div>
+              <div class="field"><span class="field-label">Est. per SQFT</span><div class="fo" id="o_persqft">$0.00</div></div>
+            </div>
+            <div class="field"><span class="field-label">Rehab Estimate</span><div class="fo" id="o_rehabest">$0.00</div></div>
+            <div class="frow">
+              <div class="field"><span class="field-label">Neighborhood</span>
+                <select class="fs" id="c_neighborhood">
+                  <option value="95">Low End — 95%</option>
+                  <option value="100">Average End — 100%</option>
+                  <option value="120">High End — 120%</option>
+                  <option value="135" selected>Luxury — 135%</option>
+                </select>
+              </div>
+              <div class="field"><span class="field-label">Total Rehab Estimate</span><div class="fo" id="o_rehabtotal">$0.00</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="calc-sec">
+          <div class="calc-sec-head">ADU / Pool</div>
+          <div class="calc-sec-body">
+            <div class="frow">
+              <div class="field"><span class="field-label">ADU or Pool</span>
+                <select class="fs" id="c_adutype">
+                  <option value="105000">Brand New Build</option>
+                  <option value="40000">Garage Conversion or Pool Rehab</option>
+                  <option value="0" selected>No ADU or Pool</option>
+                </select>
+              </div>
+              <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_aduest">$0.00</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="calc-sec">
+          <div class="calc-sec-head">Hard Money / Carry Cost</div>
+          <div class="calc-sec-body">
+            <div class="field"><span class="field-label">Length of Project</span>
+              <select class="fs" id="c_length">
+                <option value="2">0 – 3 Months</option>
+                <option value="5" selected>3 – 6 Months</option>
+                <option value="7">6 Months – 1 Year</option>
+                <option value="12">1 Year+</option>
+              </select>
+            </div>
+            <div class="frow">
+              <div class="field"><span class="field-label">Cash</span><div class="fo" id="o_cashfactor">0</div></div>
+              <div class="field"><span class="field-label">Cash Carry Cost</span><div class="fo" id="o_cashcarry">$0.00</div></div>
+            </div>
+            <div class="frow">
+              <div class="field"><span class="field-label">Hard Money</span><div class="fo" id="o_hmfactor">0</div></div>
+              <div class="field"><span class="field-label">Hard Money Carry Cost</span><div class="fo" id="o_hmcarry">$0.00</div></div>
+            </div>
+            <p class="field-hint">Cash carry is shown for reference; hard money carry is real interest and is deducted from the offer.</p>
+          </div>
+        </div>
+
+        <div class="calc-sec">
+          <div class="calc-sec-head">Selling Commissions</div>
+          <div class="calc-sec-body">
+            <div class="frow">
+              <div class="field"><span class="field-label">Listing Agents — 2.5%</span><div class="fo" id="o_sellval">$0.00</div></div>
+              <div class="field"><span class="field-label">Buying Agents — 2.5%</span><div class="fo" id="o_buyval">$0.00</div></div>
+            </div>
+            <div class="field"><span class="field-label">Escrow, Title &amp; Transfer — 1.0%</span><div class="fo" id="o_esctval">$0.00</div></div>
+          </div>
+        </div>
+
+        <div class="calc-sec">
+          <div class="calc-sec-head">Investor's Profit</div>
+          <div class="calc-sec-body">
+            <div class="frow">
+              <div class="field"><span class="field-label">Minimum Profit %</span>
+                <select class="fs" id="c_profitpct">
+                  <option value="8">8%</option>
+                  <option value="10">10%</option>
+                  <option value="12" selected>12%</option>
+                </select>
+              </div>
+              <div class="field"><span class="field-label">Value</span><div class="fo" id="o_profitval">$0.00</div></div>
+            </div>
+          </div>
+        </div>
+
+        <p class="calc-note">This calculator provides a rough estimate for planning purposes only and does not constitute financial, legal, or investment advice. Actual rehab costs, financing terms, and market value can vary. Talk to Simone for a detailed opinion on any specific property.</p>
+
+        <div class="calc-sec" id="flip-cta-sec">
+          <div class="calc-sec-body">
+            <input type="text" class="hp-field" id="flip_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <button type="button" class="btn-sub" id="flip-calc-btn" onclick="calculateDeal(this)">Calculate Deal</button>
+          </div>
+        </div>
+
+        <div class="calc-sec" id="flip-email-sec" style="display:none">
+          <div class="calc-sec-body">
+            <button type="button" class="btn-outline" id="flip-email-toggle-btn" onclick="toggleEmailForm()">Email Me This Deal Calculation</button>
+            <div id="flip-email-form" style="display:none;margin-top:20px">
+              <div class="field"><span class="field-label">Email</span><input class="fi" id="flip_email_email" required type="email" placeholder="you@email.com" autocomplete="email" inputmode="email"></div>
+              <div class="frow">
+                <div class="field"><span class="field-label">Full Name (Optional)</span><input class="fi" id="flip_email_name" type="text" placeholder="First and last name" autocomplete="name"></div>
+                <div class="field"><span class="field-label">Phone (Optional)</span><input class="fi" id="flip_email_phone" type="tel" placeholder="(310) 000-0000" autocomplete="tel" inputmode="tel"></div>
+              </div>
+              <div class="consent-note">By submitting, you agree to receive calls and text messages from Simone Marzullo regarding your inquiry. Message and data rates may apply. See our <a href="privacy.html">Privacy Policy</a>.</div>
+              <button type="button" class="btn-sub" id="flip-email-submit-btn" style="margin-top:16px" onclick="submitEmailDeal(this)">Send My Deal Analysis</button>
+            </div>
+            <div id="flip-email-success" class="success-msg">
+              <div class="s-icon">✓</div>
+              <div class="s-title">Got It!</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUMMARY -->
+      <div class="calc-summary">
+        <div class="calc-summary-hero">
+          <span class="label label-red">Estimated Buyer Investment</span>
+          <div class="calc-summary-hero-val" id="o_buyerinv">$0.00</div>
+          <div class="calc-summary-hero-note">Suggested purchase-price ceiling, after rehab, financing, selling costs &amp; target profit.</div>
+        </div>
+        <div class="calc-stat-grid">
+          <div class="stat-block"><div class="stat-val" id="o_roi">0%</div><div class="stat-lbl">Return on Investment</div></div>
+          <div class="stat-block"><div class="stat-val" id="o_renocost">$0</div><div class="stat-lbl">Renovation Cost</div></div>
+          <div class="stat-block"><div class="stat-val" id="o_dp">$0</div><div class="stat-lbl">Down Payment</div></div>
+          <div class="stat-block"><div class="stat-val" id="o_hmloan">$0</div><div class="stat-lbl">Hard Money Loan</div></div>
+        </div>
+        <div class="calc-summary-cta">
+          <a href="index.html#contact">Discuss This Deal With Simone →</a>
+          <p>Have a property in mind? I work with flippers and builders across Los Angeles.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="f-name">Simone Marzullo</div>
+      <div class="f-line">REALTOR® | DRE# 02174253</div>
+      <div class="f-line">310-696-6596</div>
+      <div class="f-line">Simone@SimoneMarzullo.com</div>
+    </div>
+    <div>
+      <img src="assets/agency-logo.png" alt="The Agency" style="height:28px;margin-bottom:8px" onerror="this.style.display='none';document.getElementById('f-agency-text').style.display='block'">
+      <div class="f-agency-name" id="f-agency-text" style="display:none">The Agency</div>
+      <div class="f-line">DRE# 01904054</div>
+      <div class="f-line">331 Foothill Rd. #100</div>
+      <div class="f-line">Beverly Hills, CA 90210</div>
+    </div>
+    <div class="f-legal">
+      <div class="f-eq">⌂</div>
+      <div class="f-copy">Equal Housing Opportunity<br>© 2026 Simone Marzullo. All rights reserved.<br>Information deemed reliable but not guaranteed.<br>CA DRE# 02174253</div>
+      <div class="f-copy" style="margin-top:10px"><a href="privacy.html" style="color:var(--g5);text-decoration:underline">Privacy Policy</a></div>
+    </div>
+  </div>
+</footer>
+
+<script>
+document.body.style.overflow = 'hidden';
+
+function toggleMobileNav() {
+  const menu = document.getElementById('nav-mobile');
+  const btn = document.querySelector('.nav-toggle');
+  const willOpen = !menu.classList.contains('on');
+  menu.classList.toggle('on', willOpen);
+  btn.setAttribute('aria-expanded', String(willOpen));
+}
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768) {
+    document.getElementById('nav-mobile').classList.remove('on');
+    document.querySelector('.nav-toggle').setAttribute('aria-expanded', 'false');
+  }
+});
+
+function n(id) {
+  const el = document.getElementById(id);
+  const v = parseFloat(el.value);
+  return isNaN(v) ? 0 : v;
+}
+function money(v) {
+  if (!isFinite(v)) v = 0;
+  return v.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function moneyRound(v) {
+  if (!isFinite(v)) v = 0;
+  return v.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+function set(id, text) { document.getElementById(id).textContent = text; }
+
+let calcState = {};
+
+function recalc() {
+  const arv = n('c_arv');
+  const sqft = n('c_sqft');
+  const arvSqft = sqft > 0 ? arv / sqft : 0;
+  set('o_arvsqft', money(arvSqft));
+
+  const perSqft = n('c_rehabtype');
+  set('o_persqft', money(perSqft));
+  const rehabEst = sqft * perSqft;
+  set('o_rehabest', money(rehabEst));
+
+  const neighborhoodPct = n('c_neighborhood');
+  const rehabTotal = rehabEst * (neighborhoodPct / 100);
+  set('o_rehabtotal', money(rehabTotal));
+
+  const aduEst = n('c_adutype');
+  set('o_aduest', money(aduEst));
+
+  const sellVal = arv * 0.025, buyVal = arv * 0.025, esctVal = arv * 0.01;
+  set('o_sellval', money(sellVal));
+  set('o_buyval', money(buyVal));
+  set('o_esctval', money(esctVal));
+  const sellingCosts = sellVal + buyVal + esctVal;
+
+  const profitPct = n('c_profitpct');
+  const profitVal = arv * profitPct / 100;
+  set('o_profitval', money(profitVal));
+
+  const lengthFactor = n('c_length');
+  set('o_cashfactor', String(lengthFactor));
+  set('o_hmfactor', String(lengthFactor));
+
+  const cashCarry = (((arv * 0.01) + 0.085) / 12) * lengthFactor;
+  const hmCarry = (((arv * 0.7) * 0.095) / 12) * lengthFactor;
+  set('o_cashcarry', money(cashCarry));
+  set('o_hmcarry', money(hmCarry));
+
+  const buyerInvestment = arv - (rehabTotal + aduEst + sellVal + buyVal + esctVal + profitVal) - hmCarry;
+  const downPayment = buyerInvestment * 0.15;
+  const hardMoneyLoan = buyerInvestment - downPayment;
+  const roiBasis = rehabTotal + downPayment + hmCarry;
+  const roi = roiBasis > 0 ? (profitVal / roiBasis) * 100 : 0;
+
+  set('o_buyerinv', money(buyerInvestment));
+  set('o_roi', roi.toFixed(0) + '%');
+  set('o_renocost', moneyRound(rehabTotal));
+  set('o_dp', moneyRound(downPayment));
+  set('o_hmloan', moneyRound(hardMoneyLoan));
+
+  calcState = {
+    arv, sqft, arvSqft, rehabEst, rehabTotal, aduEst,
+    sellVal, buyVal, esctVal, profitPct, profitVal,
+    cashCarry, hmCarry, buyerInvestment, roi, downPayment, hardMoneyLoan,
+  };
+}
+
+document.querySelectorAll('#calc input[id^="c_"], #calc select[id^="c_"]').forEach(el => {
+  el.addEventListener('input', recalc);
+  el.addEventListener('change', recalc);
+});
+recalc();
+
+/* ---------- Deal lead capture ---------- */
+const API_ENDPOINT = '/api/submit-lead';
+let flipLeadId = null;
+let flipAddress = '';
+
+function val(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+function selectedLabel(id) {
+  const el = document.getElementById(id);
+  return el && el.selectedOptions.length ? el.selectedOptions[0].textContent.trim() : '';
+}
+function requireValid(ids) {
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el && !el.checkValidity()) {
+      el.reportValidity();
+      el.focus();
+      return false;
+    }
+  }
+  return true;
+}
+function buildFlipPayload(extra) {
+  const s = calcState;
+  return Object.assign({
+    formType: 'flip',
+    leadId: flipLeadId,
+    address: flipAddress,
+    arv: money(s.arv || 0),
+    sqft: String(s.sqft || 0),
+    arvSqft: money(s.arvSqft || 0),
+    rehabType: selectedLabel('c_rehabtype'),
+    rehabEstimate: money(s.rehabEst || 0),
+    neighborhood: selectedLabel('c_neighborhood'),
+    rehabTotal: money(s.rehabTotal || 0),
+    aduType: selectedLabel('c_adutype'),
+    aduEstimate: money(s.aduEst || 0),
+    lengthOfProject: selectedLabel('c_length'),
+    cashCarry: money(s.cashCarry || 0),
+    hardMoneyCarry: money(s.hmCarry || 0),
+    listingAgent: money(s.sellVal || 0),
+    buyingAgent: money(s.buyVal || 0),
+    escrow: money(s.esctVal || 0),
+    profitPct: (s.profitPct || 0) + '%',
+    profitValue: money(s.profitVal || 0),
+    buyerInvestment: money(s.buyerInvestment || 0),
+    roi: (s.roi || 0).toFixed(0) + '%',
+    renovationCost: money(s.rehabTotal || 0),
+    downPayment: money(s.downPayment || 0),
+    hardMoneyLoan: money(s.hardMoneyLoan || 0),
+    hp: val('flip_hp'),
+  }, extra);
+}
+
+function closeGate() {
+  document.getElementById('calc-gate').style.display = 'none';
+  document.getElementById('calc-grid').classList.remove('calc-locked');
+  document.body.style.overflow = '';
+  if (flipAddress) {
+    const banner = document.getElementById('calc-address-banner');
+    banner.textContent = 'Analyzing: ' + flipAddress;
+    banner.style.display = 'block';
+  }
+}
+
+function unlockCalculator(btn) {
+  if (!requireValid(['c_gate_address'])) return;
+  flipAddress = val('c_gate_address');
+  const isBot = !!val('flip_gate_hp');
+  closeGate();
+  if (isBot) return;
+  // Fire-and-forget: send the lead the moment the address is entered,
+  // same pattern as the address-step early capture on the Sell/Valuation
+  // forms in index.html. Don't block unlocking the calculator on this.
+  fetch(API_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ formType: 'flip', early: true, address: flipAddress }),
+  }).then(res => res.ok ? res.json() : null).then(result => {
+    if (result && result.leadId) flipLeadId = result.leadId;
+  }).catch(() => { /* best effort */ });
+}
+
+async function calculateDeal(btn) {
+  if (val('flip_hp')) {
+    document.getElementById('flip-email-sec').style.display = 'block';
+    return;
+  }
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildFlipPayload({ early: true })),
+    });
+    if (res.ok) {
+      const result = await res.json();
+      if (result && result.leadId) flipLeadId = result.leadId;
+    }
+  } catch (e) { /* best effort */ }
+  btn.disabled = false;
+  btn.textContent = 'Deal Calculated ✓ — Recalculate';
+  document.getElementById('flip-email-sec').style.display = 'block';
+}
+
+function toggleEmailForm() {
+  const form = document.getElementById('flip-email-form');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function submitEmailDeal(btn) {
+  if (!requireValid(['flip_email_email'])) return;
+  if (val('flip_hp')) {
+    document.getElementById('flip-email-form').style.display = 'none';
+    document.getElementById('flip-email-success').style.display = 'block';
+    return;
+  }
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  const sec = document.getElementById('flip-email-sec');
+  const existingErr = sec.querySelector('.form-error');
+  if (existingErr) existingErr.remove();
+
+  const payload = buildFlipPayload({
+    wantsEmail: true,
+    email: val('flip_email_email'),
+    name: val('flip_email_name'),
+    phone: val('flip_email_phone'),
+  });
+
+  try {
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Request failed with status ' + res.status);
+    document.getElementById('flip-email-toggle-btn').style.display = 'none';
+    document.getElementById('flip-email-form').style.display = 'none';
+    document.getElementById('flip-email-success').style.display = 'block';
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    const errEl = document.createElement('div');
+    errEl.className = 'form-error';
+    errEl.textContent = 'Something went wrong sending your request. Please call/text 310-696-6596 or email Simone@SimoneMarzullo.com directly.';
+    sec.appendChild(errEl);
+  }
+}
+</script>
+</body>
+</html>

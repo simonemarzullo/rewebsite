@@ -95,6 +95,7 @@ input,textarea,select{font-family:var(--sans)}
 .stage-back{display:inline-flex;align-items:center;gap:8px;font-size:.67rem;letter-spacing:.15em;text-transform:uppercase;color:var(--g5);font-weight:500;margin-bottom:36px;transition:color .2s}
 .stage-back:hover{color:var(--white)}
 .choice-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:1100px;margin:0 auto}
+.choice-grid-2{grid-template-columns:repeat(2,1fr);max-width:820px}
 .choice-btn{background:var(--black);border:1px solid var(--g3);padding:36px 28px;text-align:left;display:flex;flex-direction:column;gap:16px;min-height:190px;transition:border-color .2s,background .2s,transform .15s;width:100%}
 .choice-btn:hover{border-color:var(--red);background:rgba(200,16,46,.06);transform:translateY(-2px)}
 .choice-btn:active{transform:translateY(0)}
@@ -237,6 +238,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
     <li><a href="#action" onclick="showStageAndScroll(event,'stage-valuation-form')">Home Value</a></li>
     <li><a href="#action" onclick="showStageAndScroll(event,'stage-sell-menu')">Sellers</a></li>
     <li><a href="#action" onclick="showStageAndScroll(event,'stage-buy-menu')">Buyers</a></li>
+    <li><a href="flip-calculator.html">Flip Calculator</a></li>
     <li><a href="#about">About</a></li>
     <li><a href="#contact">Contact</a></li>
   </ul>
@@ -249,6 +251,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   <a href="#action" onclick="closeMobileNavAndGo(event,'stage-valuation-form')">Home Value</a>
   <a href="#action" onclick="closeMobileNavAndGo(event,'stage-sell-menu')">Sellers</a>
   <a href="#action" onclick="closeMobileNavAndGo(event,'stage-buy-menu')">Buyers</a>
+  <a href="flip-calculator.html">Flip Calculator</a>
   <a href="#about" onclick="closeMobileNav()">About</a>
   <a href="#contact" onclick="closeMobileNav()">Contact</a>
   <a href="#action" class="nav-cta" onclick="closeMobileNavAndGo(event,'stage-home')">Get Started</a>
@@ -292,20 +295,25 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
         <h2 class="action-title">Let's Get Started</h2>
         <p class="action-sub">Choose an option below — it only takes a minute.</p>
       </div>
-      <div class="choice-grid">
+      <div class="choice-grid choice-grid-2">
         <button type="button" class="choice-btn" onclick="showStage('stage-sell-menu')">
-          <div class="choice-title">I Want to Sell</div>
+          <div class="choice-title">I'm a Seller</div>
           <div class="choice-desc">Get expert guidance to list, sell privately, or receive a cash offer.</div>
           <span class="choice-arrow">Continue →</span>
         </button>
         <button type="button" class="choice-btn" onclick="showStage('stage-buy-menu')">
-          <div class="choice-title">I Want to Buy</div>
+          <div class="choice-title">I'm a Buyer</div>
           <div class="choice-desc">Find your next home, an income property, or your next project.</div>
           <span class="choice-arrow">Continue →</span>
         </button>
         <button type="button" class="choice-btn" onclick="showStage('stage-valuation-form')">
           <div class="choice-title">Home Valuation</div>
           <div class="choice-desc">Get a free, no-obligation estimate of your property's value.</div>
+          <span class="choice-arrow">Continue →</span>
+        </button>
+        <button type="button" class="choice-btn" onclick="showStage('stage-investor-menu')">
+          <div class="choice-title">For Investors</div>
+          <div class="choice-desc">Get off-market opportunities matched to your criteria, or run your numbers with the flip calculator.</div>
           <span class="choice-arrow">Continue →</span>
         </button>
       </div>
@@ -551,6 +559,95 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
       </div>
     </div>
 
+    <!-- STAGE: INVESTOR MENU -->
+    <div class="stage" id="stage-investor-menu">
+      <button type="button" class="stage-back" onclick="showStage('stage-home')">← Back</button>
+      <div class="action-head">
+        <span class="label label-red">I'm an Investor</span>
+        <h2 class="action-title">How Can I Help?</h2>
+      </div>
+      <div class="choice-grid choice-grid-2">
+        <button type="button" class="choice-btn" onclick="openInvestorForm()">
+          <div class="choice-title">Submit My Investment Criteria to Receive Off-Market Opportunities</div>
+          <div class="choice-desc">Tell me what you're looking for and I'll reach out personally when something matches — before it hits the market.</div>
+          <span class="choice-arrow">Continue →</span>
+        </button>
+        <a href="flip-calculator.html" class="choice-btn">
+          <div class="choice-title">Access Flip Calculator</div>
+          <div class="choice-desc">Run ARV, rehab cost, financing, and ROI on your next flip or build.</div>
+          <span class="choice-arrow">Open Calculator →</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- STAGE: INVESTOR FORM -->
+    <div class="stage" id="stage-investor-form">
+      <button type="button" class="stage-back" onclick="showStage('stage-investor-menu')">← Back</button>
+      <div class="form-shell">
+        <div class="form-card" id="investor-card">
+          <div class="step-dots"><div class="step-dot on" id="ivd1"></div><div class="step-dot" id="ivd2"></div></div>
+
+          <div id="ivs1">
+            <div class="form-title">Your Investment Criteria</div>
+            <div class="form-sub">Only your investor type is required — everything else helps me match you faster.</div>
+            <div class="field"><span class="field-label">I Am A…</span>
+              <div class="opts2" id="iv-type-opts">
+                <button type="button" class="opt" onclick="pick(this,'iv-type-opts','investor_type')"><div class="odot"></div>I'm a Flipper</button>
+                <button type="button" class="opt" onclick="pick(this,'iv-type-opts','investor_type')"><div class="odot"></div>I'm a Builder</button>
+              </div>
+              <input type="hidden" id="investor_type">
+            </div>
+            <div class="frow" style="margin-top:16px">
+              <div class="field"><span class="field-label">Property Types of Interest</span>
+                <select class="fs" id="investor_propertyType"><option value="">Select… (optional)</option><option>Single Family Home</option><option>Multi-Family</option><option>Land / Dev Site</option><option>Mixed-Use</option><option>Open to Anything</option></select>
+              </div>
+              <div class="field"><span class="field-label">Budget Per Deal</span>
+                <select class="fs" id="investor_budget"><option value="">Select… (optional)</option><option>Under $500K</option><option>$500K – $1M</option><option>$1M – $3M</option><option>$3M – $7M</option><option>$7M+</option><option>Flexible / Varies</option></select>
+              </div>
+            </div>
+            <div class="field"><span class="field-label">Preferred Areas / Neighborhoods (Optional)</span><input class="fi" id="investor_areas" type="text" placeholder="e.g. Beverly Hills, Silver Lake, Malibu…"></div>
+            <div class="frow">
+              <div class="field"><span class="field-label">Deals Per Year</span>
+                <select class="fs" id="investor_volume"><option value="">Select… (optional)</option><option>1 – 2</option><option>3 – 5</option><option>6 – 10</option><option>10+</option></select>
+              </div>
+              <div class="field"><span class="field-label">Financing Type</span>
+                <select class="fs" id="investor_financing"><option value="">Select… (optional)</option><option>Cash</option><option>Hard Money</option><option>Conventional Loan</option><option>Mix of Financing</option></select>
+              </div>
+            </div>
+            <div class="field" style="margin-top:16px"><span class="field-label">Timeline (Optional)</span>
+              <div class="opts3" id="iv-timeline-opts">
+                <button type="button" class="opt" onclick="pick(this,'iv-timeline-opts','investor_timeline')"><div class="odot"></div>Ready Now</button>
+                <button type="button" class="opt" onclick="pick(this,'iv-timeline-opts','investor_timeline')"><div class="odot"></div>3 – 6 Months</button>
+                <button type="button" class="opt" onclick="pick(this,'iv-timeline-opts','investor_timeline')"><div class="odot"></div>Ongoing</button>
+              </div>
+              <input type="hidden" id="investor_timeline">
+            </div>
+            <div class="field" style="margin-top:16px"><span class="field-label">Additional Criteria (Optional)</span><textarea class="ft" id="investor_notes" placeholder="Anything else — unit count, condition, off-market only, etc…" style="min-height:80px"></textarea></div>
+            <div class="form-nav"><span></span><button class="btn-next" id="iv-next-btn" onclick="investorCriteriaNext(this)">Next</button></div>
+          </div>
+
+          <div id="ivs2" style="display:none">
+            <div class="form-title">Let's Connect</div>
+            <div class="form-sub">I'll reach out personally when something matches your criteria.</div>
+            <div class="field"><span class="field-label">Full Name</span><input class="fi" id="investor_name" required type="text" placeholder="First and last name" autocomplete="name"></div>
+            <div class="frow">
+              <div class="field"><span class="field-label">Email</span><input class="fi" id="investor_email" required type="email" placeholder="you@email.com" autocomplete="email" inputmode="email"></div>
+              <div class="field"><span class="field-label">Phone (Optional)</span><input class="fi" id="investor_phone" type="tel" placeholder="(310) 000-0000" autocomplete="tel" inputmode="tel"></div>
+            </div>
+            <input type="text" class="hp-field" id="investor_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <div class="consent-note">By submitting, you agree to receive calls and text messages from Simone Marzullo regarding your inquiry. Message and data rates may apply. See our <a href="privacy.html">Privacy Policy</a>.</div>
+            <div class="form-nav"><button class="btn-back" onclick="go('ivs',1,2,'ivd')">← Back</button><button class="btn-sub" onclick="submitInvestor(this)">Submit My Criteria</button></div>
+          </div>
+
+          <div id="investorsucc" class="success-msg">
+            <div class="s-icon">✓</div>
+            <div class="s-title">Criteria Received</div>
+            <div class="s-sub">Thank you! I'll reach out personally when an off-market opportunity matches what you're looking for.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 
@@ -726,6 +823,10 @@ function openBuyForm(intent) {
   go('bs', 1, 2, 'bd');
   showStage('stage-buy-form');
 }
+function openInvestorForm() {
+  go('ivs', 1, 2, 'ivd');
+  showStage('stage-investor-form');
+}
 
 /* ---------- Mobile nav ---------- */
 function toggleMobileNav() {
@@ -891,6 +992,33 @@ function buildBuyPayload() {
   };
 }
 
+function investorCriteriaNext(btn) {
+  if (!val('investor_type')) {
+    const group = document.getElementById('iv-type-opts');
+    group.style.outline = '1px solid var(--red)';
+    group.style.outlineOffset = '6px';
+    setTimeout(() => { group.style.outline = ''; }, 1600);
+    return;
+  }
+  go('ivs', 2, 2, 'ivd');
+}
+function submitInvestor(btn) {
+  if (!requireValid(['investor_name', 'investor_email'])) return;
+  submitLead(buildInvestorPayload(), { honeypotId: 'investor_hp', cardId: 'investor-card', succId: 'investorsucc', button: btn, formKey: 'investor' });
+}
+function buildInvestorPayload() {
+  return {
+    formType: 'investor',
+    investorType: val('investor_type'),
+    propertyType: val('investor_propertyType'), budget: val('investor_budget'),
+    areas: val('investor_areas'), dealsPerYear: val('investor_volume'),
+    financing: val('investor_financing'), timeline: val('investor_timeline'),
+    notes: val('investor_notes'),
+    name: val('investor_name'), email: val('investor_email'), phone: val('investor_phone'),
+    hp: val('investor_hp')
+  };
+}
+
 function submitContact(btn) {
   if (!requireValid(['contact_name', 'contact_email', 'contact_phone'])) return;
   submitLead(buildContactPayload(), { honeypotId: 'contact_hp', cardId: 'con-card', succId: 'consucc', button: btn, formKey: 'contact' });
@@ -911,7 +1039,8 @@ const FORM_BUILDERS = {
   valuation: buildValuationPayload,
   sell: buildSellPayload,
   buy: buildBuyPayload,
-  contact: buildContactPayload
+  contact: buildContactPayload,
+  investor: buildInvestorPayload
 };
 const submittedForms = new Set();
 const abandonReported = new Set();

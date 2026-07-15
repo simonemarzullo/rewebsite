@@ -56,6 +56,30 @@ FIELD_LABELS = {
     "contact": [
         ("Full Name", "name"), ("Email", "email"), ("Phone", "phone"), ("Message", "message"),
     ],
+    "flip": [
+        ("Property Address", "address"),
+        ("ARV", "arv"), ("Square Footage", "sqft"), ("ARV / SQFT", "arvSqft"),
+        ("Rehab Type", "rehabType"), ("Rehab Estimate", "rehabEstimate"),
+        ("Neighborhood", "neighborhood"), ("Total Rehab Estimate", "rehabTotal"),
+        ("ADU / Pool", "aduType"), ("ADU Estimate", "aduEstimate"),
+        ("Length of Project", "lengthOfProject"),
+        ("Cash Carry Cost", "cashCarry"), ("Hard Money Carry Cost", "hardMoneyCarry"),
+        ("Listing Agent Commission", "listingAgent"), ("Buying Agent Commission", "buyingAgent"),
+        ("Escrow, Title & Transfer", "escrow"),
+        ("Minimum Profit %", "profitPct"), ("Profit Value", "profitValue"),
+        ("Estimated Buyer Investment", "buyerInvestment"), ("Return on Investment", "roi"),
+        ("Renovation Cost", "renovationCost"), ("Down Payment", "downPayment"),
+        ("Hard Money Loan", "hardMoneyLoan"),
+        ("Full Name", "name"), ("Email", "email"), ("Phone", "phone"),
+    ],
+    "investor": [
+        ("Investor Type", "investorType"),
+        ("Property Types of Interest", "propertyType"), ("Budget Per Deal", "budget"),
+        ("Preferred Areas", "areas"), ("Deals Per Year", "dealsPerYear"),
+        ("Financing Type", "financing"), ("Timeline", "timeline"),
+        ("Additional Criteria", "notes"),
+        ("Full Name", "name"), ("Email", "email"), ("Phone", "phone"),
+    ],
 }
 
 
@@ -79,6 +103,10 @@ def resolve_form_meta(form_type, data):
         return "Property Inquiry", cfg["tag"], cfg["title"], (cfg["desc"] or None)
     if form_type == "contact":
         return "General Inquiry", "Contact Form Lead", "Contact Form Message", None
+    if form_type == "flip":
+        return "Property Inquiry", "Flip-Website-Lead", "Flip Calculator Deal", None
+    if form_type == "investor":
+        return "Property Inquiry", "New-Investor-Website", "Investor Criteria Submission", None
     return None, "Website Lead", f"Website Form ({form_type or 'unknown'})", None
 
 
@@ -131,7 +159,7 @@ def build_person(data, tag, extra_tags=None, person_id=None):
 def build_property(form_type, data):
     # Buy forms only collect the buyer's *current* address, not a target
     # property, so there is nothing to attach as a FollowUpBoss property.
-    if form_type not in ("valuation", "sell"):
+    if form_type not in ("valuation", "sell", "flip"):
         return None
     address = clean(data.get("address"))
     if not address:
@@ -260,13 +288,18 @@ class handler(BaseHTTPRequestHandler):
         # Early capture: Sell/Valuation forms send this the moment the
         # address step is completed, well before name/email/phone exist, so
         # Simone gets the lead in FollowUpBoss immediately. The returned
-        # leadId lets the later (real) submission update this exact record
-        # instead of creating a second one.
+        # leadId lets a later call (early or not) update this exact record
+        # instead of creating a second one -- the flip calculator in
+        # particular fires several early calls in a row (address gate, then
+        # Calculate Deal) that all need to land on the same person.
         if early:
             if event_type is None:
                 self._send_json(400, {"ok": False, "error": "Unknown form type"})
                 return
-            result = push_to_followupboss(form_type, event_type, tag, data, message_body)
+            result = push_to_followupboss(
+                form_type, event_type, tag, data, message_body,
+                person_id=get_lead_id(data),
+            )
             if result:
                 self._send_json(200, {"ok": True, "leadId": result.get("id")})
             else:
@@ -308,7 +341,11 @@ class handler(BaseHTTPRequestHandler):
             return
 
         lead_name = clean(data.get("name")) or "Website Visitor"
-        result = push_to_followupboss(form_type, event_type, tag, data, message_body, person_id=get_lead_id(data))
+        extra_tags = ["Deal Email Requested"] if bool(data.get("wantsEmail")) else None
+        result = push_to_followupboss(
+            form_type, event_type, tag, data, message_body,
+            extra_tags=extra_tags, person_id=get_lead_id(data),
+        )
         if result:
             send_notification_email(f"New Lead: {title} - {lead_name}", message_body)
             self._send_json(200, {"ok": True})
