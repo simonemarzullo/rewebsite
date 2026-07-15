@@ -81,9 +81,6 @@ input,textarea,select{font-family:var(--sans)}
 .calc-summary-hero-note{font-size:.68rem;color:var(--g5);font-weight:300;margin-top:8px;line-height:1.6}
 .calc-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--g3)}
 .calc-stat-grid .stat-block{padding:20px 16px}
-.calc-summary-cta{padding:22px 26px}
-.calc-summary-cta a{display:flex;align-items:center;justify-content:center;background:var(--red);color:var(--white);padding:13px 20px;font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;font-weight:500;transition:background .2s}
-.calc-summary-cta p{font-size:.66rem;color:var(--g5);font-weight:300;line-height:1.6;margin-top:12px;text-align:center}
 
 /* FORM SECTION CARDS */
 .calc-sec{background:var(--g2);border:1px solid var(--g3)}
@@ -160,7 +157,6 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 .nav-links a:hover{color:var(--white)}
 .nav-cta:hover{background:var(--red-h)}
 .nav-mobile a.nav-cta:hover{background:var(--red-h)}
-.calc-summary-cta a:hover{background:var(--red-h)}
 .btn-sub:hover{background:var(--red-h)}
 .btn-outline:hover{background:var(--g7)}
 .btn-reset:hover{color:var(--white)}
@@ -354,7 +350,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 
         <div class="calc-sec" id="flip-email-sec" style="display:none">
           <div class="calc-sec-body">
-            <button type="button" class="btn-outline" id="flip-email-toggle-btn" onclick="toggleEmailForm()">Email Me This Deal Calculation</button>
+            <button type="button" class="btn-outline" id="flip-email-toggle-btn" onclick="toggleEmailForm()">Email Me This Deal Breakdown</button>
             <div id="flip-email-form" style="display:none;margin-top:20px">
               <div class="field"><span class="field-label">Email</span><input class="fi" id="flip_email_email" required type="email" placeholder="you@email.com" autocomplete="email" inputmode="email"></div>
               <div class="frow">
@@ -368,6 +364,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               <div class="s-icon">✓</div>
               <div class="s-title">Got It!</div>
               <button type="button" class="btn-sub" style="margin-top:16px" onclick="calculateNewDeal()">Calculate New Deal</button>
+              <a href="index.html#contact" class="btn-outline" style="display:flex;align-items:center;justify-content:center;margin-top:12px">Discuss This Deal With Simone →</a>
+              <p class="s-sub" style="margin-top:12px">Have a property in mind? I work with flippers and builders across Los Angeles.</p>
             </div>
           </div>
         </div>
@@ -385,10 +383,6 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           <div class="stat-block"><div class="stat-val" id="o_renocost">$0</div><div class="stat-lbl">Renovation Cost</div></div>
           <div class="stat-block"><div class="stat-val" id="o_dp">$0</div><div class="stat-lbl">Down Payment</div></div>
           <div class="stat-block"><div class="stat-val" id="o_hmloan">$0</div><div class="stat-lbl">Hard Money Loan</div></div>
-        </div>
-        <div class="calc-summary-cta">
-          <a href="index.html#contact">Discuss This Deal With Simone →</a>
-          <p>Have a property in mind? I work with flippers and builders across Los Angeles.</p>
         </div>
       </div>
 
