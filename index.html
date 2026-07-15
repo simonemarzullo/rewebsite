@@ -178,6 +178,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 .f-legal{text-align:right}
 .f-eq{font-size:1.1rem;opacity:.25;margin-bottom:8px}
 .f-copy{font-size:.6rem;color:var(--g5);font-weight:300;line-height:1.9}
+.f-disclaimer{max-width:1200px;margin:32px auto 0;padding-top:24px;border-top:1px solid var(--g3);font-size:.6rem;color:var(--g5);font-weight:300;line-height:1.9}
 
 /* RESPONSIVE */
 @media(max-width:1024px){
@@ -485,6 +486,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
             <div class="field"><span class="field-label">Anything else? (Optional)</span><textarea class="ft" id="sell_notes" placeholder="Any additional context about your property or situation…" style="min-height:80px"></textarea></div>
             <input type="text" class="hp-field" id="sell_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
             <div class="consent-note">By submitting, you agree to receive calls and text messages from Simone Marzullo regarding your inquiry. Message and data rates may apply. See our <a href="privacy.html">Privacy Policy</a>.</div>
+            <div class="consent-note" id="cash-offer-disclaimer" style="display:none">Neither Simone Marzullo nor The Agency purchases properties directly. Any cash offers are made solely by independent third-party investors or cash buyers within our network and are subject to each purchaser's independent evaluation, due diligence, and terms. Not all properties will qualify for a cash offer, and no offer, purchase price, or closing timeline is guaranteed. Any advertised response time, including "within 48 hours," applies only after sufficient property information has been received and may vary based on the property's characteristics and market conditions. There is no obligation to accept any offer or to list your property for sale.</div>
             <div class="form-nav"><button class="btn-back" onclick="go('ss',2,3,'sd')">← Back</button><button class="btn-sub" id="sell-submit-btn" onclick="submitSell(this)">Request a Consultation</button></div>
           </div>
 
@@ -771,6 +773,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
       <div class="f-copy" style="margin-top:10px"><a href="privacy.html" style="color:var(--g5);text-decoration:underline">Privacy Policy</a></div>
     </div>
   </div>
+  <div class="f-disclaimer">Simone Marzullo | REALTOR® | DRE#02174253 is a real estate salesperson's licensed by the state of California affiliated with The Agency. The Agency is a real estate broker licensed by the state of California and abides by equal housing opportunity laws. All material presented herein is intended for informational purposes only. Information is compiled from sources deemed reliable but is subject to errors, omissions, changes in price, condition, sale, or withdrawal without notice. No statement is made as to accuracy of any description. All measurements and square footages are approximate. This is not intended to solicit property already listed. Nothing herein shall be construed as legal, accounting or other professional advice outside the realm of real estate brokerage.</div>
 </footer>
 
 <script>
@@ -869,6 +872,7 @@ function openSellForm(saleType) {
   document.getElementById('ss1-title').textContent = isCashOffer ? 'Get a Cash Offer' : 'Your Property Address';
   document.getElementById('ss3-title').textContent = isCashOffer ? 'Get a Cash Offer' : "Let's Connect";
   document.getElementById('sell-submit-btn').textContent = isCashOffer ? 'Submit Request' : 'Request a Consultation';
+  document.getElementById('cash-offer-disclaimer').style.display = isCashOffer ? 'block' : 'none';
   if (isCashOffer) {
     document.title = 'Get a Cash Offer | Simone Marzullo';
     if (window.location.pathname !== '/cashoffer') {
