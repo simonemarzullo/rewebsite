@@ -19,7 +19,6 @@
 html{scroll-behavior:smooth;font-size:16px}
 body{font-family:var(--sans);background:var(--black);color:var(--white);-webkit-font-smoothing:antialiased}
 a{color:var(--g6);text-decoration:underline;transition:color .2s}
-a:hover{color:var(--white)}
 .wrap{max-width:760px;margin:0 auto;padding:0 24px}
 
 #nav{position:sticky;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:72px;background:rgba(0,0,0,0.94);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,0.06)}
@@ -28,7 +27,6 @@ a:hover{color:var(--white)}
 .nav-name{font-family:var(--serif);font-size:1.1rem;font-weight:400;letter-spacing:.06em;color:var(--white);line-height:1}
 .nav-sub{font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;color:var(--g5)}
 .nav-back{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--g6);text-decoration:none}
-.nav-back:hover{color:var(--white)}
 
 main{padding:72px 0 96px}
 .label{font-size:.6875rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--red)}
@@ -47,6 +45,14 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:40px 24px;tex
 @media(max-width:640px){
   #nav{padding:0 20px}
   main{padding:48px 0 64px}
+}
+
+/* Hover-only effects -- gated so touch devices (which fire :hover on
+   tap and never clear it) don't get a permanently "stuck" highlighted
+   state after tapping/scrolling past an element. */
+@media(hover:hover){
+a:hover{color:var(--white)}
+.nav-back:hover{color:var(--white)}
 }
 </style>
 </head>

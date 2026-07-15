@@ -46,9 +46,7 @@ input,textarea,select{font-family:var(--sans)}
 .nav-sub{font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;color:var(--g5)}
 .nav-links{display:flex;align-items:center;gap:28px;list-style:none}
 .nav-links a{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--g6);transition:color .2s;background:none;border:none;cursor:pointer}
-.nav-links a:hover{color:var(--white)}
 .nav-cta{display:inline-flex;align-items:center;background:var(--red);color:var(--white);padding:10px 22px;font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;transition:background .2s}
-.nav-cta:hover{background:var(--red-h)}
 .nav-toggle{display:none;flex-direction:column;justify-content:center;gap:5px;width:32px;height:32px;padding:0}
 .nav-toggle span{display:block;width:22px;height:1.5px;background:var(--white);transition:transform .2s,opacity .2s}
 .nav-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
@@ -58,7 +56,6 @@ input,textarea,select{font-family:var(--sans)}
 @media(max-width:768px){.nav-mobile.on{display:flex}}
 .nav-mobile a{font-size:.95rem;letter-spacing:.04em;color:var(--g7);font-weight:400;padding:18px 4px;border-bottom:1px solid var(--g3);background:none;border-left:none;border-right:none;border-top:none;text-align:left;width:100%}
 .nav-mobile a.nav-cta{background:var(--red);color:var(--white);border-bottom:none;justify-content:center;margin-top:20px;padding:16px 22px}
-.nav-mobile a.nav-cta:hover{background:var(--red-h)}
 
 /* HERO */
 #hero{min-height:88vh;display:flex;align-items:center;position:relative;overflow:hidden;padding-top:72px;padding-bottom:64px}
@@ -78,7 +75,6 @@ input,textarea,select{font-family:var(--sans)}
 .hero-sub{font-size:.88rem;line-height:1.8;color:var(--g5);max-width:380px;font-weight:300;margin-bottom:44px}
 .hero-actions{display:flex;gap:16px;flex-wrap:wrap}
 .btn-primary{display:inline-flex;align-items:center;background:var(--red);color:var(--white);padding:14px 32px;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;transition:background .2s,transform .15s}
-.btn-primary:hover{background:var(--red-h);transform:translateY(-1px)}
 .hero-scroll{position:absolute;right:48px;bottom:80px;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:2}
 .hero-scroll span{font-size:.56rem;letter-spacing:.28em;text-transform:uppercase;color:var(--g5);writing-mode:vertical-rl}
 .scroll-bar{width:1px;height:48px;background:var(--g3);position:relative;overflow:hidden}
@@ -93,11 +89,9 @@ input,textarea,select{font-family:var(--sans)}
 .stage{display:none}
 .stage.on{display:block}
 .stage-back{display:inline-flex;align-items:center;gap:8px;font-size:.67rem;letter-spacing:.15em;text-transform:uppercase;color:var(--g5);font-weight:500;margin-bottom:36px;transition:color .2s}
-.stage-back:hover{color:var(--white)}
 .choice-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:1100px;margin:0 auto}
 .choice-grid-2{grid-template-columns:repeat(2,1fr);max-width:820px}
 .choice-btn{background:var(--black);border:1px solid var(--g3);padding:36px 28px;text-align:left;display:flex;flex-direction:column;gap:16px;min-height:190px;transition:border-color .2s,background .2s,transform .15s;width:100%}
-.choice-btn:hover{border-color:var(--red);background:rgba(200,16,46,.06);transform:translateY(-2px)}
 .choice-btn:active{transform:translateY(0)}
 .choice-title{font-family:var(--serif);font-size:1.35rem;font-weight:400;color:var(--white);line-height:1.2}
 .choice-desc{font-size:.78rem;color:var(--g5);line-height:1.65;font-weight:300}
@@ -130,18 +124,14 @@ input,textarea,select{font-family:var(--sans)}
 .opts2{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:4px}
 .opts3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-top:4px}
 .opt{display:flex;align-items:center;gap:10px;padding:13px 16px;background:var(--g1);border:1px solid var(--g3);color:var(--g6);font-size:.78rem;font-weight:300;cursor:pointer;transition:border-color .2s,color .2s,background .2s;text-align:left}
-.opt:hover{border-color:var(--g5);color:var(--white)}
 .opt.on{border-color:var(--red);color:var(--white);background:rgba(200,16,46,.07)}
 .odot{width:13px;height:13px;flex-shrink:0;border:1px solid currentColor;border-radius:50%;position:relative}
 .opt.on .odot::after{content:'';position:absolute;inset:3px;background:var(--red);border-radius:50%}
 .form-nav{display:flex;justify-content:space-between;align-items:center;margin-top:28px;padding-top:24px;border-top:1px solid var(--g3)}
 .btn-back{font-size:.67rem;letter-spacing:.15em;text-transform:uppercase;color:var(--g5);font-weight:500;transition:color .2s;background:none;border:none;cursor:pointer;padding:0}
-.btn-back:hover{color:var(--white)}
 .btn-next{background:var(--white);color:var(--black);padding:13px 32px;font-size:.67rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background .2s}
-.btn-next:hover{background:var(--g7)}
 .btn-next:disabled,.btn-sub:disabled{opacity:.55;cursor:default;transform:none!important}
 .btn-sub{background:var(--red);color:var(--white);padding:13px 32px;font-size:.67rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background .2s,transform .15s}
-.btn-sub:hover{background:var(--red-h);transform:translateY(-1px)}
 .success-msg{display:none;text-align:center;padding:40px 20px}
 .s-icon{font-size:2rem;margin-bottom:14px}
 .s-title{font-family:var(--serif);font-size:1.7rem;color:var(--white);margin-bottom:10px}
@@ -149,7 +139,6 @@ input,textarea,select{font-family:var(--sans)}
 .hp-field{position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;overflow:hidden}
 .consent-note{font-size:.68rem;line-height:1.6;color:var(--g5);font-weight:300;margin-top:14px}
 .consent-note a{color:var(--g6);text-decoration:underline;transition:color .2s}
-.consent-note a:hover{color:var(--white)}
 .form-error{margin-top:16px;padding:14px 16px;background:rgba(200,16,46,.08);border:1px solid var(--red);color:var(--g7);font-size:.78rem;line-height:1.6}
 
 /* ABOUT */
@@ -168,7 +157,6 @@ input,textarea,select{font-family:var(--sans)}
 .agency-stat .stat-val{font-size:2.1rem;margin-bottom:8px}
 .agency-stat .stat-lbl{line-height:1.5}
 .agency-link{display:inline-flex;align-items:center;font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--red);font-weight:500;transition:color .2s}
-.agency-link:hover{color:var(--white)}
 
 /* CONTACT */
 .contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start}
@@ -176,7 +164,6 @@ input,textarea,select{font-family:var(--sans)}
 .ci-label{font-size:.59rem;letter-spacing:.24em;text-transform:uppercase;color:var(--g5);font-weight:500;margin-bottom:7px}
 .ci-value{font-family:var(--serif);font-size:1.1rem;color:var(--white);font-weight:400;line-height:1.5}
 .ci-value a{transition:color .2s}
-.ci-value a:hover{color:var(--red)}
 .contact-signoff{display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:64px;padding-top:36px;border-top:1px solid var(--g3);text-align:center}
 .contact-signoff-photo{width:84px;height:84px;border-radius:50%;object-fit:cover;object-position:center top;border:1px solid var(--g3)}
 .contact-signoff-name{font-family:var(--serif);font-size:1rem;color:var(--white)}
@@ -220,6 +207,25 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 @media(prefers-reduced-motion:reduce){
   .scroll-bar::after{animation:none}
   *{transition-duration:0ms!important}
+}
+
+/* Hover-only effects -- gated so touch devices (which fire :hover on
+   tap and never clear it) don't get a permanently "stuck" highlighted
+   state after tapping/scrolling past an element. */
+@media(hover:hover){
+.nav-links a:hover{color:var(--white)}
+.nav-cta:hover{background:var(--red-h)}
+.nav-mobile a.nav-cta:hover{background:var(--red-h)}
+.btn-primary:hover{background:var(--red-h);transform:translateY(-1px)}
+.stage-back:hover{color:var(--white)}
+.choice-btn:hover{border-color:var(--red);background:rgba(200,16,46,.06);transform:translateY(-2px)}
+.opt:hover{border-color:var(--g5);color:var(--white)}
+.btn-back:hover{color:var(--white)}
+.btn-next:hover{background:var(--g7)}
+.btn-sub:hover{background:var(--red-h);transform:translateY(-1px)}
+.consent-note a:hover{color:var(--white)}
+.agency-link:hover{color:var(--white)}
+.ci-value a:hover{color:var(--red)}
 }
 </style>
 </head>

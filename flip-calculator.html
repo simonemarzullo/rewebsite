@@ -47,9 +47,8 @@ input,textarea,select{font-family:var(--sans)}
 .nav-sub{font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;color:var(--g5)}
 .nav-links{display:flex;align-items:center;gap:28px;list-style:none}
 .nav-links a{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--g6);transition:color .2s;background:none;border:none;cursor:pointer}
-.nav-links a:hover,.nav-links a.active{color:var(--white)}
+.nav-links a.active{color:var(--white)}
 .nav-cta{display:inline-flex;align-items:center;background:var(--red);color:var(--white);padding:10px 22px;font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;transition:background .2s}
-.nav-cta:hover{background:var(--red-h)}
 .nav-toggle{display:none;flex-direction:column;justify-content:center;gap:5px;width:32px;height:32px;padding:0}
 .nav-toggle span{display:block;width:22px;height:1.5px;background:var(--white);transition:transform .2s,opacity .2s}
 .nav-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
@@ -59,7 +58,6 @@ input,textarea,select{font-family:var(--sans)}
 @media(max-width:768px){.nav-mobile.on{display:flex}}
 .nav-mobile a{font-size:.95rem;letter-spacing:.04em;color:var(--g7);font-weight:400;padding:18px 4px;border-bottom:1px solid var(--g3);background:none;border-left:none;border-right:none;border-top:none;text-align:left;width:100%}
 .nav-mobile a.nav-cta{background:var(--red);color:var(--white);border-bottom:none;justify-content:center;margin-top:20px;padding:16px 22px}
-.nav-mobile a.nav-cta:hover{background:var(--red-h)}
 
 /* PAGE HEADER */
 #calc-hero{padding:150px 0 56px;background:linear-gradient(160deg,#0d0d0d 0%,#000 60%);border-bottom:1px solid var(--g3)}
@@ -85,7 +83,6 @@ input,textarea,select{font-family:var(--sans)}
 .calc-stat-grid .stat-block{padding:20px 16px}
 .calc-summary-cta{padding:22px 26px}
 .calc-summary-cta a{display:flex;align-items:center;justify-content:center;background:var(--red);color:var(--white);padding:13px 20px;font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;font-weight:500;transition:background .2s}
-.calc-summary-cta a:hover{background:var(--red-h)}
 .calc-summary-cta p{font-size:.66rem;color:var(--g5);font-weight:300;line-height:1.6;margin-top:12px;text-align:center}
 
 /* FORM SECTION CARDS */
@@ -105,15 +102,11 @@ input,textarea,select{font-family:var(--sans)}
 .field-hint{font-size:.66rem;color:var(--g5);font-weight:300;margin-top:2px;line-height:1.5}
 .calc-note{font-size:.72rem;color:var(--g5);font-weight:300;line-height:1.8;max-width:760px;margin-top:8px}
 .btn-sub{background:var(--red);color:var(--white);padding:14px 24px;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background .2s,transform .15s;width:100%}
-.btn-sub:hover{background:var(--red-h)}
 .btn-sub:disabled{opacity:.55;cursor:default;transform:none!important}
 .btn-outline{background:var(--white);color:var(--black);padding:14px 24px;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background .2s;width:100%}
-.btn-outline:hover{background:var(--g7)}
 .btn-reset{display:block;margin:14px auto 0;background:none;border:none;color:var(--g5);font-size:.66rem;letter-spacing:.15em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:color .2s;padding:6px}
-.btn-reset:hover{color:var(--white)}
 .consent-note{font-size:.68rem;line-height:1.6;color:var(--g5);font-weight:300;margin-top:14px}
 .consent-note a{color:var(--g6);text-decoration:underline;transition:color .2s}
-.consent-note a:hover{color:var(--white)}
 .form-error{margin-top:16px;padding:14px 16px;background:rgba(200,16,46,.08);border:1px solid var(--red);color:var(--g7);font-size:.78rem;line-height:1.6}
 .success-msg{display:none;text-align:center;padding:24px 4px}
 .s-icon{font-size:1.8rem;margin-bottom:10px}
@@ -125,7 +118,6 @@ input,textarea,select{font-family:var(--sans)}
 .calc-gate{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:24px}
 .calc-gate-card{position:relative;background:var(--g2);border:1px solid var(--g3);padding:40px 36px;max-width:440px;width:100%;text-align:center}
 .calc-gate-close{position:absolute;top:12px;right:12px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;line-height:1;color:var(--g5);background:none;border:none;cursor:pointer;transition:color .2s}
-.calc-gate-close:hover{color:var(--white)}
 .calc-gate-title{font-family:var(--serif);font-size:1.7rem;font-weight:400;color:var(--white);margin-top:12px;line-height:1.15}
 .calc-gate .field{text-align:left;margin-top:24px;margin-bottom:20px}
 .calc-locked{opacity:.4;pointer-events:none;user-select:none}
@@ -160,6 +152,21 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 .f-eq{font-size:1.1rem;opacity:.25;margin-bottom:8px}
 .f-copy{font-size:.6rem;color:var(--g5);font-weight:300;line-height:1.9}
 @media(max-width:1024px){.footer-inner{grid-template-columns:1fr}.f-legal{text-align:left}}
+
+/* Hover-only effects -- gated so touch devices (which fire :hover on
+   tap and never clear it) don't get a permanently "stuck" highlighted
+   state after tapping/scrolling past an element. */
+@media(hover:hover){
+.nav-links a:hover{color:var(--white)}
+.nav-cta:hover{background:var(--red-h)}
+.nav-mobile a.nav-cta:hover{background:var(--red-h)}
+.calc-summary-cta a:hover{background:var(--red-h)}
+.btn-sub:hover{background:var(--red-h)}
+.btn-outline:hover{background:var(--g7)}
+.btn-reset:hover{color:var(--white)}
+.consent-note a:hover{color:var(--white)}
+.calc-gate-close:hover{color:var(--white)}
+}
 </style>
 </head>
 <body>
