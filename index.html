@@ -261,10 +261,11 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 </nav>
 
 <div class="nav-mobile" id="nav-mobile">
+  <a href="#action" onclick="closeMobileNavAndGo(event,'stage-sell-menu')">I'm a Seller</a>
+  <a href="#action" onclick="closeMobileNavAndGo(event,'stage-buy-menu')">I'm a Buyer</a>
   <a href="#action" onclick="closeMobileNavAndGo(event,'stage-valuation-form')">Home Valuation</a>
-  <a href="#action" onclick="closeMobileNavAndGo(event,'stage-sell-menu')">Sellers</a>
-  <a href="#action" onclick="closeMobileNavAndGo(event,'stage-buy-menu')">Buyers</a>
-  <a href="#action" onclick="closeMobileNavAndGo(event,'stage-investor-menu')">Investors</a>
+  <a href="#action" onclick="closeMobileNavAndOpenCashOffer(event)">Get a Cash Offer</a>
+  <a href="flip-calculator.html">Flip Calculator</a>
   <a href="#about" onclick="closeMobileNav()">About</a>
   <a href="#contact" onclick="closeMobileNav()">Contact</a>
   <a href="#action" class="nav-cta" onclick="closeMobileNavAndGo(event,'stage-home')">Get Started</a>
@@ -911,6 +912,11 @@ function closeMobileNav() {
 function closeMobileNavAndGo(evt, stageId) {
   closeMobileNav();
   showStageAndScroll(evt, stageId);
+}
+function closeMobileNavAndOpenCashOffer(evt) {
+  evt.preventDefault();
+  closeMobileNav();
+  openSellForm('cash-offer');
 }
 window.addEventListener('resize', () => {
   if (window.innerWidth > 768) closeMobileNav();
