@@ -61,6 +61,7 @@ FIELD_LABELS = {
         ("ARV", "arv"), ("Square Footage", "sqft"), ("ARV / SQFT", "arvSqft"),
         ("Rehab Type", "rehabType"), ("Rehab Estimate", "rehabEstimate"),
         ("Neighborhood", "neighborhood"), ("Total Rehab Estimate", "rehabTotal"),
+        ("Roof Replacement", "roofType"), ("Roof Replacement Estimate", "roofEstimate"),
         ("ADU / Garage Conversion", "aduType"), ("ADU / Garage Conversion Estimate", "aduEstimate"),
         ("Pool", "poolType"), ("Pool Estimate", "poolEstimate"),
         ("Length of Project", "lengthOfProject"),

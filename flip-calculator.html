@@ -251,9 +251,10 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               <div class="field"><span class="field-label">Rehab Type</span>
                 <select class="fs" id="c_rehabtype">
                   <option value="" selected>Select…</option>
-                  <option value="25">Light — $25/sqft</option>
-                  <option value="45">Medium — $45/sqft</option>
-                  <option value="65">Heavy — $65/sqft</option>
+                  <option value="40">Light — $40/sqft</option>
+                  <option value="90">Medium — $90/sqft</option>
+                  <option value="150">Heavy — $150/sqft</option>
+                  <option value="225">Full Gut — $225/sqft</option>
                 </select>
               </div>
               <div class="field"><span class="field-label">Est. per SQFT</span><div class="fo" id="o_persqft">$0.00</div></div>
@@ -270,6 +271,26 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
                 </select>
               </div>
               <div class="field"><span class="field-label">Total Rehab Estimate</span><div class="fo" id="o_rehabtotal">$0.00</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="calc-sec">
+          <div class="calc-sec-head">Roof Replacement</div>
+          <div class="calc-sec-body">
+            <div class="frow">
+              <div class="field"><span class="field-label">Roof Replacement</span>
+                <select class="fs" id="c_rooftype">
+                  <option value="0" selected>No Roof Replacement</option>
+                  <option value="10">Asphalt Shingle Roof — $10/sqft</option>
+                  <option value="12">Flat / Low-Slope Roof — $12/sqft</option>
+                  <option value="13">Spanish Tile — Lift &amp; Relay — $13/sqft</option>
+                  <option value="17">New Concrete Spanish Tile — $17/sqft</option>
+                  <option value="22">New Clay / Terracotta Tile — $22/sqft</option>
+                  <option value="manual">Historic / Custom Clay Tile — Manual Estimate</option>
+                </select>
+              </div>
+              <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_roofest">$0.00</div></div>
             </div>
           </div>
         </div>
@@ -536,6 +557,13 @@ function recalc() {
   const rehabTotal = rehabEst * (neighborhoodPct / 100);
   set('o_rehabtotal', money(rehabTotal));
 
+  // "manual" (Historic / Custom Clay Tile) has no per-sqft rate -- flag it
+  // for a manual estimate instead of computing a misleading $0.
+  const roofRateRaw = document.getElementById('c_rooftype').value;
+  const roofIsManual = roofRateRaw === 'manual';
+  const roofEst = roofIsManual ? 0 : sqft * (parseFloat(roofRateRaw) || 0);
+  set('o_roofest', roofIsManual ? 'Manual Estimate' : money(roofEst));
+
   const aduGarageEst = n('c_adutype');
   set('o_aduest', money(aduGarageEst));
   const poolEst = n('c_pooltype');
@@ -575,7 +603,7 @@ function recalc() {
   const originationFeeCost = hmLoanBasis * (originationFeePct / 100);
   set('o_originationfeecost', money(originationFeeCost));
 
-  const buyerInvestment = arv - (rehabTotal + aduEst + sellVal + buyVal + esctVal + profitVal) - hmCarry - originationFeeCost;
+  const buyerInvestment = arv - (rehabTotal + roofEst + aduEst + sellVal + buyVal + esctVal + profitVal) - hmCarry - originationFeeCost;
   const downPayment = buyerInvestment * ((100 - loanPct) / 100);
   const hardMoneyLoan = buyerInvestment - downPayment;
   const roiBasis = rehabTotal + downPayment + hmCarry + originationFeeCost;
@@ -588,7 +616,7 @@ function recalc() {
   set('o_hmloan', moneyRound(hardMoneyLoan));
 
   calcState = {
-    arv, sqft, arvSqft, rehabEst, rehabTotal, aduEst, aduGarageEst, poolEst,
+    arv, sqft, arvSqft, rehabEst, rehabTotal, roofEst, roofIsManual, aduEst, aduGarageEst, poolEst,
     sellVal, buyVal, esctVal, profitPct, profitVal,
     loanPct, hmRatePct, originationFeePct, originationFeeCost,
     cashCarry, hmCarry, buyerInvestment, roi, downPayment, hardMoneyLoan,
@@ -638,6 +666,8 @@ function buildFlipPayload(extra) {
     rehabEstimate: money(s.rehabEst || 0),
     neighborhood: selectedLabel('c_neighborhood'),
     rehabTotal: money(s.rehabTotal || 0),
+    roofType: selectedLabel('c_rooftype'),
+    roofEstimate: s.roofIsManual ? 'Manual Estimate' : money(s.roofEst || 0),
     aduType: selectedLabel('c_adutype'),
     aduEstimate: money(s.aduGarageEst || 0),
     poolType: selectedLabel('c_pooltype'),
@@ -776,6 +806,7 @@ function resetCalculatorFields() {
   document.getElementById('c_sqft').value = '';
   document.getElementById('c_rehabtype').value = '';
   document.getElementById('c_neighborhood').value = '';
+  document.getElementById('c_rooftype').value = '0';
   document.getElementById('c_adutype').value = '0';
   document.getElementById('c_pooltype').value = '0';
   document.getElementById('c_length').value = '';
