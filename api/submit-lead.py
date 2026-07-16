@@ -65,6 +65,8 @@ FIELD_LABELS = {
         ("Pool Rehab", "poolRehabType"), ("Pool Rehab Estimate", "poolRehabEstimate"),
         ("New Pool", "newPoolType"), ("New Pool Estimate", "newPoolEstimate"),
         ("Length of Project", "lengthOfProject"),
+        ("Hard Money Loan / Down Payment", "loanRatio"), ("Hard Money Interest Rate", "hmInterestRate"),
+        ("Loan Origination Fee", "loanOriginationFee"), ("Loan Origination Fee Cost", "loanOriginationFeeCost"),
         ("Cash Carry Cost", "cashCarry"), ("Hard Money Carry Cost", "hardMoneyCarry"),
         ("Listing Agent Commission", "listingAgent"), ("Buying Agent Commission", "buyingAgent"),
         ("Escrow, Title & Transfer", "escrow"),

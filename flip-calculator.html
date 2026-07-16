@@ -343,6 +343,38 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               </select>
             </div>
             <div class="frow">
+              <div class="field"><span class="field-label">Hard Money Loan / Down Payment</span>
+                <select class="fs" id="c_loanratio">
+                  <option value="" selected>Select…</option>
+                  <option value="70">70% Loan / 30% Down Payment</option>
+                  <option value="75">75% Loan / 25% Down Payment</option>
+                  <option value="80">80% Loan / 20% Down Payment</option>
+                  <option value="85">85% Loan / 15% Down Payment</option>
+                  <option value="90">90% Loan / 10% Down Payment</option>
+                </select>
+              </div>
+              <div class="field"><span class="field-label">Hard Money Interest Rate</span>
+                <select class="fs" id="c_hmrate">
+                  <option value="" selected>Select…</option>
+                  <option value="0">All Cash / No Loan — 0%</option>
+                  <option value="8">8% — Deal</option>
+                  <option value="9">9% — Strong Borrower</option>
+                  <option value="10">10% — Average</option>
+                  <option value="11">11% — Conservative Underwriting</option>
+                  <option value="12">12% — Higher-Risk Deal</option>
+                </select>
+              </div>
+            </div>
+            <div class="field"><span class="field-label">Loan Origination Fee</span>
+              <select class="fs" id="c_originationfee">
+                <option value="" selected>Select…</option>
+                <option value="0.5">0.5% — Very Low</option>
+                <option value="1">1% — Low</option>
+                <option value="2">2% — Average</option>
+                <option value="3">3% — High</option>
+              </select>
+            </div>
+            <div class="frow">
               <div class="field"><span class="field-label">Cash</span><div class="fo" id="o_cashfactor">0</div></div>
               <div class="field"><span class="field-label">Cash Carry Cost</span><div class="fo" id="o_cashcarry">$0.00</div></div>
             </div>
@@ -350,7 +382,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               <div class="field"><span class="field-label">Hard Money</span><div class="fo" id="o_hmfactor">0</div></div>
               <div class="field"><span class="field-label">Hard Money Carry Cost</span><div class="fo" id="o_hmcarry">$0.00</div></div>
             </div>
-            <p class="field-hint">Cash carry is shown for reference; hard money carry is real interest and is deducted from the offer.</p>
+            <div class="field"><span class="field-label">Loan Origination Fee Cost</span><div class="fo" id="o_originationfeecost">$0.00</div></div>
+            <p class="field-hint">Cash carry is shown for reference; hard money carry and the origination fee are real costs and are deducted from the offer.</p>
           </div>
         </div>
 
@@ -531,15 +564,28 @@ function recalc() {
   set('o_cashfactor', String(lengthFactor));
   set('o_hmfactor', String(lengthFactor));
 
+  const loanPct = n('c_loanratio');
+  const hmRatePct = n('c_hmrate');
+  const originationFeePct = n('c_originationfee');
+  // The interest-bearing loan balance is approximated from ARV (rather than
+  // the buyer investment) because buyerInvestment is itself derived below
+  // from the carry cost -- basing the loan on buyerInvestment would create a
+  // circular calculation. The same loanPct then drives the final loan/down
+  // payment split further down, so both uses stay consistent with each other.
+  const hmLoanBasis = arv * (loanPct / 100);
+
   const cashCarry = (((arv * 0.01) + 0.085) / 12) * lengthFactor;
-  const hmCarry = (((arv * 0.7) * 0.095) / 12) * lengthFactor;
+  const hmCarry = ((hmLoanBasis * (hmRatePct / 100)) / 12) * lengthFactor;
   set('o_cashcarry', money(cashCarry));
   set('o_hmcarry', money(hmCarry));
 
-  const buyerInvestment = arv - (rehabTotal + aduEst + sellVal + buyVal + esctVal + profitVal) - hmCarry;
-  const downPayment = buyerInvestment * 0.15;
+  const originationFeeCost = hmLoanBasis * (originationFeePct / 100);
+  set('o_originationfeecost', money(originationFeeCost));
+
+  const buyerInvestment = arv - (rehabTotal + aduEst + sellVal + buyVal + esctVal + profitVal) - hmCarry - originationFeeCost;
+  const downPayment = buyerInvestment * ((100 - loanPct) / 100);
   const hardMoneyLoan = buyerInvestment - downPayment;
-  const roiBasis = rehabTotal + downPayment + hmCarry;
+  const roiBasis = rehabTotal + downPayment + hmCarry + originationFeeCost;
   const roi = roiBasis > 0 ? (profitVal / roiBasis) * 100 : 0;
 
   set('o_buyerinv', money(buyerInvestment));
@@ -551,6 +597,7 @@ function recalc() {
   calcState = {
     arv, sqft, arvSqft, rehabEst, rehabTotal, aduEst, aduGarageEst, poolEst, poolRehabEst, newPoolEst,
     sellVal, buyVal, esctVal, profitPct, profitVal,
+    loanPct, hmRatePct, originationFeePct, originationFeeCost,
     cashCarry, hmCarry, buyerInvestment, roi, downPayment, hardMoneyLoan,
   };
 }
@@ -605,6 +652,10 @@ function buildFlipPayload(extra) {
     newPoolType: selectedLabel('c_newpooltype'),
     newPoolEstimate: money(s.newPoolEst || 0),
     lengthOfProject: selectedLabel('c_length'),
+    loanRatio: selectedLabel('c_loanratio'),
+    hmInterestRate: selectedLabel('c_hmrate'),
+    loanOriginationFee: selectedLabel('c_originationfee'),
+    loanOriginationFeeCost: money(s.originationFeeCost || 0),
     cashCarry: money(s.cashCarry || 0),
     hardMoneyCarry: money(s.hmCarry || 0),
     listingAgent: money(s.sellVal || 0),
@@ -738,6 +789,9 @@ function resetCalculatorFields() {
   document.getElementById('c_poolrehabtype').value = '0';
   document.getElementById('c_newpooltype').value = '0';
   document.getElementById('c_length').value = '';
+  document.getElementById('c_loanratio').value = '';
+  document.getElementById('c_hmrate').value = '';
+  document.getElementById('c_originationfee').value = '';
   document.getElementById('c_profitpct').value = '';
   recalc();
 }
