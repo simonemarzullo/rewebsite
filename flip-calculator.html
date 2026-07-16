@@ -392,16 +392,13 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
         <div class="calc-sec">
           <div class="calc-sec-head">Investor's Profit</div>
           <div class="calc-sec-body">
-            <div class="frow">
-              <div class="field"><span class="field-label">Minimum Profit %</span>
-                <select class="fs" id="c_profitpct">
-                  <option value="" selected>Select…</option>
-                  <option value="8">8%</option>
-                  <option value="10">10%</option>
-                  <option value="12">12%</option>
-                </select>
-              </div>
-              <div class="field"><span class="field-label">Value</span><div class="fo" id="o_profitval">$0.00</div></div>
+            <div class="field"><span class="field-label">Minimum Profit %</span>
+              <select class="fs" id="c_profitpct">
+                <option value="" selected>Select…</option>
+                <option value="8">8%</option>
+                <option value="10">10%</option>
+                <option value="12">12%</option>
+              </select>
             </div>
           </div>
         </div>
@@ -418,6 +415,14 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
             <div class="stat-block"><div class="stat-val" id="o_renocost">$0</div><div class="stat-lbl">Renovation Cost</div></div>
             <div class="stat-block"><div class="stat-val" id="o_dp">$0</div><div class="stat-lbl">Down Payment</div></div>
             <div class="stat-block"><div class="stat-val" id="o_hmloan">$0</div><div class="stat-lbl">Hard Money Loan</div></div>
+          </div>
+        </div>
+
+        <div class="calc-summary">
+          <div class="calc-summary-hero">
+            <span class="label label-red">Estimated Investor Profit</span>
+            <div class="calc-summary-hero-val" id="o_profitval">$0.00</div>
+            <div class="calc-summary-hero-note">Target profit built into this deal at the selected minimum profit %.</div>
           </div>
         </div>
 
