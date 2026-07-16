@@ -294,37 +294,28 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
         </div>
 
         <div class="calc-sec">
-          <div class="calc-sec-head">Pool Rehab</div>
+          <div class="calc-sec-head">Pool</div>
           <div class="calc-sec-body">
             <div class="frow">
-              <div class="field"><span class="field-label">Pool Rehab</span>
-                <select class="fs" id="c_poolrehabtype">
-                  <option value="0" selected>No Pool Work</option>
-                  <option value="20000">Basic Pool Rehab</option>
-                  <option value="40000">Standard Full Pool Rehab</option>
-                  <option value="75000">Major Pool Renovation</option>
-                  <option value="125000">Luxury or Structural Pool Renovation</option>
+              <div class="field"><span class="field-label">Pool</span>
+                <select class="fs" id="c_pooltype">
+                  <optgroup label="Pool Rehab">
+                    <option value="0" selected>No Pool Work</option>
+                    <option value="30000">Small Pool Rehab (~250–400 sq. ft.)</option>
+                    <option value="45000">Average Pool Rehab (~400–600 sq. ft.)</option>
+                    <option value="70000">Large Pool Rehab (~600–900 sq. ft.)</option>
+                    <option value="125000">Major or Structural Pool Renovation</option>
+                  </optgroup>
+                  <optgroup label="New Pool Installation">
+                    <option value="0">No Pool Installation</option>
+                    <option value="95000">Small Pool (~250–400 sq. ft.)</option>
+                    <option value="135000">Average Pool (~400–600 sq. ft.)</option>
+                    <option value="185000">Large Pool (~600–900 sq. ft.)</option>
+                    <option value="250000">Luxury Custom Pool with Spa</option>
+                  </optgroup>
                 </select>
               </div>
-              <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_poolrehabest">$0.00</div></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="calc-sec">
-          <div class="calc-sec-head">New Pool</div>
-          <div class="calc-sec-body">
-            <div class="frow">
-              <div class="field"><span class="field-label">New Pool</span>
-                <select class="fs" id="c_newpooltype">
-                  <option value="0" selected>No Pool Installation</option>
-                  <option value="85000">Small or Basic Pool</option>
-                  <option value="125000">Standard Pool (~450 sq. ft.)</option>
-                  <option value="175000">Pool with Spa or Upgraded Decking</option>
-                  <option value="250000">Luxury Custom Pool</option>
-                </select>
-              </div>
-              <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_newpoolest">$0.00</div></div>
+              <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_poolest">$0.00</div></div>
             </div>
             <div class="field" style="margin-top:4px"><span class="field-label">Combined ADU / Pool Estimate</span><div class="fo" id="o_adupooltotal">$0.00</div></div>
           </div>
@@ -542,11 +533,8 @@ function recalc() {
 
   const aduGarageEst = n('c_adutype');
   set('o_aduest', money(aduGarageEst));
-  const poolRehabEst = n('c_poolrehabtype');
-  set('o_poolrehabest', money(poolRehabEst));
-  const newPoolEst = n('c_newpooltype');
-  set('o_newpoolest', money(newPoolEst));
-  const poolEst = poolRehabEst + newPoolEst;
+  const poolEst = n('c_pooltype');
+  set('o_poolest', money(poolEst));
   const aduEst = aduGarageEst + poolEst;
   set('o_adupooltotal', money(aduEst));
 
@@ -595,7 +583,7 @@ function recalc() {
   set('o_hmloan', moneyRound(hardMoneyLoan));
 
   calcState = {
-    arv, sqft, arvSqft, rehabEst, rehabTotal, aduEst, aduGarageEst, poolEst, poolRehabEst, newPoolEst,
+    arv, sqft, arvSqft, rehabEst, rehabTotal, aduEst, aduGarageEst, poolEst,
     sellVal, buyVal, esctVal, profitPct, profitVal,
     loanPct, hmRatePct, originationFeePct, originationFeeCost,
     cashCarry, hmCarry, buyerInvestment, roi, downPayment, hardMoneyLoan,
@@ -647,10 +635,8 @@ function buildFlipPayload(extra) {
     rehabTotal: money(s.rehabTotal || 0),
     aduType: selectedLabel('c_adutype'),
     aduEstimate: money(s.aduGarageEst || 0),
-    poolRehabType: selectedLabel('c_poolrehabtype'),
-    poolRehabEstimate: money(s.poolRehabEst || 0),
-    newPoolType: selectedLabel('c_newpooltype'),
-    newPoolEstimate: money(s.newPoolEst || 0),
+    poolType: selectedLabel('c_pooltype'),
+    poolEstimate: money(s.poolEst || 0),
     lengthOfProject: selectedLabel('c_length'),
     loanRatio: selectedLabel('c_loanratio'),
     hmInterestRate: selectedLabel('c_hmrate'),
@@ -786,8 +772,7 @@ function resetCalculatorFields() {
   document.getElementById('c_rehabtype').value = '';
   document.getElementById('c_neighborhood').value = '';
   document.getElementById('c_adutype').value = '0';
-  document.getElementById('c_poolrehabtype').value = '0';
-  document.getElementById('c_newpooltype').value = '0';
+  document.getElementById('c_pooltype').value = '0';
   document.getElementById('c_length').value = '';
   document.getElementById('c_loanratio').value = '';
   document.getElementById('c_hmrate').value = '';
