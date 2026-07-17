@@ -11,6 +11,29 @@ from email.message import EmailMessage
 FUB_EVENTS_URL = "https://api.followupboss.com/v1/events"
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
+# Abuse guards: no field on any form legitimately needs more than this many
+# characters, and no legitimate submission comes close to this body size.
+MAX_FIELD_LEN = 2000
+MAX_BODY_BYTES = 64 * 1024
+
+# Browsers always send an Origin header on cross-site POSTs; rejecting
+# unknown origins blocks drive-by form spam embedded on other sites.
+# Requests with no Origin at all (curl, server-to-server) are allowed
+# through -- this is a soft shield, not authentication.
+ALLOWED_ORIGINS = {
+    "https://www.marzullore.com",
+    "https://marzullore.com",
+}
+
+
+def origin_allowed(origin):
+    if not origin:
+        return True
+    if origin in ALLOWED_ORIGINS:
+        return True
+    # Local development servers (any port).
+    return origin.startswith("http://localhost:") or origin.startswith("http://127.0.0.1:")
+
 BUY_INTENT_CONFIG = {
     "new-home": {"tag": "New Home Buyer Lead", "title": "Buyer Inquiry — New Home",
                  "desc": "Looking for a new home (primary residence)."},
@@ -88,7 +111,7 @@ FIELD_LABELS = {
 
 
 def clean(value):
-    return str(value).strip() if value is not None else ""
+    return str(value).strip()[:MAX_FIELD_LEN] if value is not None else ""
 
 
 def digits_only(value):
@@ -263,10 +286,17 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self):
+        if not origin_allowed(self.headers.get("Origin")):
+            self._send_json(403, {"ok": False, "error": "Forbidden"})
+            return
+
         try:
             length = int(self.headers.get("Content-Length", 0))
         except (TypeError, ValueError):
             length = 0
+        if length > MAX_BODY_BYTES:
+            self._send_json(413, {"ok": False, "error": "Payload too large"})
+            return
         raw = self.rfile.read(length) if length else b""
 
         try:

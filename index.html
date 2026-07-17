@@ -26,6 +26,35 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "RealEstateAgent",
+  "name": "Simone Marzullo",
+  "url": "https://www.marzullore.com/",
+  "image": "https://www.marzullore.com/assets/headshot.jpg",
+  "telephone": "+1-310-696-6596",
+  "email": "Simone@SimoneMarzullo.com",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "331 Foothill Rd. #100",
+    "addressLocality": "Beverly Hills",
+    "addressRegion": "CA",
+    "postalCode": "90210",
+    "addressCountry": "US"
+  },
+  "areaServed": {
+    "@type": "City",
+    "name": "Los Angeles"
+  },
+  "knowsLanguage": ["en", "it"],
+  "memberOf": {
+    "@type": "Organization",
+    "name": "The Agency",
+    "url": "https://www.theagencyre.com/"
+  }
+}
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -70,6 +99,7 @@ input,textarea,select{font-family:var(--sans)}
 .hero-photo-area{position:absolute;right:0;top:0;bottom:0;width:44%;overflow:hidden}
 .hero-photo-placeholder{width:100%;height:100%;background:linear-gradient(170deg,#181818,#080808);display:none;align-items:center;justify-content:center}
 .hero-photo-placeholder span{font-size:.62rem;letter-spacing:.4em;color:rgba(255,255,255,.06);font-weight:500}
+.hero-photo-area picture{display:contents}
 .hero-photo-img{width:100%;height:100%;object-fit:cover;object-position:50% 22%}
 .hero-fade{position:absolute;inset:0;background:linear-gradient(to right,#000 0%,transparent 38%),linear-gradient(to top,#000 0%,transparent 22%)}
 .hero-content{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:0 48px;width:100%}
@@ -276,7 +306,13 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 <section id="hero">
   <div class="hero-bg"></div>
   <div class="hero-photo-area">
-    <img class="hero-photo-img" src="assets/hero-skyline.jpg" alt="Downtown Los Angeles skyline at night" onerror="this.style.display='none';document.getElementById('hero-photo-ph').style.display='flex'">
+    <!-- The photo panel is hidden below 1025px, but a plain <img> would still
+         be downloaded there; the <picture> media query makes phones fetch the
+         inline 1x1 pixel instead of the ~400KB photo. -->
+    <picture>
+      <source media="(min-width:1025px)" srcset="assets/hero-skyline.jpg">
+      <img class="hero-photo-img" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Downtown Los Angeles skyline at night" onerror="this.style.display='none';document.getElementById('hero-photo-ph').style.display='flex'">
+    </picture>
     <div class="hero-photo-placeholder" id="hero-photo-ph"><span>LOS ANGELES</span></div>
     <div class="hero-fade"></div>
   </div>
@@ -781,7 +817,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
       <div class="f-copy" style="margin-top:10px"><a href="privacy.html" style="color:var(--g5);text-decoration:underline">Privacy Policy</a></div>
     </div>
   </div>
-  <div class="f-disclaimer">Simone Marzullo | REALTOR® | DRE#02174253 is a real estate salesperson's licensed by the state of California affiliated with The Agency. The Agency is a real estate broker licensed by the state of California and abides by equal housing opportunity laws. All material presented herein is intended for informational purposes only. Information is compiled from sources deemed reliable but is subject to errors, omissions, changes in price, condition, sale, or withdrawal without notice. No statement is made as to accuracy of any description. All measurements and square footages are approximate. This is not intended to solicit property already listed. Nothing herein shall be construed as legal, accounting or other professional advice outside the realm of real estate brokerage.</div>
+  <div class="f-disclaimer">Simone Marzullo | REALTOR® | DRE#02174253 is a real estate salesperson licensed by the state of California affiliated with The Agency. The Agency is a real estate broker licensed by the state of California and abides by equal housing opportunity laws. All material presented herein is intended for informational purposes only. Information is compiled from sources deemed reliable but is subject to errors, omissions, changes in price, condition, sale, or withdrawal without notice. No statement is made as to accuracy of any description. All measurements and square footages are approximate. This is not intended to solicit property already listed. Nothing herein shall be construed as legal, accounting or other professional advice outside the realm of real estate brokerage.</div>
 </footer>
 
 <script>
