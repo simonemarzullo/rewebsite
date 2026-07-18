@@ -1240,17 +1240,14 @@ window.widgetTracker("send", "pageview");
 @media(max-width:768px){.mcf{display:flex}}
 .mcf-menu{display:flex;flex-direction:column;gap:10px;align-items:flex-end;opacity:0;pointer-events:none;transform:translateY(10px) scale(.92);transition:opacity .22s ease,transform .22s ease}
 .mcf.on .mcf-menu{opacity:1;pointer-events:auto;transform:translateY(0) scale(1)}
-.mcf-item{display:flex;align-items:center;gap:8px;background:#161616;border:1px solid rgba(255,255,255,.14);color:#fff;text-decoration:none;padding:10px 18px 10px 13px;border-radius:999px;font-family:var(--sans);font-size:.78rem;font-weight:500;letter-spacing:.02em;box-shadow:0 6px 18px rgba(0,0,0,.4);white-space:nowrap}
-.mcf-item svg{width:15px;height:15px;fill:var(--red);flex-shrink:0}
+.mcf-item{display:flex;align-items:center;gap:10px;background:#161616;border:1px solid rgba(255,255,255,.14);color:#fff;text-decoration:none;padding:13px 23px 13px 17px;border-radius:999px;font-family:var(--sans);font-size:1.01rem;font-weight:500;letter-spacing:.02em;box-shadow:0 6px 18px rgba(0,0,0,.4);white-space:nowrap}
+.mcf-item svg{width:20px;height:20px;fill:var(--red);flex-shrink:0}
 .mcf-toggle{position:relative;width:52px;height:52px;border-radius:50%;background:var(--red);border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(200,16,46,.45),0 2px 8px rgba(0,0,0,.35);cursor:pointer;transition:transform .2s ease}
 .mcf-toggle:active{transform:scale(.9)}
-.mcf-toggle::before{content:'';position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--red);opacity:.55;animation:mcfPulse 2.4s ease-out infinite}
-.mcf.on .mcf-toggle::before{animation:none;opacity:0}
 .mcf-toggle svg{position:absolute;width:21px;height:21px;fill:#fff;transition:opacity .2s ease,transform .2s ease}
 .mcf-icon-close{opacity:0;transform:rotate(-45deg) scale(.4)}
 .mcf.on .mcf-icon-phone{opacity:0;transform:rotate(45deg) scale(.4)}
 .mcf.on .mcf-icon-close{opacity:1;transform:rotate(0) scale(1)}
-@keyframes mcfPulse{0%{transform:scale(.88);opacity:.55}70%{transform:scale(1.4);opacity:0}100%{opacity:0}}
 </style>
 <div class="mcf" id="mcf">
   <div class="mcf-menu" id="mcfMenu">
