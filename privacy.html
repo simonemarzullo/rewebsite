@@ -146,5 +146,35 @@ window.widgetTracker("create", "WT-XXOSQCXA");
 window.widgetTracker("send", "pageview");
 </script>
 <!-- end Widget Tracker Code -->
+<!-- Recolor the Follow Up Boss widget's blue accents to the site's brand red.
+     The widget renders inside a same-origin iframe injected by the pixel
+     script above; retry until it appears, then inject an override stylesheet. -->
+<script>
+(function () {
+  var CSS =
+    '.pixelShowButton:not(.favorites){background:#C8102E !important}' +
+    '#ctaDesktopBodyAgentAvatar.withInitials,#ctaMobileBodyAgentAvatar.withInitials{background:#C8102E !important}';
+  function brand() {
+    var frames = document.querySelectorAll('body > iframe');
+    for (var i = 0; i < frames.length; i++) {
+      var doc;
+      try { doc = frames[i].contentDocument; } catch (e) { continue; }
+      if (!doc || !doc.querySelector('.pixelShowButton')) continue;
+      if (!doc.getElementById('fub-brand-css')) {
+        var style = doc.createElement('style');
+        style.id = 'fub-brand-css';
+        style.textContent = CSS;
+        (doc.head || doc.documentElement).appendChild(style);
+      }
+      return true;
+    }
+    return false;
+  }
+  var tries = 0;
+  var timer = setInterval(function () {
+    if (brand() || ++tries > 120) clearInterval(timer);
+  }, 500);
+})();
+</script>
 </body>
 </html>
