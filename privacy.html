@@ -46,6 +46,10 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:40px 24px;tex
   #nav{padding:0 20px}
   main{padding:48px 0 64px}
 }
+/* Hide the Follow Up Boss widget iframe on mobile via our own page CSS
+   (not injected into the iframe) so it never paints in the first place --
+   eliminates the flash-of-default-styling that a JS-polling approach can't avoid. */
+@media(max-width:768px){body>iframe{display:none !important}}
 
 /* Hover-only effects -- gated so touch devices (which fire :hover on
    tap and never clear it) don't get a permanently "stuck" highlighted
@@ -153,10 +157,7 @@ window.widgetTracker("send", "pageview");
 (function () {
   var CSS =
     '.pixelShowButton:not(.favorites){background:#C8102E !important}' +
-    '#ctaDesktopBodyAgentAvatar.withInitials{background:#C8102E !important}' +
-    /* Mobile Call/Text bar removed entirely per request -- keep only the
-       desktop round button, recolored above. */
-    '#ctaMobileContainer{display:none !important}';
+    '#ctaDesktopBodyAgentAvatar.withInitials{background:#C8102E !important}';
   function brand() {
     var frames = document.querySelectorAll('body > iframe');
     for (var i = 0; i < frames.length; i++) {

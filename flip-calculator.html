@@ -62,6 +62,10 @@ input,textarea,select{font-family:var(--sans)}
 .nav-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
 .nav-mobile{display:none;position:fixed;top:72px;left:0;right:0;bottom:0;z-index:199;background:rgba(0,0,0,0.98);backdrop-filter:blur(16px);flex-direction:column;padding:32px 28px;gap:4px;overflow-y:auto}
 @media(max-width:768px){.nav-mobile.on{display:flex}}
+/* Hide the Follow Up Boss widget iframe on mobile via our own page CSS
+   (not injected into the iframe) so it never paints in the first place --
+   eliminates the flash-of-default-styling that a JS-polling approach can't avoid. */
+@media(max-width:768px){body>iframe{display:none !important}}
 .nav-mobile a{font-size:.95rem;letter-spacing:.04em;color:var(--g7);font-weight:400;padding:18px 4px;border-bottom:1px solid var(--g3);background:none;border-left:none;border-right:none;border-top:none;text-align:left;width:100%}
 .nav-mobile a.nav-cta{background:var(--red);color:var(--white);border-bottom:none;justify-content:center;margin-top:20px;padding:16px 22px}
 
@@ -869,10 +873,7 @@ window.widgetTracker("send", "pageview");
 (function () {
   var CSS =
     '.pixelShowButton:not(.favorites){background:#C8102E !important}' +
-    '#ctaDesktopBodyAgentAvatar.withInitials{background:#C8102E !important}' +
-    /* Mobile Call/Text bar removed entirely per request -- keep only the
-       desktop round button, recolored above. */
-    '#ctaMobileContainer{display:none !important}';
+    '#ctaDesktopBodyAgentAvatar.withInitials{background:#C8102E !important}';
   function brand() {
     var frames = document.querySelectorAll('body > iframe');
     for (var i = 0; i < frames.length; i++) {
