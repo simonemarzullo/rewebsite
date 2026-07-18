@@ -870,7 +870,12 @@ window.widgetTracker("send", "pageview");
   var CSS =
     '.pixelShowButton:not(.favorites){background:#C8102E !important}' +
     '#ctaDesktopBodyAgentAvatar.withInitials,#ctaMobileBodyAgentAvatar.withInitials{background:#C8102E !important}' +
-    /* Mobile Call/Text bottom bar: black bar, red icons, white labels */
+    /* Mobile Call/Text bottom bar: black bar, red icons, white labels.
+       html/body + a safe-area bottom pad on the container keep the iOS
+       home-indicator strip black instead of the widget page's default
+       white showing through below the bar. */
+    'html,body{background:#000000 !important}' +
+    '#ctaMobileContainer{background:#000000 !important;padding-bottom:env(safe-area-inset-bottom) !important}' +
     '#ctaMobileBody{background:#000000 !important;box-shadow:0 -1px 0 0 #2E2E2E !important}' +
     '.ctaMobileBodyBtn{color:#FFFFFF !important}' +
     '.ctaMobileBodyBtnIcon{color:#C8102E !important}' +
