@@ -65,7 +65,7 @@ input,textarea,select{font-family:var(--sans)}
 /* Hide the Follow Up Boss widget iframe on mobile via our own page CSS
    (not injected into the iframe) so it never paints in the first place --
    eliminates the flash-of-default-styling that a JS-polling approach can't avoid. */
-@media(max-width:1024px){body>iframe{display:none !important}}
+body>iframe{display:none !important}
 .nav-mobile a{font-size:.95rem;letter-spacing:.04em;color:var(--g7);font-weight:400;padding:18px 4px;border-bottom:1px solid var(--g3);background:none;border-left:none;border-right:none;border-top:none;text-align:left;width:100%}
 .nav-mobile a.nav-cta{background:var(--red);color:var(--white);border-bottom:none;justify-content:center;margin-top:20px;padding:16px 22px}
 
@@ -866,40 +866,10 @@ window.widgetTracker("create", "WT-XXOSQCXA");
 window.widgetTracker("send", "pageview");
 </script>
 <!-- end Widget Tracker Code -->
-<!-- Recolor the Follow Up Boss widget's blue accents to the site's brand red.
-     The widget renders inside a same-origin iframe injected by the pixel
-     script above; retry until it appears, then inject an override stylesheet. -->
-<script>
-(function () {
-  var CSS =
-    '.pixelShowButton:not(.favorites){background:#C8102E !important}' +
-    '#ctaDesktopBodyAgentAvatar.withInitials{background:#C8102E !important}';
-  function brand() {
-    var frames = document.querySelectorAll('body > iframe');
-    for (var i = 0; i < frames.length; i++) {
-      var doc;
-      try { doc = frames[i].contentDocument; } catch (e) { continue; }
-      if (!doc || !doc.querySelector('.pixelShowButton')) continue;
-      if (!doc.getElementById('fub-brand-css')) {
-        var style = doc.createElement('style');
-        style.id = 'fub-brand-css';
-        style.textContent = CSS;
-        (doc.head || doc.documentElement).appendChild(style);
-      }
-      return true;
-    }
-    return false;
-  }
-  var tries = 0;
-  var timer = setInterval(function () {
-    if (brand() || ++tries > 120) clearInterval(timer);
-  }, 500);
-})();
-</script>
-<!-- Custom floating Call/Text button (mobile only) -- independent of the FUB pixel widget above. -->
+<!-- Custom floating Call/Text button (all screen sizes) -- replaces the FUB pixel's own widget UI,
+     which stays hidden site-wide (see body>iframe rule above) while its tracking script keeps running. -->
 <style>
-.mcf{display:none;position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:9999;flex-direction:column;align-items:flex-end;gap:10px}
-@media(max-width:1024px){.mcf{display:flex}}
+.mcf{display:flex;position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:9999;flex-direction:column;align-items:flex-end;gap:10px}
 .mcf-menu{display:flex;flex-direction:column;gap:10px;align-items:flex-end;opacity:0;pointer-events:none;transform:translateY(10px) scale(.92);transition:opacity .22s ease,transform .22s ease}
 .mcf.on .mcf-menu{opacity:1;pointer-events:auto;transform:translateY(0) scale(1)}
 .mcf-item{display:flex;align-items:center;gap:10px;background:#161616;border:1px solid rgba(255,255,255,.14);color:#fff;text-decoration:none;padding:13px 23px 13px 17px;border-radius:999px;font-family:var(--sans);font-size:1.01rem;font-weight:500;letter-spacing:.02em;box-shadow:0 6px 18px rgba(0,0,0,.4);white-space:nowrap}
