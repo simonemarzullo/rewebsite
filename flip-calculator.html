@@ -862,35 +862,40 @@ window.widgetTracker("create", "WT-XXOSQCXA");
 window.widgetTracker("send", "pageview");
 </script>
 <!-- end Widget Tracker Code -->
-<!-- Site call button. The FUB widget's own UI (round button on desktop,
-     Call/Text bar on phones) is hidden below in favor of this one
-     consistent button; the pixel's visitor tracking is separate from the
-     widget UI and keeps working. -->
-<style>
-.call-fab{position:fixed;bottom:24px;right:24px;z-index:150;width:58px;height:58px;border-radius:50%;background:#C8102E;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(0,0,0,.45);transition:background .2s,transform .15s;text-decoration:none}
-@media(hover:hover){.call-fab:hover{background:#a50d24;transform:translateY(-2px)}}
-</style>
-<a href="tel:+13106966596" class="call-fab" aria-label="Call Simone Marzullo at 310-696-6596">
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-</a>
+<!-- Recolor the Follow Up Boss widget's blue accents to the site's brand red.
+     The widget renders inside a same-origin iframe injected by the pixel
+     script above; retry until it appears, then inject an override stylesheet. -->
 <script>
 (function () {
-  function hideFubUi() {
+  var CSS =
+    '.pixelShowButton:not(.favorites){background:#C8102E !important}' +
+    '#ctaDesktopBodyAgentAvatar.withInitials,#ctaMobileBodyAgentAvatar.withInitials{background:#C8102E !important}' +
+    /* Mobile Call/Text bottom bar: black bar, red icons, white labels */
+    '#ctaMobileBody{background:#000000 !important;box-shadow:0 -1px 0 0 #2E2E2E !important}' +
+    '.ctaMobileBodyBtn{color:#FFFFFF !important}' +
+    '.ctaMobileBodyBtnIcon{color:#C8102E !important}' +
+    '#ctaMobileContainer.unassigned .ctaMobileBodyBtn:first-child{border-right:1px solid #2E2E2E !important}' +
+    '#ctaMobileClose{color:#888888 !important}';
+  function brand() {
     var frames = document.querySelectorAll('body > iframe');
-    var found = false;
     for (var i = 0; i < frames.length; i++) {
       var doc;
       try { doc = frames[i].contentDocument; } catch (e) { continue; }
-      if (!doc) continue;
-      if (doc.querySelector('.pixelShowButton') || doc.getElementById('ctaMobileContainer') || doc.getElementById('ctaDesktopContainer')) {
-        frames[i].style.display = 'none';
-        found = true;
+      if (!doc || !doc.querySelector('.pixelShowButton')) continue;
+      if (!doc.getElementById('fub-brand-css')) {
+        var style = doc.createElement('style');
+        style.id = 'fub-brand-css';
+        style.textContent = CSS;
+        (doc.head || doc.documentElement).appendChild(style);
       }
+      return true;
     }
-    return found;
+    return false;
   }
   var tries = 0;
-  var timer = setInterval(function () { if (hideFubUi() || ++tries > 120) clearInterval(timer); }, 500);
+  var timer = setInterval(function () {
+    if (brand() || ++tries > 120) clearInterval(timer);
+  }, 500);
 })();
 </script>
 </body>
