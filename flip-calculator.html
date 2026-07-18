@@ -869,7 +869,13 @@ window.widgetTracker("send", "pageview");
 (function () {
   var CSS =
     '.pixelShowButton:not(.favorites){background:#C8102E !important}' +
-    '#ctaDesktopBodyAgentAvatar.withInitials,#ctaMobileBodyAgentAvatar.withInitials{background:#C8102E !important}';
+    '#ctaDesktopBodyAgentAvatar.withInitials,#ctaMobileBodyAgentAvatar.withInitials{background:#C8102E !important}' +
+    /* Mobile Call/Text bottom bar: black bar, red icons, white labels */
+    '#ctaMobileBody{background:#000000 !important;box-shadow:0 -1px 0 0 #2E2E2E !important}' +
+    '.ctaMobileBodyBtn{color:#FFFFFF !important}' +
+    '.ctaMobileBodyBtnIcon{color:#C8102E !important}' +
+    '#ctaMobileContainer.unassigned .ctaMobileBodyBtn:first-child{border-right:1px solid #2E2E2E !important}' +
+    '#ctaMobileClose{color:#888888 !important}';
   function brand() {
     var frames = document.querySelectorAll('body > iframe');
     for (var i = 0; i < frames.length; i++) {
