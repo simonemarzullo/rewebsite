@@ -411,8 +411,24 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           <div class="calc-sec-head">Selling Commissions</div>
           <div class="calc-sec-body">
             <div class="frow">
-              <div class="field"><span class="field-label">Listing Agents — 2.5%</span><div class="fo" id="o_sellval">$0.00</div></div>
-              <div class="field"><span class="field-label">Buying Agents — 2.5%</span><div class="fo" id="o_buyval">$0.00</div></div>
+              <div class="field"><span class="field-label">Listing Agent %</span>
+                <select class="fs" id="c_sellpct">
+                  <option value="2">2%</option>
+                  <option value="2.5" selected>2.5%</option>
+                  <option value="3">3%</option>
+                </select>
+              </div>
+              <div class="field"><span class="field-label">Listing Agent Value</span><div class="fo" id="o_sellval">$0.00</div></div>
+            </div>
+            <div class="frow">
+              <div class="field"><span class="field-label">Buying Agent %</span>
+                <select class="fs" id="c_buypct">
+                  <option value="2">2%</option>
+                  <option value="2.5" selected>2.5%</option>
+                  <option value="3">3%</option>
+                </select>
+              </div>
+              <div class="field"><span class="field-label">Buying Agent Value</span><div class="fo" id="o_buyval">$0.00</div></div>
             </div>
             <div class="field"><span class="field-label">Escrow, Title &amp; Transfer — 1.0%</span><div class="fo" id="o_esctval">$0.00</div></div>
           </div>
@@ -579,7 +595,8 @@ function recalc() {
   const aduEst = aduGarageEst + poolEst;
   set('o_adupooltotal', money(aduEst));
 
-  const sellVal = arv * 0.025, buyVal = arv * 0.025, esctVal = arv * 0.01;
+  const sellPct = n('c_sellpct'), buyPct = n('c_buypct');
+  const sellVal = arv * sellPct / 100, buyVal = arv * buyPct / 100, esctVal = arv * 0.01;
   set('o_sellval', money(sellVal));
   set('o_buyval', money(buyVal));
   set('o_esctval', money(esctVal));
