@@ -311,18 +311,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               </div>
             </div>
             <div class="field"><span class="field-label">Rehab Estimate</span><div class="fo" id="o_rehabest">$0.00</div></div>
-            <div class="frow">
-              <div class="field"><span class="field-label">Neighborhood</span>
-                <select class="fs" id="c_neighborhood">
-                  <option value="" selected>Select…</option>
-                  <option value="95">Low End — 95%</option>
-                  <option value="100">Average End — 100%</option>
-                  <option value="120">High End — 120%</option>
-                  <option value="135">Luxury — 135%</option>
-                </select>
-              </div>
-              <div class="field"><span class="field-label">Total Rehab Estimate</span><div class="fo" id="o_rehabtotal">$0.00</div></div>
-            </div>
+            <div class="field"><span class="field-label">Total Rehab Estimate</span><div class="fo" id="o_rehabtotal">$0.00</div></div>
           </div>
         </div>
 
@@ -623,7 +612,7 @@ function recalc() {
   const rehabEst = sqft * perSqft;
   set('o_rehabest', money(rehabEst));
 
-  const neighborhoodPct = n('c_neighborhood');
+  const neighborhoodPct = 100; // neighborhood selector removed; always 100%
   const rehabTotal = rehabEst * (neighborhoodPct / 100);
   set('o_rehabtotal', money(rehabTotal));
 
@@ -740,7 +729,7 @@ function buildFlipPayload(extra) {
     arvSqft: money(s.arvSqft || 0),
     rehabType: rehabTypeLabel(),
     rehabEstimate: money(s.rehabEst || 0),
-    neighborhood: selectedLabel('c_neighborhood'),
+    neighborhood: 'Average End — 100%',
     rehabTotal: money(s.rehabTotal || 0),
     roofType: selectedLabel('c_rooftype'),
     roofEstimate: s.roofIsManual ? 'Manual Estimate' : money(s.roofEst || 0),
@@ -886,7 +875,6 @@ function resetCalculatorFields() {
   document.getElementById('c_sqft').value = '';
   document.getElementById('c_rehabtype').value = '';
   document.getElementById('c_rehab_custom').value = '';
-  document.getElementById('c_neighborhood').value = '';
   document.getElementById('c_rooftype').value = '0';
   document.getElementById('c_adutype').value = '0';
   document.getElementById('c_pooltype').value = '0';
