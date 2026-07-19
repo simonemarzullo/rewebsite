@@ -328,9 +328,14 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
                   <option value="14">New Concrete Spanish Tile — $14/sqft</option>
                   <option value="18">New Clay / Terracotta Tile — $18/sqft</option>
                   <option value="manual">Historic / Custom Clay Tile — Manual Estimate</option>
+                  <option value="custom">Custom ($/sqft)</option>
                 </select>
               </div>
-              <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_roofest">$0.00</div></div>
+              <div class="field">
+                <span class="field-label">Estimate</span>
+                <div class="fo" id="o_roofest">$0.00</div>
+                <input class="fi" id="c_roof_custom" type="number" min="0" step="1" placeholder="e.g. 15" style="display:none">
+              </div>
             </div>
           </div>
         </div>
@@ -620,7 +625,11 @@ function recalc() {
   // for a manual estimate instead of computing a misleading $0.
   const roofRateRaw = document.getElementById('c_rooftype').value;
   const roofIsManual = roofRateRaw === 'manual';
-  const roofEst = roofIsManual ? 0 : sqft * (parseFloat(roofRateRaw) || 0);
+  const roofIsCustom = roofRateRaw === 'custom';
+  document.getElementById('o_roofest').style.display = roofIsCustom ? 'none' : 'flex';
+  document.getElementById('c_roof_custom').style.display = roofIsCustom ? 'block' : 'none';
+  const roofRate = roofIsCustom ? n('c_roof_custom') : (parseFloat(roofRateRaw) || 0);
+  const roofEst = roofIsManual ? 0 : sqft * roofRate;
   set('o_roofest', roofIsManual ? 'Manual Estimate' : money(roofEst));
 
   const aduGarageEst = n('c_adutype');
@@ -707,6 +716,11 @@ function rehabTypeLabel() {
   const customVal = val('c_rehab_custom');
   return customVal ? `Custom — $${customVal}/sqft` : 'Custom (no value entered)';
 }
+function roofTypeLabel() {
+  if (document.getElementById('c_rooftype').value !== 'custom') return selectedLabel('c_rooftype');
+  const customVal = val('c_roof_custom');
+  return customVal ? `Custom — $${customVal}/sqft` : 'Custom (no value entered)';
+}
 function requireValid(ids) {
   for (const id of ids) {
     const el = document.getElementById(id);
@@ -731,7 +745,7 @@ function buildFlipPayload(extra) {
     rehabEstimate: money(s.rehabEst || 0),
     neighborhood: 'Average End — 100%',
     rehabTotal: money(s.rehabTotal || 0),
-    roofType: selectedLabel('c_rooftype'),
+    roofType: roofTypeLabel(),
     roofEstimate: s.roofIsManual ? 'Manual Estimate' : money(s.roofEst || 0),
     aduType: selectedLabel('c_adutype'),
     aduEstimate: money(s.aduGarageEst || 0),
@@ -876,6 +890,7 @@ function resetCalculatorFields() {
   document.getElementById('c_rehabtype').value = '';
   document.getElementById('c_rehab_custom').value = '';
   document.getElementById('c_rooftype').value = '0';
+  document.getElementById('c_roof_custom').value = '';
   document.getElementById('c_adutype').value = '0';
   document.getElementById('c_pooltype').value = '0';
   document.getElementById('c_length').value = '';
