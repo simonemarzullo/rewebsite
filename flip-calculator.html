@@ -99,7 +99,7 @@ body>iframe{display:none !important}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .field{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
 .field:last-child{margin-bottom:0}
-.field-label{font-size:.59rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--g5)}
+.field-label{font-size:.59rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--g5);display:flex;align-items:center;gap:6px;min-height:15px}
 .fi,.fs{background:rgba(200,16,46,.1);border:1px solid var(--red);color:var(--white);padding:13px 16px;font-size:.87rem;font-weight:300;outline:none;transition:border-color .2s;width:100%;-webkit-appearance:none}
 .fi:focus,.fs:focus{border-color:var(--white)}
 .fi::placeholder{color:var(--g4)}
@@ -129,6 +129,18 @@ body>iframe{display:none !important}
 .calc-gate .field{text-align:left;margin-top:24px;margin-bottom:20px}
 .calc-locked{opacity:.4;pointer-events:none;user-select:none}
 .calc-address-banner{font-size:.7rem;letter-spacing:.08em;color:var(--g6);font-weight:300;margin-top:18px}
+
+/* REHAB INFO MODAL */
+.info-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;flex-shrink:0;border-radius:50%;border:1px solid var(--g5);color:var(--g5);font-size:.6rem;font-family:var(--serif);font-style:italic;font-weight:600;background:none;cursor:pointer;line-height:1;padding:0}
+.info-overlay{position:fixed;inset:0;z-index:350;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:24px}
+.info-overlay.on{display:flex}
+.info-modal{position:relative;background:var(--g2);border:1px solid var(--g3);padding:32px 28px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto}
+.info-modal-close{position:absolute;top:12px;right:12px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;line-height:1;color:var(--g5);background:none;border:none;cursor:pointer;transition:color .2s}
+.info-modal-title{font-family:var(--serif);font-size:1.25rem;font-weight:400;color:var(--white);margin-bottom:20px;padding-right:20px}
+.info-tier{margin-bottom:18px}
+.info-tier:last-child{margin-bottom:0}
+.info-tier-title{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--red);font-weight:500;margin-bottom:6px}
+.info-tier-desc{font-size:.8rem;color:var(--g6);font-weight:300;line-height:1.6}
 
 /* RESPONSIVE */
 @media(max-width:1024px){
@@ -170,6 +182,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 .btn-reset:hover{color:var(--white)}
 .consent-note a:hover{color:var(--white)}
 .calc-gate-close:hover{color:var(--white)}
+.info-icon-btn:hover{border-color:var(--white);color:var(--white)}
+.info-modal-close:hover{color:var(--white)}
 }
 </style>
 </head>
@@ -221,6 +235,30 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   </div>
 </div>
 
+<!-- REHAB INFO MODAL -->
+<div class="info-overlay" id="rehab-info-overlay" onclick="if(event.target===this) toggleRehabInfo()">
+  <div class="info-modal">
+    <button type="button" class="info-modal-close" aria-label="Close" onclick="toggleRehabInfo()">×</button>
+    <h3 class="info-modal-title">About These Estimates</h3>
+    <div class="info-tier">
+      <div class="info-tier-title">Light — $40/sqft</div>
+      <div class="info-tier-desc">Paint, flooring, fixtures, basic landscaping, hardware, appliance replacement and minor repairs.</div>
+    </div>
+    <div class="info-tier">
+      <div class="info-tier-title">Medium — $90/sqft</div>
+      <div class="info-tier-desc">Investor-grade kitchen and bathrooms, flooring, paint, fixtures, appliances, limited windows and minor electrical or plumbing work.</div>
+    </div>
+    <div class="info-tier">
+      <div class="info-tier-title">Heavy — $150/sqft</div>
+      <div class="info-tier-desc">Complete kitchen and bathrooms, windows, HVAC, electrical and plumbing upgrades, drywall, substantial repairs and limited layout changes.</div>
+    </div>
+    <div class="info-tier">
+      <div class="info-tier-title">Full Gut — $225/sqft</div>
+      <div class="info-tier-desc">Studs-out interior renovation, new plumbing, electrical, HVAC, insulation, drywall, windows, kitchen, bathrooms and permitted layout changes.</div>
+    </div>
+  </div>
+</div>
+
 <!-- PAGE HEADER -->
 <section id="calc-hero">
   <div class="wrap">
@@ -256,16 +294,21 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           <div class="calc-sec-head">Rehab Cost</div>
           <div class="calc-sec-body">
             <div class="frow">
-              <div class="field"><span class="field-label">Rehab Type</span>
+              <div class="field"><span class="field-label">Rehab Type <button type="button" class="info-icon-btn" onclick="toggleRehabInfo()" aria-label="About these estimates">i</button></span>
                 <select class="fs" id="c_rehabtype">
                   <option value="" selected>Select…</option>
                   <option value="40">Light — $40/sqft</option>
                   <option value="90">Medium — $90/sqft</option>
                   <option value="150">Heavy — $150/sqft</option>
                   <option value="225">Full Gut — $225/sqft</option>
+                  <option value="custom">Custom: Enter Value ($)</option>
                 </select>
               </div>
-              <div class="field"><span class="field-label">Est. per SQFT</span><div class="fo" id="o_persqft">$0.00</div></div>
+              <div class="field">
+                <span class="field-label">Est. per SQFT</span>
+                <div class="fo" id="o_persqft">$0.00</div>
+                <input class="fi" id="c_rehab_custom" type="number" min="0" step="1" placeholder="e.g. 100" style="display:none">
+              </div>
             </div>
             <div class="field"><span class="field-label">Rehab Estimate</span><div class="fo" id="o_rehabest">$0.00</div></div>
             <div class="frow">
@@ -572,7 +615,10 @@ function recalc() {
   const arvSqft = sqft > 0 ? arv / sqft : 0;
   set('o_arvsqft', money(arvSqft));
 
-  const perSqft = n('c_rehabtype');
+  const isCustomRehab = document.getElementById('c_rehabtype').value === 'custom';
+  document.getElementById('o_persqft').style.display = isCustomRehab ? 'none' : 'flex';
+  document.getElementById('c_rehab_custom').style.display = isCustomRehab ? 'block' : 'none';
+  const perSqft = isCustomRehab ? n('c_rehab_custom') : n('c_rehabtype');
   set('o_persqft', money(perSqft));
   const rehabEst = sqft * perSqft;
   set('o_rehabest', money(rehabEst));
@@ -667,6 +713,11 @@ function selectedLabel(id) {
   const el = document.getElementById(id);
   return el && el.selectedOptions.length ? el.selectedOptions[0].textContent.trim() : '';
 }
+function rehabTypeLabel() {
+  if (document.getElementById('c_rehabtype').value !== 'custom') return selectedLabel('c_rehabtype');
+  const customVal = val('c_rehab_custom');
+  return customVal ? `Custom — $${customVal}/sqft` : 'Custom (no value entered)';
+}
 function requireValid(ids) {
   for (const id of ids) {
     const el = document.getElementById(id);
@@ -687,7 +738,7 @@ function buildFlipPayload(extra) {
     arv: money(s.arv || 0),
     sqft: String(s.sqft || 0),
     arvSqft: money(s.arvSqft || 0),
-    rehabType: selectedLabel('c_rehabtype'),
+    rehabType: rehabTypeLabel(),
     rehabEstimate: money(s.rehabEst || 0),
     neighborhood: selectedLabel('c_neighborhood'),
     rehabTotal: money(s.rehabTotal || 0),
@@ -735,6 +786,10 @@ function closeGateGoBack() {
   } else {
     window.location.href = 'index.html';
   }
+}
+
+function toggleRehabInfo() {
+  document.getElementById('rehab-info-overlay').classList.toggle('on');
 }
 
 function unlockCalculator(btn) {
@@ -830,6 +885,7 @@ function resetCalculatorFields() {
   document.getElementById('c_arv').value = '';
   document.getElementById('c_sqft').value = '';
   document.getElementById('c_rehabtype').value = '';
+  document.getElementById('c_rehab_custom').value = '';
   document.getElementById('c_neighborhood').value = '';
   document.getElementById('c_rooftype').value = '0';
   document.getElementById('c_adutype').value = '0';
