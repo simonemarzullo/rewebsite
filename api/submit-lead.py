@@ -90,7 +90,7 @@ FIELD_LABELS = {
         ("Length of Project", "lengthOfProject"),
         ("Hard Money Loan / Down Payment", "loanRatio"), ("Hard Money Interest Rate", "hmInterestRate"),
         ("Loan Origination Fee", "loanOriginationFee"), ("Loan Origination Fee Cost", "loanOriginationFeeCost"),
-        ("Cash Carry Cost", "cashCarry"), ("Hard Money Carry Cost", "hardMoneyCarry"),
+        ("Monthly Holding Cost", "monthlyHoldingCost"), ("Total Hard Money Interest Cost", "totalHardMoneyInterestCost"),
         ("Listing Agent Commission", "listingAgent"), ("Buying Agent Commission", "buyingAgent"),
         ("Escrow, Title & Transfer", "escrow"),
         ("Minimum Profit %", "profitPct"), ("Profit Value", "profitValue"),

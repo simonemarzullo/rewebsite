@@ -399,14 +399,14 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
         <div class="calc-sec">
           <div class="calc-sec-head">Hard Money / Carry Cost</div>
           <div class="calc-sec-body">
-            <div class="field"><span class="field-label">Length of Project</span>
+            <div class="field"><span class="field-label">Length of Project &amp; Hard Money Loan Term</span>
               <select class="fs" id="c_length">
                 <option value="" selected>Select…</option>
-                <option value="2">0 – 3 Months</option>
-                <option value="5">3 – 6 Months</option>
-                <option value="7">6 Months – 1 Year</option>
-                <option value="12">1 Year+</option>
-                <option value="other">Other: Enter Months</option>
+                <option value="1">1 Month</option>
+                <option value="3">3 Months</option>
+                <option value="6">6 Months</option>
+                <option value="12">12 Months</option>
+                <option value="other">Enter Number of Months</option>
               </select>
             </div>
             <div class="field" id="length-other-field" style="display:none">
@@ -417,6 +417,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               <div class="field"><span class="field-label">Hard Money Loan / Down Payment</span>
                 <select class="fs" id="c_loanratio">
                   <option value="" selected>Select…</option>
+                  <option value="0">All Cash / No Loan — 0%</option>
                   <option value="70">70% Loan / 30% Down Payment</option>
                   <option value="75">75% Loan / 25% Down Payment</option>
                   <option value="80">80% Loan / 20% Down Payment</option>
@@ -427,13 +428,13 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               <div class="field"><span class="field-label">Hard Money Interest Rate</span>
                 <select class="fs" id="c_hmrate">
                   <option value="" selected>Select…</option>
-                  <option value="0">All Cash / No Loan — 0%</option>
                   <option value="8">8% — Deal</option>
                   <option value="9">9% — Strong Borrower</option>
                   <option value="10">10% — Average</option>
                   <option value="11">11% — Conservative Underwriting</option>
                   <option value="12">12% — Higher-Risk Deal</option>
                 </select>
+                <div class="fo" id="o_hmrate_allcash" style="display:none">0% (All Cash)</div>
               </div>
             </div>
             <div class="field"><span class="field-label">Loan Origination Fee</span>
@@ -444,17 +445,12 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
                 <option value="2">2% — Average</option>
                 <option value="3">3% — High</option>
               </select>
+              <div class="fo" id="o_originationfee_allcash" style="display:none">$0 (All Cash)</div>
             </div>
-            <div class="frow">
-              <div class="field"><span class="field-label">Cash Holding Period (Months)</span><div class="fo" id="o_cashfactor">0</div></div>
-              <div class="field"><span class="field-label">Cash Carry Cost</span><div class="fo" id="o_cashcarry">$0.00</div></div>
-            </div>
-            <div class="frow">
-              <div class="field"><span class="field-label">Hard Money Loan Term (Months)</span><div class="fo" id="o_hmfactor">0</div></div>
-              <div class="field"><span class="field-label">Hard Money Carry Cost</span><div class="fo" id="o_hmcarry">$0.00</div></div>
-            </div>
+            <div class="field"><span class="field-label">Monthly Holding Cost</span><div class="fo" id="o_cashcarry">$0.00</div></div>
+            <div class="field"><span class="field-label">Total Hard Money Interest Cost</span><div class="fo" id="o_hmcarry">$0.00</div></div>
             <div class="field"><span class="field-label">Loan Origination Fee Cost</span><div class="fo" id="o_originationfeecost">$0.00</div></div>
-            <p class="field-hint">Cash carry is shown for reference; hard money carry and the origination fee are real costs and are deducted from the offer.</p>
+            <p class="field-hint">Monthly Holding Cost is shown for reference; Total Hard Money Interest Cost and the origination fee are real costs and are deducted from the offer.</p>
           </div>
         </div>
 
@@ -686,12 +682,15 @@ function recalc() {
   const lengthIsOther = document.getElementById('c_length').value === 'other';
   document.getElementById('length-other-field').style.display = lengthIsOther ? 'flex' : 'none';
   const lengthFactor = lengthIsOther ? n('c_length_other') : n('c_length');
-  set('o_cashfactor', String(lengthFactor));
-  set('o_hmfactor', String(lengthFactor));
 
+  const isAllCash = document.getElementById('c_loanratio').value === '0';
+  document.getElementById('c_hmrate').style.display = isAllCash ? 'none' : 'block';
+  document.getElementById('o_hmrate_allcash').style.display = isAllCash ? 'flex' : 'none';
+  document.getElementById('c_originationfee').style.display = isAllCash ? 'none' : 'block';
+  document.getElementById('o_originationfee_allcash').style.display = isAllCash ? 'flex' : 'none';
   const loanPct = n('c_loanratio');
-  const hmRatePct = n('c_hmrate');
-  const originationFeePct = n('c_originationfee');
+  const hmRatePct = isAllCash ? 0 : n('c_hmrate');
+  const originationFeePct = isAllCash ? 0 : n('c_originationfee');
   // The interest-bearing loan balance is approximated from ARV (rather than
   // the buyer investment) because buyerInvestment is itself derived below
   // from the carry cost -- basing the loan on buyerInvestment would create a
@@ -699,9 +698,9 @@ function recalc() {
   // payment split further down, so both uses stay consistent with each other.
   const hmLoanBasis = arv * (loanPct / 100);
 
-  const cashCarry = (((arv * 0.01) + 0.085) / 12) * lengthFactor;
+  const monthlyHoldingCost = ((arv * 0.01) + 0.085) / 12;
   const hmCarry = ((hmLoanBasis * (hmRatePct / 100)) / 12) * lengthFactor;
-  set('o_cashcarry', money(cashCarry));
+  set('o_cashcarry', money(monthlyHoldingCost));
   set('o_hmcarry', money(hmCarry));
 
   const originationFeeCost = hmLoanBasis * (originationFeePct / 100);
@@ -735,7 +734,7 @@ function recalc() {
     arv, sqft, arvSqft, rehabEst, rehabTotal, roofEst, roofIsManual, aduEst, aduGarageEst, poolEst,
     sellVal, buyVal, esctVal, profitPct, profitVal,
     loanPct, hmRatePct, originationFeePct, originationFeeCost,
-    cashCarry, hmCarry, buyerInvestment, roi, downPayment, hardMoneyLoan,
+    monthlyHoldingCost, hmCarry, buyerInvestment, roi, downPayment, hardMoneyLoan,
     renovationCost, totalCost,
   };
 }
@@ -784,6 +783,14 @@ function lengthLabel() {
   const customVal = val('c_length_other');
   return customVal ? `${customVal} Months` : 'Other (no value entered)';
 }
+function hmRateLabel() {
+  if (document.getElementById('c_loanratio').value === '0') return '0% (All Cash)';
+  return selectedLabel('c_hmrate');
+}
+function originationFeeLabel() {
+  if (document.getElementById('c_loanratio').value === '0') return '$0 (All Cash)';
+  return selectedLabel('c_originationfee');
+}
 function requireValid(ids) {
   for (const id of ids) {
     const el = document.getElementById(id);
@@ -816,11 +823,11 @@ function buildFlipPayload(extra) {
     poolEstimate: money(s.poolEst || 0),
     lengthOfProject: lengthLabel(),
     loanRatio: selectedLabel('c_loanratio'),
-    hmInterestRate: selectedLabel('c_hmrate'),
-    loanOriginationFee: selectedLabel('c_originationfee'),
+    hmInterestRate: hmRateLabel(),
+    loanOriginationFee: originationFeeLabel(),
     loanOriginationFeeCost: money(s.originationFeeCost || 0),
-    cashCarry: money(s.cashCarry || 0),
-    hardMoneyCarry: money(s.hmCarry || 0),
+    monthlyHoldingCost: money(s.monthlyHoldingCost || 0),
+    totalHardMoneyInterestCost: money(s.hmCarry || 0),
     listingAgent: money(s.sellVal || 0),
     buyingAgent: money(s.buyVal || 0),
     escrow: money(s.esctVal || 0),
