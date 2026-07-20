@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>if ('scrollRestoration' in history) history.scrollRestoration = 'manual';</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Simone Marzullo | REALTOR® | The Agency Los Angeles</title>
@@ -825,6 +826,17 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 </footer>
 
 <script>
+window.scrollTo(0, 0);
+
+// Safari's back-forward cache restores the page (including scroll position)
+// without re-running scripts, so the scrollTo(0,0) above never fires on that
+// path -- force it again whenever the page is shown from bfcache.
+window.addEventListener('pageshow', function(event) {
+  if (event.persisted) {
+    window.scrollTo(0, 0);
+  }
+});
+
 const API_ENDPOINT = '/api/submit-lead';
 
 /* ---------- Early lead capture (Sell + Valuation) ----------
