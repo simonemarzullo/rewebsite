@@ -260,6 +260,30 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   </div>
 </div>
 
+<!-- HOLDING COST INFO MODAL -->
+<div class="info-overlay" id="holding-cost-info-overlay" onclick="if(event.target===this) toggleHoldingCostInfo()">
+  <div class="info-modal">
+    <button type="button" class="info-modal-close" aria-label="Close" onclick="toggleHoldingCostInfo()">×</button>
+    <h3 class="info-modal-title">What's Included in Monthly Holding Cost</h3>
+    <div class="info-tier">
+      <div class="info-tier-title">Property Taxes</div>
+      <div class="info-tier-desc">Estimated at the standard California effective rate on the property's ARV.</div>
+    </div>
+    <div class="info-tier">
+      <div class="info-tier-title">Insurance</div>
+      <div class="info-tier-desc">Hazard / builder's risk coverage for a vacant property under renovation.</div>
+    </div>
+    <div class="info-tier">
+      <div class="info-tier-title">Utilities</div>
+      <div class="info-tier-desc">Electric, water, gas and trash service kept active during the rehab.</div>
+    </div>
+    <div class="info-tier">
+      <div class="info-tier-title">Maintenance &amp; Security</div>
+      <div class="info-tier-desc">Basic upkeep, landscaping and security for a vacant property while it's held.</div>
+    </div>
+  </div>
+</div>
+
 <!-- PAGE HEADER -->
 <section id="calc-hero">
   <div class="wrap">
@@ -448,7 +472,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               </select>
               <div class="fo" id="o_originationfee_allcash" style="display:none">$0 (All Cash)</div>
             </div>
-            <div class="field"><span class="field-label">Monthly Holding Cost</span><div class="fo" id="o_cashcarry">$0.00</div></div>
+            <div class="field"><span class="field-label">Monthly Holding Cost <button type="button" class="info-icon-btn" onclick="toggleHoldingCostInfo()" aria-label="What's included in monthly holding cost">i</button></span><div class="fo" id="o_cashcarry">$0.00</div></div>
             <div class="field"><span class="field-label">Total Holding Cost (Based on Project Length)</span><div class="fo" id="o_totalholdingcost">$0.00</div></div>
             <div class="field"><span class="field-label">Total Hard Money Interest Cost</span><div class="fo" id="o_hmcarry">$0.00</div></div>
             <div class="field"><span class="field-label">Loan Origination Fee Cost</span><div class="fo" id="o_originationfeecost">$0.00</div></div>
@@ -701,7 +725,7 @@ function recalc() {
   // payment split further down, so both uses stay consistent with each other.
   const hmLoanBasis = arv * (loanPct / 100);
 
-  const monthlyHoldingCost = ((arv * 0.01) + 0.085) / 12;
+  const monthlyHoldingCost = (arv * 0.0175) / 12;
   const totalHoldingCost = monthlyHoldingCost * lengthFactor;
   const hmCarry = ((hmLoanBasis * (hmRatePct / 100)) / 12) * lengthFactor;
   set('o_cashcarry', money(monthlyHoldingCost));
@@ -870,6 +894,10 @@ function closeGateGoBack() {
 
 function toggleRehabInfo() {
   document.getElementById('rehab-info-overlay').classList.toggle('on');
+}
+
+function toggleHoldingCostInfo() {
+  document.getElementById('holding-cost-info-overlay').classList.toggle('on');
 }
 
 function unlockCalculator(btn) {
