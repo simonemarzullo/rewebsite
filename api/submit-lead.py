@@ -95,8 +95,8 @@ FIELD_LABELS = {
         ("Escrow, Title & Transfer", "escrow"),
         ("Minimum Profit %", "profitPct"), ("Profit Value", "profitValue"),
         ("Estimated Buyer Investment", "buyerInvestment"), ("Return on Investment", "roi"),
-        ("Renovation Cost", "renovationCost"), ("Down Payment", "downPayment"),
-        ("Hard Money Loan", "hardMoneyLoan"),
+        ("Renovation Cost", "renovationCost"), ("Total Cost (Purchase to Resale)", "totalCost"),
+        ("Down Payment", "downPayment"), ("Hard Money Loan", "hardMoneyLoan"),
         ("Full Name", "name"), ("Email", "email"), ("Phone", "phone"),
     ],
     "investor": [

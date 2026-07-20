@@ -311,7 +311,6 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               </div>
             </div>
             <div class="field"><span class="field-label">Rehab Estimate</span><div class="fo" id="o_rehabest">$0.00</div></div>
-            <div class="field"><span class="field-label">Total Rehab Estimate</span><div class="fo" id="o_rehabtotal">$0.00</div></div>
           </div>
         </div>
 
@@ -332,11 +331,12 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
                 </select>
               </div>
               <div class="field">
-                <span class="field-label">Estimate</span>
-                <div class="fo" id="o_roofest">$0.00</div>
+                <span class="field-label">Rate per SQFT</span>
+                <div class="fo" id="o_roofrate">$0.00</div>
                 <input class="fi" id="c_roof_custom" type="number" min="0" step="1" placeholder="e.g. 15" style="display:none">
               </div>
             </div>
+            <div class="field"><span class="field-label">Roof Estimate</span><div class="fo" id="o_roofest">$0.00</div></div>
           </div>
         </div>
 
@@ -355,11 +355,11 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
                   <option value="custom">Custom ($)</option>
                 </select>
               </div>
-              <div class="field">
-                <span class="field-label">Estimate</span>
-                <div class="fo" id="o_aduest">$0.00</div>
-                <input class="fi" id="c_adu_custom" type="number" min="0" step="1000" placeholder="e.g. 150000" style="display:none">
-              </div>
+              <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_aduest">$0.00</div></div>
+            </div>
+            <div class="field" id="adu-custom-field" style="display:none">
+              <span class="field-label">Custom Amount ($)</span>
+              <input class="fi" id="c_adu_custom" type="number" min="0" step="1000" placeholder="e.g. 150000">
             </div>
           </div>
         </div>
@@ -387,11 +387,11 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
                   <option value="custom">Custom ($)</option>
                 </select>
               </div>
-              <div class="field">
-                <span class="field-label">Estimate</span>
-                <div class="fo" id="o_poolest">$0.00</div>
-                <input class="fi" id="c_pool_custom" type="number" min="0" step="1000" placeholder="e.g. 80000" style="display:none">
-              </div>
+              <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_poolest">$0.00</div></div>
+            </div>
+            <div class="field" id="pool-custom-field" style="display:none">
+              <span class="field-label">Custom Amount ($)</span>
+              <input class="fi" id="c_pool_custom" type="number" min="0" step="1000" placeholder="e.g. 80000">
             </div>
             <div class="field" style="margin-top:4px"><span class="field-label">Combined ADU / Pool Estimate</span><div class="fo" id="o_adupooltotal">$0.00</div></div>
           </div>
@@ -515,6 +515,20 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           </div>
         </div>
 
+        <div class="calc-sec">
+          <div class="calc-sec-head">Total Cost Breakdown</div>
+          <div class="calc-sec-body">
+            <div class="field"><span class="field-label">Purchase Price</span><div class="fo" id="o_bd_purchase">$0.00</div></div>
+            <div class="field"><span class="field-label">Renovation Cost</span><div class="fo" id="o_bd_reno">$0.00</div></div>
+            <div class="field"><span class="field-label">Hard Money Carry Cost</span><div class="fo" id="o_bd_carry">$0.00</div></div>
+            <div class="field"><span class="field-label">Loan Origination Fee</span><div class="fo" id="o_bd_originationfee">$0.00</div></div>
+            <div class="field"><span class="field-label">Listing Agent Commission</span><div class="fo" id="o_bd_sell">$0.00</div></div>
+            <div class="field"><span class="field-label">Buying Agent Commission</span><div class="fo" id="o_bd_buy">$0.00</div></div>
+            <div class="field"><span class="field-label">Escrow, Title &amp; Transfer</span><div class="fo" id="o_bd_esct">$0.00</div></div>
+            <div class="field" style="margin-top:4px"><span class="field-label">Total Cost (Purchase to Resale)</span><div class="fo" id="o_bd_total">$0.00</div></div>
+          </div>
+        </div>
+
         <div class="calc-summary">
           <div class="calc-summary-hero">
             <span class="label label-red">Estimated Investor Profit</span>
@@ -634,28 +648,26 @@ function recalc() {
 
   const neighborhoodPct = 100; // neighborhood selector removed; always 100%
   const rehabTotal = rehabEst * (neighborhoodPct / 100);
-  set('o_rehabtotal', money(rehabTotal));
 
   // "manual" (Historic / Custom Clay Tile) has no per-sqft rate -- flag it
   // for a manual estimate instead of computing a misleading $0.
   const roofRateRaw = document.getElementById('c_rooftype').value;
   const roofIsManual = roofRateRaw === 'manual';
   const roofIsCustom = roofRateRaw === 'custom';
-  document.getElementById('o_roofest').style.display = roofIsCustom ? 'none' : 'flex';
+  document.getElementById('o_roofrate').style.display = roofIsCustom ? 'none' : 'flex';
   document.getElementById('c_roof_custom').style.display = roofIsCustom ? 'block' : 'none';
   const roofRate = roofIsCustom ? n('c_roof_custom') : (parseFloat(roofRateRaw) || 0);
+  set('o_roofrate', roofIsManual ? 'Manual' : money(roofRate));
   const roofEst = roofIsManual ? 0 : sqft * roofRate;
   set('o_roofest', roofIsManual ? 'Manual Estimate' : money(roofEst));
 
   const aduIsCustom = document.getElementById('c_adutype').value === 'custom';
-  document.getElementById('o_aduest').style.display = aduIsCustom ? 'none' : 'flex';
-  document.getElementById('c_adu_custom').style.display = aduIsCustom ? 'block' : 'none';
+  document.getElementById('adu-custom-field').style.display = aduIsCustom ? 'flex' : 'none';
   const aduGarageEst = aduIsCustom ? n('c_adu_custom') : n('c_adutype');
   set('o_aduest', money(aduGarageEst));
 
   const poolIsCustom = document.getElementById('c_pooltype').value === 'custom';
-  document.getElementById('o_poolest').style.display = poolIsCustom ? 'none' : 'flex';
-  document.getElementById('c_pool_custom').style.display = poolIsCustom ? 'block' : 'none';
+  document.getElementById('pool-custom-field').style.display = poolIsCustom ? 'flex' : 'none';
   const poolEst = poolIsCustom ? n('c_pool_custom') : n('c_pooltype');
   set('o_poolest', money(poolEst));
 
@@ -703,17 +715,30 @@ function recalc() {
   const roiBasis = rehabTotal + downPayment + hmCarry + originationFeeCost;
   const roi = roiBasis > 0 ? (profitVal / roiBasis) * 100 : 0;
 
+  const renovationCost = rehabTotal + roofEst + aduEst;
+
   set('o_buyerinv', money(buyerInvestment));
   set('o_roi', roi.toFixed(0) + '%');
-  set('o_renocost', moneyRound(rehabTotal));
+  set('o_renocost', moneyRound(renovationCost));
   set('o_dp', moneyRound(downPayment));
   set('o_hmloan', moneyRound(hardMoneyLoan));
+
+  const totalCost = buyerInvestment + renovationCost + hmCarry + originationFeeCost + sellVal + buyVal + esctVal;
+  set('o_bd_purchase', money(buyerInvestment));
+  set('o_bd_reno', money(renovationCost));
+  set('o_bd_carry', money(hmCarry));
+  set('o_bd_originationfee', money(originationFeeCost));
+  set('o_bd_sell', money(sellVal));
+  set('o_bd_buy', money(buyVal));
+  set('o_bd_esct', money(esctVal));
+  set('o_bd_total', money(totalCost));
 
   calcState = {
     arv, sqft, arvSqft, rehabEst, rehabTotal, roofEst, roofIsManual, aduEst, aduGarageEst, poolEst,
     sellVal, buyVal, esctVal, profitPct, profitVal,
     loanPct, hmRatePct, originationFeePct, originationFeeCost,
     cashCarry, hmCarry, buyerInvestment, roi, downPayment, hardMoneyLoan,
+    renovationCost, totalCost,
   };
 }
 
@@ -805,7 +830,8 @@ function buildFlipPayload(extra) {
     profitValue: money(s.profitVal || 0),
     buyerInvestment: money(s.buyerInvestment || 0),
     roi: (s.roi || 0).toFixed(0) + '%',
-    renovationCost: money(s.rehabTotal || 0),
+    renovationCost: money(s.renovationCost || 0),
+    totalCost: money(s.totalCost || 0),
     downPayment: money(s.downPayment || 0),
     hardMoneyLoan: money(s.hardMoneyLoan || 0),
     hp: val('flip_hp'),
