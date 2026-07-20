@@ -393,7 +393,6 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               <span class="field-label">Custom Amount ($)</span>
               <input class="fi" id="c_pool_custom" type="number" min="0" step="1000" placeholder="e.g. 80000">
             </div>
-            <div class="field" style="margin-top:4px"><span class="field-label">Combined ADU / Pool Estimate</span><div class="fo" id="o_adupooltotal">$0.00</div></div>
           </div>
         </div>
 
@@ -525,7 +524,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
             <div class="field"><span class="field-label">Listing Agent Commission</span><div class="fo" id="o_bd_sell">$0.00</div></div>
             <div class="field"><span class="field-label">Buying Agent Commission</span><div class="fo" id="o_bd_buy">$0.00</div></div>
             <div class="field"><span class="field-label">Escrow, Title &amp; Transfer</span><div class="fo" id="o_bd_esct">$0.00</div></div>
-            <div class="field" style="margin-top:4px"><span class="field-label">Total Cost (Purchase to Resale)</span><div class="fo" id="o_bd_total">$0.00</div></div>
+            <div class="field" style="margin-top:4px"><span class="field-label">Estimated Total Project Costs Before Resale</span><div class="fo" id="o_bd_total">$0.00</div></div>
           </div>
         </div>
 
@@ -672,7 +671,6 @@ function recalc() {
   set('o_poolest', money(poolEst));
 
   const aduEst = aduGarageEst + poolEst;
-  set('o_adupooltotal', money(aduEst));
 
   const sellPct = n('c_sellpct'), buyPct = n('c_buypct');
   const sellVal = arv * sellPct / 100, buyVal = arv * buyPct / 100, esctVal = arv * 0.01;
