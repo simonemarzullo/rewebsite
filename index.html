@@ -828,13 +828,14 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 <script>
 window.scrollTo(0, 0);
 
-// Safari's back-forward cache restores the page (including scroll position)
-// without re-running scripts, so the scrollTo(0,0) above never fires on that
-// path -- force it again whenever the page is shown from bfcache.
-window.addEventListener('pageshow', function(event) {
-  if (event.persisted) {
-    window.scrollTo(0, 0);
-  }
+// iOS Safari can restore this page from a frozen snapshot -- including
+// scroll position -- without re-running any scripts, so nothing above this
+// point can be relied on to have executed. Force the scroll back to top
+// every time the page is (re)shown, not just when event.persisted is true,
+// since that flag isn't consistently set on iOS Safari's tab-snapshot
+// restores.
+window.addEventListener('pageshow', function() {
+  window.scrollTo(0, 0);
 });
 
 const API_ENDPOINT = '/api/submit-lead';
