@@ -725,11 +725,7 @@ function recalc() {
   // payment split further down, so both uses stay consistent with each other.
   const hmLoanBasis = arv * (loanPct / 100);
 
-  const monthlyHoldingCost = (arv * 0.0175) / 12;
-  const totalHoldingCost = monthlyHoldingCost * lengthFactor;
   const hmCarry = ((hmLoanBasis * (hmRatePct / 100)) / 12) * lengthFactor;
-  set('o_cashcarry', money(monthlyHoldingCost));
-  set('o_totalholdingcost', money(totalHoldingCost));
   set('o_hmcarry', money(hmCarry));
 
   const originationFeeCost = hmLoanBasis * (originationFeePct / 100);
@@ -740,6 +736,14 @@ function recalc() {
   const hardMoneyLoan = buyerInvestment - downPayment;
   const roiBasis = rehabTotal + downPayment + hmCarry + originationFeeCost;
   const roi = roiBasis > 0 ? (profitVal / roiBasis) * 100 : 0;
+
+  // Property tax is reassessed at time of purchase (CA Prop 13), so holding
+  // cost is estimated off the purchase price (buyer investment) rather than
+  // the after-repair value.
+  const monthlyHoldingCost = (buyerInvestment * 0.0175) / 12;
+  const totalHoldingCost = monthlyHoldingCost * lengthFactor;
+  set('o_cashcarry', money(monthlyHoldingCost));
+  set('o_totalholdingcost', money(totalHoldingCost));
 
   const renovationCost = rehabTotal + roofEst + aduEst;
 
