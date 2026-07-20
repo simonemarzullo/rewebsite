@@ -352,9 +352,14 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
                   <option value="250000">Small Detached ADU (~400–600 sq. ft.)</option>
                   <option value="325000">Standard Detached ADU (~600–800 sq. ft.)</option>
                   <option value="450000">Large / High-End Detached ADU (~800–1,200 sq. ft.)</option>
+                  <option value="custom">Custom ($)</option>
                 </select>
               </div>
-              <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_aduest">$0.00</div></div>
+              <div class="field">
+                <span class="field-label">Estimate</span>
+                <div class="fo" id="o_aduest">$0.00</div>
+                <input class="fi" id="c_adu_custom" type="number" min="0" step="1000" placeholder="e.g. 150000" style="display:none">
+              </div>
             </div>
           </div>
         </div>
@@ -379,9 +384,14 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
                     <option value="185000">Large Pool (~600–900 sq. ft.)</option>
                     <option value="250000">Luxury Custom Pool with Spa</option>
                   </optgroup>
+                  <option value="custom">Custom ($)</option>
                 </select>
               </div>
-              <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_poolest">$0.00</div></div>
+              <div class="field">
+                <span class="field-label">Estimate</span>
+                <div class="fo" id="o_poolest">$0.00</div>
+                <input class="fi" id="c_pool_custom" type="number" min="0" step="1000" placeholder="e.g. 80000" style="display:none">
+              </div>
             </div>
             <div class="field" style="margin-top:4px"><span class="field-label">Combined ADU / Pool Estimate</span><div class="fo" id="o_adupooltotal">$0.00</div></div>
           </div>
@@ -397,7 +407,12 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
                 <option value="5">3 – 6 Months</option>
                 <option value="7">6 Months – 1 Year</option>
                 <option value="12">1 Year+</option>
+                <option value="other">Other: Enter Months</option>
               </select>
+            </div>
+            <div class="field" id="length-other-field" style="display:none">
+              <span class="field-label">Number of Months</span>
+              <input class="fi" id="c_length_other" type="number" min="0" step="1" placeholder="e.g. 9">
             </div>
             <div class="frow">
               <div class="field"><span class="field-label">Hard Money Loan / Down Payment</span>
@@ -632,10 +647,18 @@ function recalc() {
   const roofEst = roofIsManual ? 0 : sqft * roofRate;
   set('o_roofest', roofIsManual ? 'Manual Estimate' : money(roofEst));
 
-  const aduGarageEst = n('c_adutype');
+  const aduIsCustom = document.getElementById('c_adutype').value === 'custom';
+  document.getElementById('o_aduest').style.display = aduIsCustom ? 'none' : 'flex';
+  document.getElementById('c_adu_custom').style.display = aduIsCustom ? 'block' : 'none';
+  const aduGarageEst = aduIsCustom ? n('c_adu_custom') : n('c_adutype');
   set('o_aduest', money(aduGarageEst));
-  const poolEst = n('c_pooltype');
+
+  const poolIsCustom = document.getElementById('c_pooltype').value === 'custom';
+  document.getElementById('o_poolest').style.display = poolIsCustom ? 'none' : 'flex';
+  document.getElementById('c_pool_custom').style.display = poolIsCustom ? 'block' : 'none';
+  const poolEst = poolIsCustom ? n('c_pool_custom') : n('c_pooltype');
   set('o_poolest', money(poolEst));
+
   const aduEst = aduGarageEst + poolEst;
   set('o_adupooltotal', money(aduEst));
 
@@ -650,7 +673,9 @@ function recalc() {
   const profitVal = arv * profitPct / 100;
   set('o_profitval', money(profitVal));
 
-  const lengthFactor = n('c_length');
+  const lengthIsOther = document.getElementById('c_length').value === 'other';
+  document.getElementById('length-other-field').style.display = lengthIsOther ? 'flex' : 'none';
+  const lengthFactor = lengthIsOther ? n('c_length_other') : n('c_length');
   set('o_cashfactor', String(lengthFactor));
   set('o_hmfactor', String(lengthFactor));
 
@@ -721,6 +746,21 @@ function roofTypeLabel() {
   const customVal = val('c_roof_custom');
   return customVal ? `Custom — $${customVal}/sqft` : 'Custom (no value entered)';
 }
+function aduTypeLabel() {
+  if (document.getElementById('c_adutype').value !== 'custom') return selectedLabel('c_adutype');
+  const customVal = val('c_adu_custom');
+  return customVal ? `Custom — $${customVal}` : 'Custom (no value entered)';
+}
+function poolTypeLabel() {
+  if (document.getElementById('c_pooltype').value !== 'custom') return selectedLabel('c_pooltype');
+  const customVal = val('c_pool_custom');
+  return customVal ? `Custom — $${customVal}` : 'Custom (no value entered)';
+}
+function lengthLabel() {
+  if (document.getElementById('c_length').value !== 'other') return selectedLabel('c_length');
+  const customVal = val('c_length_other');
+  return customVal ? `${customVal} Months` : 'Other (no value entered)';
+}
 function requireValid(ids) {
   for (const id of ids) {
     const el = document.getElementById(id);
@@ -747,11 +787,11 @@ function buildFlipPayload(extra) {
     rehabTotal: money(s.rehabTotal || 0),
     roofType: roofTypeLabel(),
     roofEstimate: s.roofIsManual ? 'Manual Estimate' : money(s.roofEst || 0),
-    aduType: selectedLabel('c_adutype'),
+    aduType: aduTypeLabel(),
     aduEstimate: money(s.aduGarageEst || 0),
-    poolType: selectedLabel('c_pooltype'),
+    poolType: poolTypeLabel(),
     poolEstimate: money(s.poolEst || 0),
-    lengthOfProject: selectedLabel('c_length'),
+    lengthOfProject: lengthLabel(),
     loanRatio: selectedLabel('c_loanratio'),
     hmInterestRate: selectedLabel('c_hmrate'),
     loanOriginationFee: selectedLabel('c_originationfee'),
@@ -892,8 +932,11 @@ function resetCalculatorFields() {
   document.getElementById('c_rooftype').value = '0';
   document.getElementById('c_roof_custom').value = '';
   document.getElementById('c_adutype').value = '0';
+  document.getElementById('c_adu_custom').value = '';
   document.getElementById('c_pooltype').value = '0';
+  document.getElementById('c_pool_custom').value = '';
   document.getElementById('c_length').value = '';
+  document.getElementById('c_length_other').value = '';
   document.getElementById('c_loanratio').value = '';
   document.getElementById('c_hmrate').value = '';
   document.getElementById('c_originationfee').value = '';
