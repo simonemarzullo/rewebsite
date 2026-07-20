@@ -380,12 +380,12 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
                   <option value="custom">Custom ($)</option>
                 </select>
               </div>
-              <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_aduest">$0.00</div></div>
+              <div class="field" id="adu-custom-field" style="display:none">
+                <span class="field-label">Custom Amount ($)</span>
+                <input class="fi" id="c_adu_custom" type="number" min="0" step="1000" placeholder="e.g. 150000">
+              </div>
             </div>
-            <div class="field" id="adu-custom-field" style="display:none">
-              <span class="field-label">Custom Amount ($)</span>
-              <input class="fi" id="c_adu_custom" type="number" min="0" step="1000" placeholder="e.g. 150000">
-            </div>
+            <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_aduest">$0.00</div></div>
           </div>
         </div>
 
@@ -412,12 +412,12 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
                   <option value="custom">Custom ($)</option>
                 </select>
               </div>
-              <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_poolest">$0.00</div></div>
+              <div class="field" id="pool-custom-field" style="display:none">
+                <span class="field-label">Custom Amount ($)</span>
+                <input class="fi" id="c_pool_custom" type="number" min="0" step="1000" placeholder="e.g. 80000">
+              </div>
             </div>
-            <div class="field" id="pool-custom-field" style="display:none">
-              <span class="field-label">Custom Amount ($)</span>
-              <input class="fi" id="c_pool_custom" type="number" min="0" step="1000" placeholder="e.g. 80000">
-            </div>
+            <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_poolest">$0.00</div></div>
           </div>
         </div>
 
@@ -622,6 +622,15 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 <script>
 window.scrollTo(0, 0);
 document.body.style.overflow = 'hidden';
+
+// Safari's back-forward cache restores the page (including scroll position)
+// without re-running scripts, so the scrollTo(0,0) above never fires on that
+// path -- force it again whenever the page is shown from bfcache.
+window.addEventListener('pageshow', function(event) {
+  if (event.persisted) {
+    window.scrollTo(0, 0);
+  }
+});
 
 function toggleMobileNav() {
   const menu = document.getElementById('nav-mobile');
