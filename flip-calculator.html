@@ -898,6 +898,11 @@ function closeGate() {
     banner.textContent = 'Analyzing: ' + flipAddress;
     banner.style.display = 'block';
   }
+  // Typing into the address field opens the keyboard, which shifts the
+  // page's scroll position behind the fixed gate overlay -- reset to the
+  // top so the calculator opens on the page title, not wherever the
+  // keyboard left it scrolled.
+  window.scrollTo(0, 0);
 }
 
 function closeGateGoBack() {
