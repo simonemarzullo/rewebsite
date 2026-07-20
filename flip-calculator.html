@@ -85,6 +85,14 @@ body>iframe{display:none !important}
 #calc{padding:64px 0 96px}
 .calc-grid{display:block;max-width:720px;margin:0 auto}
 .calc-form{display:flex;flex-direction:column;gap:24px}
+.calc-sticky-summary{display:none}
+.calc-sticky-summary-inner{position:sticky;top:96px;display:flex;flex-direction:column;gap:16px}
+.calc-sticky-summary .calc-summary-hero{padding:24px 22px}
+.calc-sticky-summary .calc-summary-hero-val{font-size:1.9rem}
+@media(min-width:1120px){
+  .calc-grid{display:grid;grid-template-columns:720px 1fr;gap:32px;max-width:1080px}
+  .calc-sticky-summary{display:block}
+}
 
 .calc-summary{background:var(--g2);border:1px solid var(--g3)}
 .calc-summary-hero{padding:28px 26px;text-align:center;border-bottom:1px solid var(--g3)}
@@ -101,7 +109,7 @@ body>iframe{display:none !important}
 .field{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
 .field:last-child{margin-bottom:0}
 .field-label{font-size:.59rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--g5);display:flex;align-items:center;gap:6px;min-height:15px}
-.fi,.fs{background:rgba(200,16,46,.1);border:1px solid var(--red);color:var(--white);padding:13px 16px;font-size:.87rem;font-weight:300;outline:none;transition:border-color .2s;width:100%;-webkit-appearance:none}
+.fi,.fs{background:var(--g1);border:1px solid var(--red);color:var(--white);padding:13px 16px;font-size:.87rem;font-weight:300;outline:none;transition:border-color .2s;width:100%;-webkit-appearance:none}
 .fi:focus,.fs:focus{border-color:var(--white)}
 .fi::placeholder{color:var(--g4)}
 .fs{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23555' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
@@ -591,6 +599,22 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
         </div>
       </div>
 
+      <!-- STICKY RESULTS (desktop only) -->
+      <aside class="calc-sticky-summary">
+        <div class="calc-sticky-summary-inner">
+          <div class="calc-summary">
+            <div class="calc-summary-hero">
+              <span class="label label-red">Estimated Buyer Investment</span>
+              <div class="calc-summary-hero-val" id="o_sticky_buyerinv">$0.00</div>
+            </div>
+            <div class="calc-stat-grid">
+              <div class="stat-block"><div class="stat-val" id="o_sticky_roi">0%</div><div class="stat-lbl">Return on Investment</div></div>
+              <div class="stat-block"><div class="stat-val" id="o_sticky_profit">$0</div><div class="stat-lbl">Investor Profit</div></div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
     </div>
   </div>
 </section>
@@ -764,6 +788,9 @@ function recalc() {
   set('o_renocost', moneyRound(renovationCost));
   set('o_dp', moneyRound(downPayment));
   set('o_hmloan', moneyRound(hardMoneyLoan));
+  set('o_sticky_buyerinv', money(buyerInvestment));
+  set('o_sticky_roi', roi.toFixed(0) + '%');
+  set('o_sticky_profit', moneyRound(profitVal));
 
   const totalCost = buyerInvestment + renovationCost + hmCarry + originationFeeCost + sellVal + buyVal + esctVal;
   set('o_bd_purchase', money(buyerInvestment));
