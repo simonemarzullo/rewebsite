@@ -89,7 +89,19 @@ body>iframe{display:none !important}
 .calc-sticky-summary-inner{position:sticky;top:96px;display:flex;flex-direction:column;gap:16px}
 .calc-sticky-summary .calc-summary-hero{padding:24px 22px}
 .calc-sticky-summary .calc-summary-hero-val{font-size:1.9rem}
+.calc-progress{display:none;position:fixed;top:72px;left:0;right:0;height:3px;background:var(--g3);z-index:201}
+.calc-progress.on{display:block}
+.calc-progress-fill{height:100%;width:0%;background:var(--red)}
+.calc-mobile-bar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:250;background:rgba(10,10,10,.96);backdrop-filter:blur(16px);border-top:1px solid var(--g3);padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));align-items:center;justify-content:center;gap:40px;cursor:pointer}
+.calc-mobile-bar.on{display:flex}
+.calc-mobile-bar-item{display:flex;flex-direction:column;align-items:center;gap:2px}
+.calc-mobile-bar-lbl{font-size:.56rem;letter-spacing:.15em;text-transform:uppercase;color:var(--g5);font-weight:500}
+.calc-mobile-bar-val{font-family:var(--serif);font-size:1.2rem;color:var(--white);line-height:1}
+@media(max-width:1119px){
+  body:has(.calc-mobile-bar.on) .mcf{bottom:calc(76px + 18px + env(safe-area-inset-bottom,0px))}
+}
 @media(min-width:1120px){
+  .calc-mobile-bar{display:none !important}
   .calc-grid{display:grid;grid-template-columns:720px 1fr;gap:32px;max-width:1080px}
   .calc-sticky-summary{display:block}
 }
@@ -97,7 +109,7 @@ body>iframe{display:none !important}
 .calc-summary{background:var(--g2);border:1px solid var(--g3)}
 .calc-summary-hero{padding:28px 26px;text-align:center;border-bottom:1px solid var(--g3)}
 .calc-summary-hero-val{font-family:var(--serif);font-size:2.3rem;font-weight:400;color:var(--white);line-height:1.05;margin-top:10px;word-break:break-word}
-.calc-summary-hero-note{font-size:.68rem;color:var(--g5);font-weight:300;margin-top:8px;line-height:1.6}
+.calc-summary-hero-note{font-size:.74rem;color:var(--g5);font-weight:300;margin-top:8px;line-height:1.6}
 .calc-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--g3)}
 .calc-stat-grid .stat-block{padding:20px 16px}
 
@@ -117,7 +129,7 @@ body>iframe{display:none !important}
 .fs{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23555' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
 .fs option{background:var(--g1)}
 .fo{background:var(--g1);border:1px solid var(--g3);color:var(--white);padding:13px 16px;font-size:.87rem;font-weight:500;width:100%;min-height:44px;display:flex;align-items:center}
-.field-hint{font-size:.66rem;color:var(--g5);font-weight:300;margin-top:2px;line-height:1.5}
+.field-hint{font-size:.74rem;color:var(--g6);font-weight:300;margin-top:2px;line-height:1.6}
 .calc-note{font-size:.72rem;color:var(--g5);font-weight:300;line-height:1.8;max-width:760px;margin-top:8px}
 .btn-sub{background:var(--red);color:var(--white);padding:14px 24px;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background .2s,transform .15s;width:100%}
 .btn-sub:disabled{opacity:.55;cursor:default;transform:none!important}
@@ -151,7 +163,7 @@ body>iframe{display:none !important}
 .info-tier{margin-bottom:18px}
 .info-tier:last-child{margin-bottom:0}
 .info-tier-title{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--red);font-weight:500;margin-bottom:6px}
-.info-tier-desc{font-size:.8rem;color:var(--g6);font-weight:300;line-height:1.6}
+.info-tier-desc{font-size:.85rem;color:var(--g6);font-weight:300;line-height:1.65}
 
 /* RESPONSIVE */
 @media(max-width:1024px){
@@ -354,6 +366,21 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   </div>
 </div>
 
+<!-- SCROLL PROGRESS INDICATOR -->
+<div class="calc-progress" id="calc-progress"><div class="calc-progress-fill" id="calc-progress-fill"></div></div>
+
+<!-- MOBILE STICKY RESULTS BAR -->
+<div class="calc-mobile-bar" id="calc-mobile-bar" onclick="document.querySelector('.calc-summary').scrollIntoView({behavior:'smooth', block:'start'})">
+  <div class="calc-mobile-bar-item">
+    <span class="calc-mobile-bar-lbl">Purchase Price</span>
+    <span class="calc-mobile-bar-val" id="o_mobilebar_buyerinv">$0.00</span>
+  </div>
+  <div class="calc-mobile-bar-item">
+    <span class="calc-mobile-bar-lbl">ROI</span>
+    <span class="calc-mobile-bar-val" id="o_mobilebar_roi">0%</span>
+  </div>
+</div>
+
 <!-- PAGE HEADER -->
 <section id="calc-hero">
   <div class="wrap">
@@ -425,13 +452,13 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
                   <option value="custom">Custom ($/sqft)</option>
                 </select>
               </div>
-              <div class="field">
+              <div class="field" id="roof-rate-field" style="display:none">
                 <span class="field-label">Rate per SQFT</span>
                 <div class="fo" id="o_roofrate">$0.00</div>
                 <input class="fi" id="c_roof_custom" type="number" min="0" step="1" placeholder="e.g. 15" style="display:none">
               </div>
             </div>
-            <div class="field"><span class="field-label">Roof Estimate</span><div class="fo" id="o_roofest">$0.00</div></div>
+            <div class="field" id="roof-est-field" style="display:none"><span class="field-label">Roof Estimate</span><div class="fo" id="o_roofest">$0.00</div></div>
           </div>
         </div>
 
@@ -455,7 +482,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
                 <input class="fi" id="c_adu_custom" type="number" min="0" step="1000" placeholder="e.g. 150000">
               </div>
             </div>
-            <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_aduest">$0.00</div></div>
+            <div class="field" id="adu-est-field" style="display:none"><span class="field-label">ADU Estimate</span><div class="fo" id="o_aduest">$0.00</div></div>
           </div>
         </div>
 
@@ -487,7 +514,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
                 <input class="fi" id="c_pool_custom" type="number" min="0" step="1000" placeholder="e.g. 80000">
               </div>
             </div>
-            <div class="field"><span class="field-label">Estimate</span><div class="fo" id="o_poolest">$0.00</div></div>
+            <div class="field" id="pool-est-field" style="display:none"><span class="field-label">Pool Estimate</span><div class="fo" id="o_poolest">$0.00</div></div>
           </div>
         </div>
 
@@ -662,7 +689,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
         <div class="calc-sec" id="flip-cta-sec">
           <div class="calc-sec-body">
             <input type="text" class="hp-field" id="flip_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-            <button type="button" class="btn-sub" id="flip-calc-btn" onclick="calculateDeal(this)">Calculate Deal</button>
+            <button type="button" class="btn-sub" id="flip-calc-btn" onclick="calculateDeal(this)">Save This Deal</button>
             <button type="button" class="btn-reset" onclick="resetCalculator()">Reset Calculator</button>
           </div>
         </div>
@@ -803,6 +830,9 @@ function recalc() {
   const roofRateRaw = document.getElementById('c_rooftype').value;
   const roofIsManual = roofRateRaw === 'manual';
   const roofIsCustom = roofRateRaw === 'custom';
+  const roofHasWork = roofRateRaw !== '0';
+  document.getElementById('roof-rate-field').style.display = roofHasWork ? 'flex' : 'none';
+  document.getElementById('roof-est-field').style.display = roofHasWork ? 'flex' : 'none';
   document.getElementById('o_roofrate').style.display = roofIsCustom ? 'none' : 'flex';
   document.getElementById('c_roof_custom').style.display = roofIsCustom ? 'block' : 'none';
   const roofRate = roofIsCustom ? n('c_roof_custom') : (parseFloat(roofRateRaw) || 0);
@@ -810,12 +840,16 @@ function recalc() {
   const roofEst = roofIsManual ? 0 : sqft * roofRate;
   set('o_roofest', roofIsManual ? 'Manual Estimate' : money(roofEst));
 
+  const aduHasWork = document.getElementById('c_adutype').value !== '0';
   const aduIsCustom = document.getElementById('c_adutype').value === 'custom';
+  document.getElementById('adu-est-field').style.display = aduHasWork ? 'flex' : 'none';
   document.getElementById('adu-custom-field').style.display = aduIsCustom ? 'flex' : 'none';
   const aduGarageEst = aduIsCustom ? n('c_adu_custom') : n('c_adutype');
   set('o_aduest', money(aduGarageEst));
 
+  const poolHasWork = document.getElementById('c_pooltype').value !== '0';
   const poolIsCustom = document.getElementById('c_pooltype').value === 'custom';
+  document.getElementById('pool-est-field').style.display = poolHasWork ? 'flex' : 'none';
   document.getElementById('pool-custom-field').style.display = poolIsCustom ? 'flex' : 'none';
   const poolEst = poolIsCustom ? n('c_pool_custom') : n('c_pooltype');
   set('o_poolest', money(poolEst));
@@ -919,6 +953,10 @@ function recalc() {
   set('o_sticky_buyerinv', money(buyerInvestment));
   set('o_sticky_roi', roi.toFixed(0) + '%');
   set('o_sticky_profit', moneyRound(profitVal));
+  set('o_mobilebar_buyerinv', moneyRound(buyerInvestment));
+  set('o_mobilebar_roi', roi.toFixed(0) + '%');
+  document.getElementById('calc-mobile-bar').classList.toggle('on', !document.getElementById('calc-grid').classList.contains('calc-locked'));
+  updateScrollProgress();
 
   const totalCost = buyerInvestment + renovationCost + hmCarry + originationFeeCost + sellVal + buyVal + esctVal;
   set('o_bd_purchase', money(buyerInvestment));
@@ -941,6 +979,23 @@ function recalc() {
     renovationCost, totalCost, totalMonthlyCost,
   };
 }
+
+function updateScrollProgress() {
+  const grid = document.getElementById('calc-grid');
+  const bar = document.getElementById('calc-progress');
+  if (!grid || !bar) return;
+  if (grid.classList.contains('calc-locked')) {
+    bar.classList.remove('on');
+    return;
+  }
+  bar.classList.add('on');
+  const rect = grid.getBoundingClientRect();
+  const scrollableHeight = rect.height - window.innerHeight;
+  const scrolled = -rect.top;
+  const pct = scrollableHeight > 0 ? Math.min(100, Math.max(0, (scrolled / scrollableHeight) * 100)) : 0;
+  document.getElementById('calc-progress-fill').style.width = pct + '%';
+}
+window.addEventListener('scroll', updateScrollProgress, { passive: true });
 
 document.querySelectorAll('#calc input[id^="c_"], #calc select[id^="c_"]').forEach(el => {
   el.addEventListener('input', recalc);
@@ -1074,6 +1129,7 @@ function closeGate() {
   // top so the calculator opens on the page title, not wherever the
   // keyboard left it scrolled.
   window.scrollTo(0, 0);
+  recalc();
 }
 
 function closeGateGoBack() {
@@ -1129,7 +1185,7 @@ async function calculateDeal(btn) {
   }
   const originalText = btn.textContent;
   btn.disabled = true;
-  btn.textContent = 'Sending…';
+  btn.textContent = 'Saving…';
   try {
     const res = await fetch(API_ENDPOINT, {
       method: 'POST',
@@ -1142,7 +1198,7 @@ async function calculateDeal(btn) {
     }
   } catch (e) { /* best effort */ }
   btn.disabled = false;
-  btn.textContent = 'Deal Calculated ✓ — Recalculate';
+  btn.textContent = 'Deal Saved ✓ — Save Again';
   document.getElementById('flip-email-sec').style.display = 'block';
 }
 
@@ -1219,7 +1275,7 @@ function resetCalculatorFields() {
 function resetCtaState() {
   const calcBtn = document.getElementById('flip-calc-btn');
   calcBtn.disabled = false;
-  calcBtn.textContent = 'Calculate Deal';
+  calcBtn.textContent = 'Save This Deal';
   document.getElementById('flip-email-sec').style.display = 'none';
   document.getElementById('flip-email-toggle-btn').style.display = '';
   document.getElementById('flip-email-form').style.display = 'none';
@@ -1244,6 +1300,7 @@ function calculateNewDeal() {
   document.getElementById('calc-gate').style.display = 'flex';
   document.body.style.overflow = 'hidden';
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  recalc();
 }
 </script>
 
