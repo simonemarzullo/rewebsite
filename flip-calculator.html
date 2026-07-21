@@ -334,6 +334,22 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   </div>
 </div>
 
+<!-- LOAN PROGRAM INFO MODAL -->
+<div class="info-overlay" id="loan-program-info-overlay" onclick="if(event.target===this) toggleLoanProgramInfo()">
+  <div class="info-modal">
+    <button type="button" class="info-modal-close" aria-label="Close" onclick="toggleLoanProgramInfo()">×</button>
+    <h3 class="info-modal-title">Hard Money Loan Programs</h3>
+    <div class="info-tier">
+      <div class="info-tier-title">Purchase Only</div>
+      <div class="info-tier-desc">The hard money loan finances only the purchase of the property. All renovation costs are paid by the borrower and are included in the required cash investment.</div>
+    </div>
+    <div class="info-tier">
+      <div class="info-tier-title">Purchase + Rehab Financing</div>
+      <div class="info-tier-desc">The hard money loan finances the purchase and the approved renovation budget. Renovation funds are released through construction draws as work is completed. The borrower may still need temporary working capital until draw reimbursements are received.</div>
+    </div>
+  </div>
+</div>
+
 <!-- PAGE HEADER -->
 <section id="calc-hero">
   <div class="wrap">
@@ -474,13 +490,12 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
         <div class="calc-sec">
           <div class="calc-sec-head">Hard Money / Carry Cost</div>
           <div class="calc-sec-body">
-            <div class="field"><span class="field-label">Hard Money Loan Program</span>
+            <div class="field"><span class="field-label">Hard Money Loan Program <button type="button" class="info-icon-btn" onclick="toggleLoanProgramInfo()" aria-label="About hard money loan programs">i</button></span>
               <select class="fs" id="c_loanprogram">
                 <option value="purchase">Purchase Only</option>
                 <option value="purchase_rehab" selected>Purchase + Rehab Financing</option>
               </select>
             </div>
-            <p class="field-hint" id="o_loanprogram_hint" style="margin-bottom:16px">The hard money loan finances the purchase and the approved renovation budget. Renovation funds are released through construction draws as work is completed. The borrower may still need temporary working capital until draw reimbursements are received.</p>
             <div class="field"><span class="field-label">Length of Project &amp; Hard Money Loan Term</span>
               <select class="fs" id="c_length">
                 <option value="" selected>Select…</option>
@@ -816,9 +831,6 @@ function recalc() {
   document.getElementById('rehab-loan-field').style.display = isRehabFinancing ? 'flex' : 'none';
   document.getElementById('working-capital-pct-field').style.display = isRehabFinancing ? 'flex' : 'none';
   document.getElementById('working-capital-field').style.display = isRehabFinancing ? 'flex' : 'none';
-  set('o_loanprogram_hint', isRehabFinancing
-    ? 'The hard money loan finances the purchase and the approved renovation budget. Renovation funds are released through construction draws as work is completed. The borrower may still need temporary working capital until draw reimbursements are received.'
-    : 'The hard money loan finances only the purchase of the property. All renovation costs are paid by the borrower and are included in the required cash investment.');
 
   const isAllCash = document.getElementById('c_loanratio').value === '0';
   document.getElementById('c_hmrate').style.display = isAllCash ? 'none' : 'block';
@@ -1053,6 +1065,10 @@ function toggleWorkingCapitalInfo() {
 
 function toggleWorkingCapitalPctInfo() {
   document.getElementById('working-capital-pct-info-overlay').classList.toggle('on');
+}
+
+function toggleLoanProgramInfo() {
+  document.getElementById('loan-program-info-overlay').classList.toggle('on');
 }
 
 function unlockCalculator(btn) {
