@@ -288,8 +288,12 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
       <div class="info-tier-desc">Electric, water, gas and trash service kept active during the rehab.</div>
     </div>
     <div class="info-tier">
-      <div class="info-tier-title">Financing &amp; HOA Not Included</div>
-      <div class="info-tier-desc">Hard Money Interest Cost is a real financing cost shown as its own line item below. If the property has HOA dues, factor those in separately too — neither is part of this estimate.</div>
+      <div class="info-tier-title">HOA Fee (If Added)</div>
+      <div class="info-tier-desc">Included only if you select "Add HOA Fee" above and enter a monthly amount. Defaults to No HOA.</div>
+    </div>
+    <div class="info-tier">
+      <div class="info-tier-title">Financing Not Included</div>
+      <div class="info-tier-desc">Hard Money Interest Cost is a real financing cost shown as its own line item below — it isn't part of this estimate.</div>
     </div>
   </div>
 </div>
@@ -554,11 +558,21 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               </select>
             </div>
             <div class="field" id="working-capital-field" style="display:none"><span class="field-label">Minimum Working Capital Required <button type="button" class="info-icon-btn" onclick="toggleWorkingCapitalInfo()" aria-label="What is minimum working capital required">i</button></span><div class="fo" id="o_workingcapital">$0.00</div></div>
-            <div class="field"><span class="field-label">Monthly Ownership Cost (Excl. Financing &amp; HOA) <button type="button" class="info-icon-btn" onclick="toggleHoldingCostInfo()" aria-label="What's included in monthly ownership cost">i</button></span><div class="fo" id="o_cashcarry">$0.00</div></div>
-            <div class="field"><span class="field-label">Total Ownership Cost (Excl. Financing &amp; HOA)</span><div class="fo" id="o_totalholdingcost">$0.00</div></div>
+            <div class="field"><span class="field-label">HOA Fee</span>
+              <select class="fs" id="c_hoa">
+                <option value="0" selected>No HOA</option>
+                <option value="custom">Add HOA Fee ($/month)</option>
+              </select>
+            </div>
+            <div class="field" id="hoa-custom-field" style="display:none">
+              <span class="field-label">Monthly HOA Fee ($)</span>
+              <input class="fi" id="c_hoa_custom" type="number" min="0" step="10" placeholder="e.g. 350">
+            </div>
+            <div class="field"><span class="field-label">Monthly Ownership Cost <button type="button" class="info-icon-btn" onclick="toggleHoldingCostInfo()" aria-label="What's included in monthly ownership cost">i</button></span><div class="fo" id="o_cashcarry">$0.00</div></div>
+            <div class="field"><span class="field-label">Total Ownership Cost</span><div class="fo" id="o_totalholdingcost">$0.00</div></div>
             <div class="field"><span class="field-label">Total Hard Money Interest Cost</span><div class="fo" id="o_hmcarry">$0.00</div></div>
             <div class="field"><span class="field-label">Loan Origination Fee Cost</span><div class="fo" id="o_originationfeecost">$0.00</div></div>
-            <p class="field-hint">Ownership Cost (tax, insurance &amp; utilities) is shown for reference; Total Hard Money Interest Cost and the origination fee are the real financing costs and are deducted from the offer.</p>
+            <p class="field-hint">Ownership Cost (tax, insurance, utilities and HOA if added) is shown for reference; Total Hard Money Interest Cost and the origination fee are the real financing costs and are deducted from the offer.</p>
           </div>
         </div>
 
@@ -880,10 +894,14 @@ function recalc() {
   const roiBasis = cashForRehab + downPayment + hmCarry + originationFeeCost;
   const roi = roiBasis > 0 ? (profitVal / roiBasis) * 100 : 0;
 
+  const hoaIsCustom = document.getElementById('c_hoa').value === 'custom';
+  document.getElementById('hoa-custom-field').style.display = hoaIsCustom ? 'flex' : 'none';
+  const hoaFee = hoaIsCustom ? n('c_hoa_custom') : 0;
+
   // Property tax is reassessed at time of purchase (CA Prop 13), so holding
   // cost is estimated off the purchase price (buyer investment) rather than
-  // the after-repair value.
-  const monthlyHoldingCost = (buyerInvestment * 0.0175) / 12;
+  // the after-repair value. HOA is optional and defaults to $0.
+  const monthlyHoldingCost = ((buyerInvestment * 0.0175) / 12) + hoaFee;
   const totalHoldingCost = monthlyHoldingCost * lengthFactor;
   set('o_cashcarry', money(monthlyHoldingCost));
   set('o_totalholdingcost', money(totalHoldingCost));
@@ -912,7 +930,7 @@ function recalc() {
     sellVal, buyVal, esctVal, profitPct, profitVal,
     loanProgram, isRehabFinancing, rehabLoanAmount, workingCapitalPct, minimumWorkingCapital,
     loanPct, hmRatePct, originationFeePct, originationFeeCost,
-    monthlyHoldingCost, totalHoldingCost, hmCarry, buyerInvestment, roi, downPayment, hardMoneyLoan, totalHardMoneyLoan,
+    hoaFee, monthlyHoldingCost, totalHoldingCost, hmCarry, buyerInvestment, roi, downPayment, hardMoneyLoan, totalHardMoneyLoan,
     renovationCost, totalCost,
   };
 }
@@ -969,6 +987,11 @@ function originationFeeLabel() {
   if (document.getElementById('c_loanratio').value === '0') return '$0 (All Cash)';
   return selectedLabel('c_originationfee');
 }
+function hoaLabel() {
+  if (document.getElementById('c_hoa').value !== 'custom') return 'No HOA';
+  const customVal = val('c_hoa_custom');
+  return customVal ? `$${customVal}/month` : 'HOA Fee (no value entered)';
+}
 function requireValid(ids) {
   for (const id of ids) {
     const el = document.getElementById(id);
@@ -1008,6 +1031,7 @@ function buildFlipPayload(extra) {
     hmInterestRate: hmRateLabel(),
     loanOriginationFee: originationFeeLabel(),
     loanOriginationFeeCost: money(s.originationFeeCost || 0),
+    hoaFee: hoaLabel(),
     monthlyHoldingCost: money(s.monthlyHoldingCost || 0),
     totalHoldingCost: money(s.totalHoldingCost || 0),
     totalHardMoneyInterestCost: money(s.hmCarry || 0),
@@ -1178,6 +1202,8 @@ function resetCalculatorFields() {
   document.getElementById('c_loanratio').value = '';
   document.getElementById('c_hmrate').value = '';
   document.getElementById('c_originationfee').value = '';
+  document.getElementById('c_hoa').value = '0';
+  document.getElementById('c_hoa_custom').value = '';
   document.getElementById('c_profitpct').value = '';
   recalc();
 }
