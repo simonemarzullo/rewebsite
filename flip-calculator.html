@@ -456,11 +456,11 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           <div class="calc-sec-body">
             <div class="field"><span class="field-label">Hard Money Loan Program</span>
               <select class="fs" id="c_loanprogram">
-                <option value="purchase" selected>Purchase Only</option>
-                <option value="purchase_rehab">Purchase + Rehab Financing</option>
+                <option value="purchase">Purchase Only</option>
+                <option value="purchase_rehab" selected>Purchase + Rehab Financing</option>
               </select>
             </div>
-            <p class="field-hint" id="o_loanprogram_hint">The hard money loan finances only the purchase of the property. All renovation costs are paid by the borrower and are included in the required cash investment.</p>
+            <p class="field-hint" id="o_loanprogram_hint" style="margin-bottom:16px">The hard money loan finances the purchase and the approved renovation budget. Renovation funds are released through construction draws as work is completed. The borrower may still need temporary working capital until draw reimbursements are received.</p>
             <div class="field"><span class="field-label">Length of Project &amp; Hard Money Loan Term</span>
               <select class="fs" id="c_length">
                 <option value="" selected>Select…</option>
@@ -1133,7 +1133,7 @@ function resetCalculatorFields() {
   document.getElementById('c_pool_custom').value = '';
   document.getElementById('c_length').value = '';
   document.getElementById('c_length_other').value = '';
-  document.getElementById('c_loanprogram').value = 'purchase';
+  document.getElementById('c_loanprogram').value = 'purchase_rehab';
   document.getElementById('c_workingcapitalpct').value = '15';
   document.getElementById('c_loanratio').value = '';
   document.getElementById('c_hmrate').value = '';
