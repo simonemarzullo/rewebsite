@@ -568,11 +568,12 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               <span class="field-label">Monthly HOA Fee ($)</span>
               <input class="fi" id="c_hoa_custom" type="number" min="0" step="10" placeholder="e.g. 350">
             </div>
-            <div class="field"><span class="field-label">Monthly Ownership Cost <button type="button" class="info-icon-btn" onclick="toggleHoldingCostInfo()" aria-label="What's included in monthly ownership cost">i</button></span><div class="fo" id="o_cashcarry">$0.00</div></div>
+            <div class="field"><span class="field-label">Monthly Ownership Cost (Loan Not Included) <button type="button" class="info-icon-btn" onclick="toggleHoldingCostInfo()" aria-label="What's included in monthly ownership cost">i</button></span><div class="fo" id="o_cashcarry">$0.00</div></div>
             <div class="field"><span class="field-label">Total Ownership Cost</span><div class="fo" id="o_totalholdingcost">$0.00</div></div>
+            <div class="field"><span class="field-label">Monthly Loan Payment (Interest Only)</span><div class="fo" id="o_monthlyloanpayment">$0.00</div></div>
             <div class="field"><span class="field-label">Total Hard Money Interest Cost</span><div class="fo" id="o_hmcarry">$0.00</div></div>
             <div class="field"><span class="field-label">Loan Origination Fee Cost</span><div class="fo" id="o_originationfeecost">$0.00</div></div>
-            <p class="field-hint">Ownership Cost (tax, insurance, utilities and HOA if added) is shown for reference; Total Hard Money Interest Cost and the origination fee are the real financing costs and are deducted from the offer.</p>
+            <p class="field-hint">Ownership Cost (tax, insurance, utilities and HOA if added) is shown for reference; the interest-only loan payment, its total, and the origination fee are the real financing costs and are deducted from the offer.</p>
           </div>
         </div>
 
@@ -643,6 +644,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
             <div class="field"><span class="field-label">Buying Agent Commission</span><div class="fo" id="o_bd_buy">$0.00</div></div>
             <div class="field"><span class="field-label">Escrow, Title &amp; Transfer</span><div class="fo" id="o_bd_esct">$0.00</div></div>
             <div class="field" style="margin-top:4px"><span class="field-label">Estimated Total Project Costs Before Resale</span><div class="fo" id="o_bd_total">$0.00</div></div>
+            <div class="field" style="margin-top:4px"><span class="field-label">Total Monthly Cost</span><div class="fo" id="o_bd_totalmonthly">$0.00</div></div>
+            <p class="field-hint">Total Monthly Cost combines Monthly Ownership Cost and the interest-only loan payment — your estimated out-of-pocket cost per month while you hold the property.</p>
           </div>
         </div>
 
@@ -867,7 +870,9 @@ function recalc() {
   // Interest and the origination fee are charged on the full loan balance,
   // including any rolled-in rehab financing.
   const totalLoanBasis = hmLoanBasis + rehabLoanAmount;
-  const hmCarry = ((totalLoanBasis * (hmRatePct / 100)) / 12) * lengthFactor;
+  const monthlyLoanPayment = (totalLoanBasis * (hmRatePct / 100)) / 12;
+  const hmCarry = monthlyLoanPayment * lengthFactor;
+  set('o_monthlyloanpayment', money(monthlyLoanPayment));
   set('o_hmcarry', money(hmCarry));
 
   const originationFeeCost = totalLoanBasis * (originationFeePct / 100);
@@ -924,14 +929,16 @@ function recalc() {
   set('o_bd_buy', money(buyVal));
   set('o_bd_esct', money(esctVal));
   set('o_bd_total', money(totalCost));
+  const totalMonthlyCost = monthlyHoldingCost + monthlyLoanPayment;
+  set('o_bd_totalmonthly', money(totalMonthlyCost));
 
   calcState = {
     arv, sqft, arvSqft, rehabEst, rehabTotal, roofEst, roofIsManual, aduEst, aduGarageEst, poolEst,
     sellVal, buyVal, esctVal, profitPct, profitVal,
     loanProgram, isRehabFinancing, rehabLoanAmount, workingCapitalPct, minimumWorkingCapital,
     loanPct, hmRatePct, originationFeePct, originationFeeCost,
-    hoaFee, monthlyHoldingCost, totalHoldingCost, hmCarry, buyerInvestment, roi, downPayment, hardMoneyLoan, totalHardMoneyLoan,
-    renovationCost, totalCost,
+    hoaFee, monthlyHoldingCost, totalHoldingCost, monthlyLoanPayment, hmCarry, buyerInvestment, roi, downPayment, hardMoneyLoan, totalHardMoneyLoan,
+    renovationCost, totalCost, totalMonthlyCost,
   };
 }
 
@@ -1034,6 +1041,7 @@ function buildFlipPayload(extra) {
     hoaFee: hoaLabel(),
     monthlyHoldingCost: money(s.monthlyHoldingCost || 0),
     totalHoldingCost: money(s.totalHoldingCost || 0),
+    monthlyLoanPayment: money(s.monthlyLoanPayment || 0),
     totalHardMoneyInterestCost: money(s.hmCarry || 0),
     listingAgent: money(s.sellVal || 0),
     buyingAgent: money(s.buyVal || 0),
@@ -1044,6 +1052,7 @@ function buildFlipPayload(extra) {
     roi: (s.roi || 0).toFixed(0) + '%',
     renovationCost: money(s.renovationCost || 0),
     totalCost: money(s.totalCost || 0),
+    totalMonthlyCost: money(s.totalMonthlyCost || 0),
     downPayment: money(s.downPayment || 0),
     hardMoneyLoan: money(s.hardMoneyLoan || 0),
     totalHardMoneyLoan: money(s.totalHardMoneyLoan || 0),
