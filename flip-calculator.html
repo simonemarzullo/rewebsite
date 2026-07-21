@@ -294,6 +294,26 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   </div>
 </div>
 
+<!-- WORKING CAPITAL INFO MODAL -->
+<div class="info-overlay" id="working-capital-info-overlay" onclick="if(event.target===this) toggleWorkingCapitalInfo()">
+  <div class="info-modal">
+    <button type="button" class="info-modal-close" aria-label="Close" onclick="toggleWorkingCapitalInfo()">×</button>
+    <h3 class="info-modal-title">What Is Minimum Working Capital?</h3>
+    <div class="info-tier">
+      <div class="info-tier-title">Draws Are Reimbursements</div>
+      <div class="info-tier-desc">Under Purchase + Rehab Financing, the lender releases rehab funds through construction draws as work is completed and inspected — not upfront.</div>
+    </div>
+    <div class="info-tier">
+      <div class="info-tier-title">You Front the First Phase</div>
+      <div class="info-tier-desc">Contractors are typically paid before a draw is reimbursed, so you need cash on hand to cover that gap.</div>
+    </div>
+    <div class="info-tier">
+      <div class="info-tier-title">This Estimate</div>
+      <div class="info-tier-desc">A reserve equal to your selected % of the approved rehab budget, as a starting-point estimate of that gap.</div>
+    </div>
+  </div>
+</div>
+
 <!-- PAGE HEADER -->
 <section id="calc-hero">
   <div class="wrap">
@@ -434,6 +454,13 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
         <div class="calc-sec">
           <div class="calc-sec-head">Hard Money / Carry Cost</div>
           <div class="calc-sec-body">
+            <div class="field"><span class="field-label">Hard Money Loan Program</span>
+              <select class="fs" id="c_loanprogram">
+                <option value="purchase" selected>Purchase Only</option>
+                <option value="purchase_rehab">Purchase + Rehab Financing</option>
+              </select>
+            </div>
+            <p class="field-hint" id="o_loanprogram_hint">The hard money loan finances only the purchase of the property. All renovation costs are paid by the borrower and are included in the required cash investment.</p>
             <div class="field"><span class="field-label">Length of Project &amp; Hard Money Loan Term</span>
               <select class="fs" id="c_length">
                 <option value="" selected>Select…</option>
@@ -449,7 +476,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               <input class="fi" id="c_length_other" type="number" min="0" step="1" placeholder="e.g. 9">
             </div>
             <div class="frow">
-              <div class="field"><span class="field-label">Hard Money Loan / Down Payment</span>
+              <div class="field"><span class="field-label">Purchase Loan / Down Payment</span>
                 <select class="fs" id="c_loanratio">
                   <option value="" selected>Select…</option>
                   <option value="0">All Cash / No Loan — 0%</option>
@@ -482,6 +509,16 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               </select>
               <div class="fo" id="o_originationfee_allcash" style="display:none">$0 (All Cash)</div>
             </div>
+            <div class="field" id="rehab-loan-field" style="display:none"><span class="field-label">Rehab Loan Amount (100% of Approved Budget)</span><div class="fo" id="o_rehabloan">$0.00</div></div>
+            <div class="field" id="working-capital-pct-field" style="display:none">
+              <span class="field-label">Working Capital Reserve %</span>
+              <select class="fs" id="c_workingcapitalpct">
+                <option value="10">10%</option>
+                <option value="15" selected>15%</option>
+                <option value="20">20%</option>
+              </select>
+            </div>
+            <div class="field" id="working-capital-field" style="display:none"><span class="field-label">Minimum Working Capital Required <button type="button" class="info-icon-btn" onclick="toggleWorkingCapitalInfo()" aria-label="What is minimum working capital required">i</button></span><div class="fo" id="o_workingcapital">$0.00</div></div>
             <div class="field"><span class="field-label">Monthly Holding Cost (HOA not included) <button type="button" class="info-icon-btn" onclick="toggleHoldingCostInfo()" aria-label="What's included in monthly holding cost">i</button></span><div class="fo" id="o_cashcarry">$0.00</div></div>
             <div class="field"><span class="field-label">Total Holding Cost (Based on Project Length)</span><div class="fo" id="o_totalholdingcost">$0.00</div></div>
             <div class="field"><span class="field-label">Total Hard Money Interest Cost</span><div class="fo" id="o_hmcarry">$0.00</div></div>
@@ -542,7 +579,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
             <div class="stat-block"><div class="stat-val" id="o_roi">0%</div><div class="stat-lbl">Return on Investment</div></div>
             <div class="stat-block"><div class="stat-val" id="o_renocost">$0</div><div class="stat-lbl">Renovation Cost</div></div>
             <div class="stat-block"><div class="stat-val" id="o_dp">$0</div><div class="stat-lbl">Down Payment</div></div>
-            <div class="stat-block"><div class="stat-val" id="o_hmloan">$0</div><div class="stat-lbl">Hard Money Loan</div></div>
+            <div class="stat-block"><div class="stat-val" id="o_hmloan">$0</div><div class="stat-lbl">Total Hard Money Loan</div></div>
           </div>
         </div>
 
@@ -732,6 +769,7 @@ function recalc() {
   set('o_poolest', money(poolEst));
 
   const aduEst = aduGarageEst + poolEst;
+  const renovationCost = rehabTotal + roofEst + aduEst;
 
   const sellPct = n('c_sellpct'), buyPct = n('c_buypct');
   const sellVal = arv * sellPct / 100, buyVal = arv * buyPct / 100, esctVal = arv * 0.01;
@@ -748,6 +786,20 @@ function recalc() {
   document.getElementById('length-other-field').style.display = lengthIsOther ? 'flex' : 'none';
   const lengthFactor = lengthIsOther ? n('c_length_other') : n('c_length');
 
+  // Hard Money Loan Program: Purchase Only keeps the loan scoped to the
+  // purchase price, with rehab paid in cash by the borrower. Purchase +
+  // Rehab Financing rolls the approved rehab budget into the loan too,
+  // released via draws, so the borrower only needs a smaller working-
+  // capital reserve up front instead of the full rehab cost.
+  const loanProgram = document.getElementById('c_loanprogram').value;
+  const isRehabFinancing = loanProgram === 'purchase_rehab';
+  document.getElementById('rehab-loan-field').style.display = isRehabFinancing ? 'flex' : 'none';
+  document.getElementById('working-capital-pct-field').style.display = isRehabFinancing ? 'flex' : 'none';
+  document.getElementById('working-capital-field').style.display = isRehabFinancing ? 'flex' : 'none';
+  set('o_loanprogram_hint', isRehabFinancing
+    ? 'The hard money loan finances the purchase and the approved renovation budget. Renovation funds are released through construction draws as work is completed. The borrower may still need temporary working capital until draw reimbursements are received.'
+    : 'The hard money loan finances only the purchase of the property. All renovation costs are paid by the borrower and are included in the required cash investment.');
+
   const isAllCash = document.getElementById('c_loanratio').value === '0';
   document.getElementById('c_hmrate').style.display = isAllCash ? 'none' : 'block';
   document.getElementById('o_hmrate_allcash').style.display = isAllCash ? 'flex' : 'none';
@@ -756,23 +808,44 @@ function recalc() {
   const loanPct = n('c_loanratio');
   const hmRatePct = isAllCash ? 0 : n('c_hmrate');
   const originationFeePct = isAllCash ? 0 : n('c_originationfee');
-  // The interest-bearing loan balance is approximated from ARV (rather than
-  // the buyer investment) because buyerInvestment is itself derived below
-  // from the carry cost -- basing the loan on buyerInvestment would create a
-  // circular calculation. The same loanPct then drives the final loan/down
-  // payment split further down, so both uses stay consistent with each other.
+  // The interest-bearing purchase loan balance is approximated from ARV
+  // (rather than the buyer investment) because buyerInvestment is itself
+  // derived below from the carry cost -- basing the loan on buyerInvestment
+  // would create a circular calculation. The same loanPct then drives the
+  // final loan/down payment split further down, so both uses stay
+  // consistent with each other.
   const hmLoanBasis = arv * (loanPct / 100);
+  const rehabLoanAmount = isRehabFinancing ? renovationCost : 0;
+  set('o_rehabloan', money(rehabLoanAmount));
 
-  const hmCarry = ((hmLoanBasis * (hmRatePct / 100)) / 12) * lengthFactor;
+  // Interest and the origination fee are charged on the full loan balance,
+  // including any rolled-in rehab financing.
+  const totalLoanBasis = hmLoanBasis + rehabLoanAmount;
+  const hmCarry = ((totalLoanBasis * (hmRatePct / 100)) / 12) * lengthFactor;
   set('o_hmcarry', money(hmCarry));
 
-  const originationFeeCost = hmLoanBasis * (originationFeePct / 100);
+  const originationFeeCost = totalLoanBasis * (originationFeePct / 100);
   set('o_originationfeecost', money(originationFeeCost));
 
-  const buyerInvestment = arv - (rehabTotal + roofEst + aduEst + sellVal + buyVal + esctVal + profitVal) - hmCarry - originationFeeCost;
+  const buyerInvestment = arv - (renovationCost + sellVal + buyVal + esctVal + profitVal) - hmCarry - originationFeeCost;
+  // Down Payment / (purchase) Hard Money Loan are sized off the purchase
+  // price (buyerInvestment), i.e. loan-to-purchase -- distinct from
+  // hmLoanBasis above, which is ARV-based and used only to compute the
+  // interest-bearing carry cost. This matches the original source
+  // calculator's design.
   const downPayment = buyerInvestment * ((100 - loanPct) / 100);
   const hardMoneyLoan = buyerInvestment - downPayment;
-  const roiBasis = rehabTotal + downPayment + hmCarry + originationFeeCost;
+  const totalHardMoneyLoan = hardMoneyLoan + rehabLoanAmount;
+
+  const workingCapitalPct = isRehabFinancing ? n('c_workingcapitalpct') : 0;
+  const minimumWorkingCapital = isRehabFinancing ? renovationCost * (workingCapitalPct / 100) : 0;
+  set('o_workingcapital', money(minimumWorkingCapital));
+
+  // Purchase Only: the full renovation cost is cash the borrower must bring.
+  // Purchase + Rehab Financing: rehab is lender-funded via draws, so only
+  // the smaller working-capital reserve counts toward cash required.
+  const cashForRehab = isRehabFinancing ? minimumWorkingCapital : renovationCost;
+  const roiBasis = cashForRehab + downPayment + hmCarry + originationFeeCost;
   const roi = roiBasis > 0 ? (profitVal / roiBasis) * 100 : 0;
 
   // Property tax is reassessed at time of purchase (CA Prop 13), so holding
@@ -783,13 +856,11 @@ function recalc() {
   set('o_cashcarry', money(monthlyHoldingCost));
   set('o_totalholdingcost', money(totalHoldingCost));
 
-  const renovationCost = rehabTotal + roofEst + aduEst;
-
   set('o_buyerinv', money(buyerInvestment));
   set('o_roi', roi.toFixed(0) + '%');
   set('o_renocost', moneyRound(renovationCost));
   set('o_dp', moneyRound(downPayment));
-  set('o_hmloan', moneyRound(hardMoneyLoan));
+  set('o_hmloan', moneyRound(totalHardMoneyLoan));
   set('o_sticky_buyerinv', money(buyerInvestment));
   set('o_sticky_roi', roi.toFixed(0) + '%');
   set('o_sticky_profit', moneyRound(profitVal));
@@ -807,8 +878,9 @@ function recalc() {
   calcState = {
     arv, sqft, arvSqft, rehabEst, rehabTotal, roofEst, roofIsManual, aduEst, aduGarageEst, poolEst,
     sellVal, buyVal, esctVal, profitPct, profitVal,
+    loanProgram, isRehabFinancing, rehabLoanAmount, workingCapitalPct, minimumWorkingCapital,
     loanPct, hmRatePct, originationFeePct, originationFeeCost,
-    monthlyHoldingCost, totalHoldingCost, hmCarry, buyerInvestment, roi, downPayment, hardMoneyLoan,
+    monthlyHoldingCost, totalHoldingCost, hmCarry, buyerInvestment, roi, downPayment, hardMoneyLoan, totalHardMoneyLoan,
     renovationCost, totalCost,
   };
 }
@@ -896,6 +968,10 @@ function buildFlipPayload(extra) {
     poolType: poolTypeLabel(),
     poolEstimate: money(s.poolEst || 0),
     lengthOfProject: lengthLabel(),
+    loanProgram: selectedLabel('c_loanprogram'),
+    rehabLoanAmount: money(s.rehabLoanAmount || 0),
+    workingCapitalPct: s.isRehabFinancing ? (s.workingCapitalPct || 0) + '%' : 'N/A',
+    minimumWorkingCapital: money(s.minimumWorkingCapital || 0),
     loanRatio: selectedLabel('c_loanratio'),
     hmInterestRate: hmRateLabel(),
     loanOriginationFee: originationFeeLabel(),
@@ -914,6 +990,7 @@ function buildFlipPayload(extra) {
     totalCost: money(s.totalCost || 0),
     downPayment: money(s.downPayment || 0),
     hardMoneyLoan: money(s.hardMoneyLoan || 0),
+    totalHardMoneyLoan: money(s.totalHardMoneyLoan || 0),
     hp: val('flip_hp'),
   }, extra);
 }
@@ -948,6 +1025,10 @@ function toggleRehabInfo() {
 
 function toggleHoldingCostInfo() {
   document.getElementById('holding-cost-info-overlay').classList.toggle('on');
+}
+
+function toggleWorkingCapitalInfo() {
+  document.getElementById('working-capital-info-overlay').classList.toggle('on');
 }
 
 function unlockCalculator(btn) {
@@ -1052,6 +1133,8 @@ function resetCalculatorFields() {
   document.getElementById('c_pool_custom').value = '';
   document.getElementById('c_length').value = '';
   document.getElementById('c_length_other').value = '';
+  document.getElementById('c_loanprogram').value = 'purchase';
+  document.getElementById('c_workingcapitalpct').value = '15';
   document.getElementById('c_loanratio').value = '';
   document.getElementById('c_hmrate').value = '';
   document.getElementById('c_originationfee').value = '';
