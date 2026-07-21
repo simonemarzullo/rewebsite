@@ -314,6 +314,26 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   </div>
 </div>
 
+<!-- WORKING CAPITAL RESERVE % INFO MODAL -->
+<div class="info-overlay" id="working-capital-pct-info-overlay" onclick="if(event.target===this) toggleWorkingCapitalPctInfo()">
+  <div class="info-modal">
+    <button type="button" class="info-modal-close" aria-label="Close" onclick="toggleWorkingCapitalPctInfo()">×</button>
+    <h3 class="info-modal-title">What Is Working Capital Reserve %?</h3>
+    <div class="info-tier">
+      <div class="info-tier-title">An Adjustable Estimate</div>
+      <div class="info-tier-desc">The share of your approved rehab budget you'd need on hand to front the first construction phase before the lender reimburses you through a draw.</div>
+    </div>
+    <div class="info-tier">
+      <div class="info-tier-title">Doesn't Change the Deal</div>
+      <div class="info-tier-desc">This percentage only affects the Return on Investment % shown below. It has no effect on Estimated Buyer Investment, Estimated Investor Profit, Total Cost Breakdown, or any loan amount on this page.</div>
+    </div>
+    <div class="info-tier">
+      <div class="info-tier-title">Choose What Fits Your Lender</div>
+      <div class="info-tier-desc">10–20% covers most single-phase draw schedules — adjust based on your lender's actual draw structure.</div>
+    </div>
+  </div>
+</div>
+
 <!-- PAGE HEADER -->
 <section id="calc-hero">
   <div class="wrap">
@@ -511,7 +531,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
             </div>
             <div class="field" id="rehab-loan-field" style="display:none"><span class="field-label">Rehab Loan Amount (100% of Approved Budget)</span><div class="fo" id="o_rehabloan">$0.00</div></div>
             <div class="field" id="working-capital-pct-field" style="display:none">
-              <span class="field-label">Working Capital Reserve %</span>
+              <span class="field-label">Working Capital Reserve % <button type="button" class="info-icon-btn" onclick="toggleWorkingCapitalPctInfo()" aria-label="What is working capital reserve">i</button></span>
               <select class="fs" id="c_workingcapitalpct">
                 <option value="10">10%</option>
                 <option value="15" selected>15%</option>
@@ -1029,6 +1049,10 @@ function toggleHoldingCostInfo() {
 
 function toggleWorkingCapitalInfo() {
   document.getElementById('working-capital-info-overlay').classList.toggle('on');
+}
+
+function toggleWorkingCapitalPctInfo() {
+  document.getElementById('working-capital-pct-info-overlay').classList.toggle('on');
 }
 
 function unlockCalculator(btn) {
