@@ -274,7 +274,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 <div class="info-overlay" id="holding-cost-info-overlay" onclick="if(event.target===this) toggleHoldingCostInfo()">
   <div class="info-modal">
     <button type="button" class="info-modal-close" aria-label="Close" onclick="toggleHoldingCostInfo()">×</button>
-    <h3 class="info-modal-title">What's Included in Monthly Holding Cost</h3>
+    <h3 class="info-modal-title">What's Included in Monthly Ownership Cost</h3>
     <div class="info-tier">
       <div class="info-tier-title">Estimated Property Taxes — 1.25%</div>
       <div class="info-tier-desc">Based on the Los Angeles County effective property tax rate.</div>
@@ -288,8 +288,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
       <div class="info-tier-desc">Electric, water, gas and trash service kept active during the rehab.</div>
     </div>
     <div class="info-tier">
-      <div class="info-tier-title">HOA Not Included</div>
-      <div class="info-tier-desc">If the property has HOA dues, factor those in separately — they aren't part of this estimate.</div>
+      <div class="info-tier-title">Financing &amp; HOA Not Included</div>
+      <div class="info-tier-desc">Hard Money Interest Cost is a real financing cost shown as its own line item below. If the property has HOA dues, factor those in separately too — neither is part of this estimate.</div>
     </div>
   </div>
 </div>
@@ -539,11 +539,11 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
               </select>
             </div>
             <div class="field" id="working-capital-field" style="display:none"><span class="field-label">Minimum Working Capital Required <button type="button" class="info-icon-btn" onclick="toggleWorkingCapitalInfo()" aria-label="What is minimum working capital required">i</button></span><div class="fo" id="o_workingcapital">$0.00</div></div>
-            <div class="field"><span class="field-label">Monthly Holding Cost (HOA not included) <button type="button" class="info-icon-btn" onclick="toggleHoldingCostInfo()" aria-label="What's included in monthly holding cost">i</button></span><div class="fo" id="o_cashcarry">$0.00</div></div>
-            <div class="field"><span class="field-label">Total Holding Cost (Based on Project Length)</span><div class="fo" id="o_totalholdingcost">$0.00</div></div>
+            <div class="field"><span class="field-label">Monthly Ownership Cost (Excl. Financing &amp; HOA) <button type="button" class="info-icon-btn" onclick="toggleHoldingCostInfo()" aria-label="What's included in monthly ownership cost">i</button></span><div class="fo" id="o_cashcarry">$0.00</div></div>
+            <div class="field"><span class="field-label">Total Ownership Cost (Excl. Financing &amp; HOA)</span><div class="fo" id="o_totalholdingcost">$0.00</div></div>
             <div class="field"><span class="field-label">Total Hard Money Interest Cost</span><div class="fo" id="o_hmcarry">$0.00</div></div>
             <div class="field"><span class="field-label">Loan Origination Fee Cost</span><div class="fo" id="o_originationfeecost">$0.00</div></div>
-            <p class="field-hint">Monthly Holding Cost is shown for reference; Total Hard Money Interest Cost and the origination fee are real costs and are deducted from the offer.</p>
+            <p class="field-hint">Ownership Cost (tax, insurance &amp; utilities) is shown for reference; Total Hard Money Interest Cost and the origination fee are the real financing costs and are deducted from the offer.</p>
           </div>
         </div>
 

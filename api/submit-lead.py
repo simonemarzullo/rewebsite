@@ -93,7 +93,7 @@ FIELD_LABELS = {
         ("Loan Origination Fee", "loanOriginationFee"), ("Loan Origination Fee Cost", "loanOriginationFeeCost"),
         ("Rehab Loan Amount", "rehabLoanAmount"), ("Working Capital Reserve %", "workingCapitalPct"),
         ("Minimum Working Capital Required", "minimumWorkingCapital"),
-        ("Monthly Holding Cost", "monthlyHoldingCost"), ("Total Holding Cost", "totalHoldingCost"),
+        ("Monthly Ownership Cost", "monthlyHoldingCost"), ("Total Ownership Cost", "totalHoldingCost"),
         ("Total Hard Money Interest Cost", "totalHardMoneyInterestCost"),
         ("Listing Agent Commission", "listingAgent"), ("Buying Agent Commission", "buyingAgent"),
         ("Escrow, Title & Transfer", "escrow"),
