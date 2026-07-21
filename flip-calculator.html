@@ -92,7 +92,7 @@ body>iframe{display:none !important}
 .calc-progress{display:none;position:fixed;top:72px;left:0;right:0;height:3px;background:var(--g3);z-index:201}
 .calc-progress.on{display:block}
 .calc-progress-fill{height:100%;width:0%;background:var(--red)}
-.calc-mobile-bar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:250;background:rgba(10,10,10,.96);backdrop-filter:blur(16px);border-top:1px solid var(--g3);padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));align-items:center;justify-content:center;gap:40px;cursor:pointer}
+.calc-mobile-bar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:250;background:rgba(0,0,0,.98);backdrop-filter:blur(16px);border-top:1px solid var(--g3);padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));align-items:center;justify-content:center;gap:32px;cursor:pointer}
 .calc-mobile-bar.on{display:flex}
 .calc-mobile-bar-item{display:flex;flex-direction:column;align-items:center;gap:2px}
 .calc-mobile-bar-lbl{font-size:.56rem;letter-spacing:.15em;text-transform:uppercase;color:var(--g5);font-weight:500}
@@ -379,6 +379,10 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
     <span class="calc-mobile-bar-lbl">ROI</span>
     <span class="calc-mobile-bar-val" id="o_mobilebar_roi">0%</span>
   </div>
+  <div class="calc-mobile-bar-item">
+    <span class="calc-mobile-bar-lbl">Estimated Profit</span>
+    <span class="calc-mobile-bar-val" id="o_mobilebar_profit">$0.00</span>
+  </div>
 </div>
 
 <!-- PAGE HEADER -->
@@ -660,7 +664,9 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           </div>
         </div>
 
-        <div class="calc-sec">
+        <button type="button" class="btn-outline" id="total-cost-breakdown-toggle-btn" onclick="toggleTotalCostBreakdown()">View Total Cost Breakdown</button>
+
+        <div class="calc-sec" id="total-cost-breakdown-sec" style="display:none">
           <div class="calc-sec-head">Total Cost Breakdown</div>
           <div class="calc-sec-body">
             <div class="field"><span class="field-label">Purchase Price</span><div class="fo" id="o_bd_purchase">$0.00</div></div>
@@ -955,6 +961,7 @@ function recalc() {
   set('o_sticky_profit', moneyRound(profitVal));
   set('o_mobilebar_buyerinv', moneyRound(buyerInvestment));
   set('o_mobilebar_roi', roi.toFixed(0) + '%');
+  set('o_mobilebar_profit', moneyRound(profitVal));
   document.getElementById('calc-mobile-bar').classList.toggle('on', !document.getElementById('calc-grid').classList.contains('calc-locked'));
   updateScrollProgress();
 
@@ -1207,6 +1214,14 @@ function toggleEmailForm() {
   form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
 
+function toggleTotalCostBreakdown() {
+  const sec = document.getElementById('total-cost-breakdown-sec');
+  const btn = document.getElementById('total-cost-breakdown-toggle-btn');
+  const isHidden = sec.style.display === 'none';
+  sec.style.display = isHidden ? 'block' : 'none';
+  btn.textContent = isHidden ? 'Hide Total Cost Breakdown' : 'View Total Cost Breakdown';
+}
+
 async function submitEmailDeal(btn) {
   if (!requireValid(['flip_email_email'])) return;
   if (val('flip_hp')) {
@@ -1284,6 +1299,8 @@ function resetCtaState() {
   document.getElementById('flip_email_name').value = '';
   document.getElementById('flip_email_phone').value = '';
   document.querySelectorAll('#flip-cta-sec .form-error, #flip-email-sec .form-error').forEach(e => e.remove());
+  document.getElementById('total-cost-breakdown-sec').style.display = 'none';
+  document.getElementById('total-cost-breakdown-toggle-btn').textContent = 'View Total Cost Breakdown';
 }
 function resetCalculator() {
   resetCalculatorFields();
