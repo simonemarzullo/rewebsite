@@ -99,7 +99,7 @@ FIELD_LABELS = {
         ("Listing Agent Commission", "listingAgent"), ("Buying Agent Commission", "buyingAgent"),
         ("Escrow, Title & Transfer", "escrow"),
         ("Minimum Profit %", "profitPct"), ("Profit Value", "profitValue"),
-        ("Estimated Buyer Investment", "buyerInvestment"), ("Return on Investment", "roi"),
+        ("Suggested Purchase Price", "buyerInvestment"), ("Return on Investment", "roi"),
         ("Renovation Cost", "renovationCost"), ("Total Cost (Purchase to Resale)", "totalCost"),
         ("Down Payment", "downPayment"), ("Purchase Hard Money Loan", "hardMoneyLoan"),
         ("Total Hard Money Loan", "totalHardMoneyLoan"),
