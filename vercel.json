@@ -22,6 +22,7 @@
     { "source": "/invest", "destination": "/api/invest-page" },
     { "source": "/cashoffer", "destination": "/api/cash-offer-page" },
     { "source": "/flipcalculator", "destination": "/flip-calculator.html" },
+    { "source": "/home", "destination": "/index.html" },
     { "source": "/about", "destination": "/api/about-page" },
     { "source": "/contact", "destination": "/api/contact-page" }
   ]

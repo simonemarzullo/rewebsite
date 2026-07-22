@@ -307,7 +307,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   <a href="flip-calculator.html">Flip Calculator</a>
   <a href="/about" onclick="closeMobileNavAndGoToAnchor(event,'about')">About</a>
   <a href="/contact" onclick="closeMobileNavAndGoToAnchor(event,'contact')">Contact</a>
-  <a href="#action" class="nav-cta" onclick="closeMobileNavAndGo(event,'stage-home')">Get Started</a>
+  <a href="/home" class="nav-cta" onclick="closeMobileNavAndGoHome(event)">Get Started</a>
 </div>
 
 <!-- HERO -->
@@ -334,7 +334,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
     </h1>
     <p class="hero-sub">Serving buyers and sellers across Los Angeles with strategic representation and local expertise.</p>
     <div class="hero-actions">
-      <a href="#action" class="btn-primary">Get Started</a>
+      <a href="/home" class="btn-primary" onclick="goToActionHome(event)">Get Started</a>
     </div>
   </div>
   <div class="hero-scroll">
@@ -836,11 +836,11 @@ window.scrollTo(0, 0);
 // point can be relied on to have executed. Force the scroll back to top
 // every time the page is (re)shown, not just when event.persisted is true,
 // since that flag isn't consistently set on iOS Safari's tab-snapshot
-// restores. Skip it on /about and /contact, which intentionally load
-// pre-scrolled to their section.
+// restores. Skip it on /about, /contact, and /home, which intentionally
+// load pre-scrolled to their section.
 window.addEventListener('pageshow', function() {
   const path = window.location.pathname;
-  if (path === '/about' || path === '/contact') return;
+  if (path === '/about' || path === '/contact' || path === '/home') return;
   window.scrollTo(0, 0);
 });
 
@@ -948,6 +948,7 @@ window.addEventListener('popstate', () => {
 (function initFromPath() {
   const path = window.location.pathname;
   if (path === '/cashoffer') { openSellForm('cash-offer'); return; }
+  if (path === '/home') { showStage('stage-home', false); return; }
   const anchorId = Object.keys(ANCHOR_PATHS).find(k => ANCHOR_PATHS[k] === path);
   if (anchorId) {
     const el = document.getElementById(anchorId);
@@ -1010,6 +1011,18 @@ function closeMobileNavAndOpenCashOffer(evt) {
   evt.preventDefault();
   closeMobileNav();
   openSellForm('cash-offer');
+}
+/* The "Get Started" CTAs share stage-home's content but use their own
+   real URL (/home) rather than stage-home's own path (/), so they get
+   a dedicated handler instead of reusing showStage's automatic push. */
+function goToActionHome(evt) {
+  if (evt) evt.preventDefault();
+  showStage('stage-home', false);
+  if (window.location.pathname !== '/home') history.pushState({ stageId: 'stage-home' }, '', '/home');
+}
+function closeMobileNavAndGoHome(evt) {
+  closeMobileNav();
+  goToActionHome(evt);
 }
 window.addEventListener('resize', () => {
   if (window.innerWidth > 768) closeMobileNav();
