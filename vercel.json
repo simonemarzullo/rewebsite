@@ -10,6 +10,11 @@
       ]
     }
   ],
+  "redirects": [
+    { "source": "/seller", "destination": "/sell", "permanent": true },
+    { "source": "/buyer", "destination": "/buy", "permanent": true },
+    { "source": "/investor", "destination": "/invest", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/sell", "destination": "/api/sell-page" },
     { "source": "/buy", "destination": "/api/buy-page" },
