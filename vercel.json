@@ -11,11 +11,13 @@
     }
   ],
   "rewrites": [
-    { "source": "/seller", "destination": "/api/seller-page" },
-    { "source": "/buyer", "destination": "/api/buyer-page" },
+    { "source": "/sell", "destination": "/api/sell-page" },
+    { "source": "/buy", "destination": "/api/buy-page" },
     { "source": "/homevaluation", "destination": "/api/home-valuation-page" },
-    { "source": "/investor", "destination": "/api/investor-page" },
+    { "source": "/invest", "destination": "/api/invest-page" },
     { "source": "/cashoffer", "destination": "/api/cash-offer-page" },
-    { "source": "/flipcalculator", "destination": "/flip-calculator.html" }
+    { "source": "/flipcalculator", "destination": "/flip-calculator.html" },
+    { "source": "/about", "destination": "/api/about-page" },
+    { "source": "/contact", "destination": "/api/contact-page" }
   ]
 }

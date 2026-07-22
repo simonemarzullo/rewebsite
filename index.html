@@ -291,8 +291,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
     <li><a href="#action" onclick="showStageAndScroll(event,'stage-buy-menu')">Buyers</a></li>
     <li><a href="#action" onclick="event.preventDefault();openSellForm('cash-offer')">Get a Cash Offer</a></li>
     <li><a href="flip-calculator.html">Flip Calculator</a></li>
-    <li><a href="#about">About</a></li>
-    <li><a href="#contact">Contact</a></li>
+    <li><a href="/about" onclick="goToAnchor(event,'about')">About</a></li>
+    <li><a href="/contact" onclick="goToAnchor(event,'contact')">Contact</a></li>
   </ul>
   <button type="button" class="nav-toggle" aria-expanded="false" aria-label="Menu" onclick="toggleMobileNav()">
     <span></span><span></span><span></span>
@@ -305,8 +305,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   <a href="#action" onclick="closeMobileNavAndGo(event,'stage-valuation-form')">Home Valuation</a>
   <a href="#action" onclick="closeMobileNavAndOpenCashOffer(event)">Get a Cash Offer</a>
   <a href="flip-calculator.html">Flip Calculator</a>
-  <a href="#about" onclick="closeMobileNav()">About</a>
-  <a href="#contact" onclick="closeMobileNav()">Contact</a>
+  <a href="/about" onclick="closeMobileNavAndGoToAnchor(event,'about')">About</a>
+  <a href="/contact" onclick="closeMobileNavAndGoToAnchor(event,'contact')">Contact</a>
   <a href="#action" class="nav-cta" onclick="closeMobileNavAndGo(event,'stage-home')">Get Started</a>
 </div>
 
@@ -836,8 +836,11 @@ window.scrollTo(0, 0);
 // point can be relied on to have executed. Force the scroll back to top
 // every time the page is (re)shown, not just when event.persisted is true,
 // since that flag isn't consistently set on iOS Safari's tab-snapshot
-// restores.
+// restores. Skip it on /about and /contact, which intentionally load
+// pre-scrolled to their section.
 window.addEventListener('pageshow', function() {
+  const path = window.location.pathname;
+  if (path === '/about' || path === '/contact') return;
   window.scrollTo(0, 0);
 });
 
@@ -869,17 +872,17 @@ async function captureEarlyLead(currentLeadId, buildPayloadFn, setLeadId) {
 /* ---------- Stage navigation ---------- */
 /* ---------- URL routing for the 4 top-level stages ----------
    Only stage-home and the 4 main menu stages get their own real,
-   shareable URL (/seller, /buyer, /homevaluation, /investor); deeper
+   shareable URL (/sell, /buy, /homevaluation, /invest); deeper
    sub-stages (e.g. stage-sell-form) stay nested under their parent's
    path since they weren't asked to have their own URL. Vercel rewrites
    these paths to /index.html so a direct visit/shared link still
    works -- see vercel.json. */
 const STAGE_PATHS = {
   'stage-home': '/',
-  'stage-sell-menu': '/seller',
-  'stage-buy-menu': '/buyer',
+  'stage-sell-menu': '/sell',
+  'stage-buy-menu': '/buy',
   'stage-valuation-form': '/homevaluation',
-  'stage-investor-menu': '/investor',
+  'stage-investor-menu': '/invest',
 };
 const STAGE_TITLES = {
   'stage-home': 'Simone Marzullo | REALTOR® | The Agency Los Angeles',
@@ -910,15 +913,48 @@ function showStageAndScroll(evt, stageId) {
   evt.preventDefault();
   showStage(stageId);
 }
+/* About/Contact aren't stages -- they're static sections below the
+   action area -- so they get their own lightweight path handling
+   (scroll + pushState) instead of going through showStage(). */
+const ANCHOR_PATHS = { about: '/about', contact: '/contact' };
+const ANCHOR_TITLES = {
+  about: 'About Simone Marzullo | The Agency Los Angeles',
+  contact: 'Contact Simone Marzullo | The Agency Los Angeles',
+};
+function goToAnchor(evt, id) {
+  if (evt) evt.preventDefault();
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const path = ANCHOR_PATHS[id];
+  if (path && window.location.pathname !== path) history.pushState({ anchor: id }, '', path);
+  if (ANCHOR_TITLES[id]) document.title = ANCHOR_TITLES[id];
+}
+function closeMobileNavAndGoToAnchor(evt, id) {
+  closeMobileNav();
+  goToAnchor(evt, id);
+}
 window.addEventListener('popstate', () => {
   const path = window.location.pathname;
   if (path === '/cashoffer') { openSellForm('cash-offer'); return; }
+  const anchorId = Object.keys(ANCHOR_PATHS).find(k => ANCHOR_PATHS[k] === path);
+  if (anchorId) {
+    const el = document.getElementById(anchorId);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
   const stageId = Object.keys(STAGE_PATHS).find(k => STAGE_PATHS[k] === path) || 'stage-home';
   showStage(stageId, false);
 });
 (function initFromPath() {
   const path = window.location.pathname;
   if (path === '/cashoffer') { openSellForm('cash-offer'); return; }
+  const anchorId = Object.keys(ANCHOR_PATHS).find(k => ANCHOR_PATHS[k] === path);
+  if (anchorId) {
+    const el = document.getElementById(anchorId);
+    if (el) el.scrollIntoView({ behavior: 'instant', block: 'start' });
+    if (ANCHOR_TITLES[anchorId]) document.title = ANCHOR_TITLES[anchorId];
+    return;
+  }
   const stageId = Object.keys(STAGE_PATHS).find(k => STAGE_PATHS[k] === path);
   if (stageId && stageId !== 'stage-home') showStage(stageId, false);
 })();

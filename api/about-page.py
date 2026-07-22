@@ -4,9 +4,9 @@ from http.server import BaseHTTPRequestHandler
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-TITLE = "Sell Your Home | Simone Marzullo"
-DESCRIPTION = "List on the market, sell privately, or get a cash offer — expert guidance for sellers across Los Angeles from Simone Marzullo, The Agency."
-CANONICAL_URL = "https://www.marzullore.com/seller"
+TITLE = "About Simone Marzullo | The Agency Los Angeles"
+DESCRIPTION = "REALTOR® with The Agency in Beverly Hills, bringing a global perspective and over a decade in the Los Angeles market to buyers, sellers, and investors."
+CANONICAL_URL = "https://www.marzullore.com/about"
 
 
 def replace_first(pattern, replacement, html):
