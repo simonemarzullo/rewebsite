@@ -73,14 +73,53 @@ body>iframe{display:none !important}
 .search-hero-title{font-family:var(--serif);font-size:clamp(2.4rem,4.6vw,4rem);font-weight:400;color:var(--white);line-height:1.05;margin-top:14px}
 .search-hero-sub{font-size:.88rem;line-height:1.8;color:var(--g5);font-weight:300;margin-top:18px;max-width:560px}
 
-/* IDX SEARCH WIDGET -- fixed-size third-party iframe (TheMLS idxcellent),
-   scaled down proportionally via CSS transform on narrower viewports since
-   the widget itself isn't responsive and its vendor warns against resizing
-   its native dimensions below 800x600 / above 1024x768. */
+/* SEARCH & RESULTS -- custom-built listing search, styled to match the
+   rest of the site. Currently rendering the sample dataset below; swap
+   loadSampleListings() for a real fetch() against the MLS data feed once
+   API credentials are in place (see comment near that function). */
 #search{padding:48px 0 96px}
-.idx-outer{display:flex;justify-content:center;width:100%}
-.idx-scale-wrap{position:relative;overflow:hidden;background:var(--g2);border:1px solid var(--g3)}
-.idx-scale-wrap iframe{position:absolute;top:0;left:0;display:block}
+.field{display:flex;flex-direction:column;gap:7px}
+.field-label{font-size:.59rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--g5)}
+.fi,.fs{background:var(--g1);border:1px solid var(--red);color:var(--white);padding:13px 16px;font-size:.87rem;font-weight:300;outline:none;transition:border-color .2s;width:100%;-webkit-appearance:none}
+.fi:focus,.fs:focus{border-color:var(--white)}
+.fi::placeholder{color:var(--g4)}
+.btn-sub{background:var(--red);color:var(--white);padding:14px 24px;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background .2s}
+.btn-outline{background:transparent;border:1px solid var(--g4);color:var(--g6);padding:14px 24px;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:all .2s}
+
+.listing-search-bar{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;background:var(--g2);border:1px solid var(--g3);padding:24px;margin-bottom:32px}
+.lsb-field{flex:1;min-width:130px}
+.lsb-field-wide{flex:2;min-width:220px}
+.lsb-btn{flex-shrink:0}
+
+.listing-results-meta{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:22px;flex-wrap:wrap;gap:8px}
+.listing-results-count{font-family:var(--serif);font-size:1.15rem;font-weight:400;color:var(--white)}
+.listing-updated{font-size:.66rem;color:var(--g5);letter-spacing:.02em}
+
+.listing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.listing-card{background:var(--g2);border:1px solid var(--g3);overflow:hidden;transition:border-color .2s}
+.listing-photo{position:relative;aspect-ratio:4/3;background:linear-gradient(135deg,#222,#0a0a0a);display:flex;align-items:center;justify-content:center}
+.listing-photo svg{width:44px;height:44px;opacity:.16}
+.listing-status{position:absolute;top:12px;left:12px;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;font-weight:500;padding:5px 10px;background:rgba(0,0,0,.72);backdrop-filter:blur(4px)}
+.listing-status-active{color:#4ade80}
+.listing-status-pending{color:#facc15}
+.listing-status-sold{color:var(--g5)}
+.listing-body{padding:18px 20px 20px}
+.listing-price{font-family:var(--serif);font-size:1.5rem;color:var(--white);font-weight:400}
+.listing-address{font-size:.78rem;color:var(--g6);margin-top:6px;line-height:1.5}
+.listing-stats{display:flex;gap:14px;margin-top:12px;font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;color:var(--g5);font-weight:500}
+.listing-courtesy{font-size:.62rem;color:var(--g4);margin-top:10px;letter-spacing:.02em}
+.listing-empty{grid-column:1/-1;text-align:center;padding:48px 24px;color:var(--g5);font-size:.85rem}
+
+.listing-loadmore-wrap{text-align:center;margin-top:36px}
+.idx-compliance{margin-top:44px;padding-top:24px;border-top:1px solid var(--g3)}
+.idx-compliance p{font-size:.64rem;color:var(--g5);line-height:1.7;font-weight:300}
+
+@media(max-width:1024px){.listing-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){
+  .listing-grid{grid-template-columns:1fr}
+  .listing-search-bar{flex-direction:column;align-items:stretch}
+  .lsb-btn{width:100%}
+}
 
 /* FOOTER (shared with index.html) */
 footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
@@ -160,19 +199,88 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
     <div class="search-hero-head">
       <span class="label label-red">Property Search</span>
       <h1 class="search-hero-title">Search MLS Listings</h1>
-      <p class="search-hero-sub">Browse active listings across Los Angeles in real time, powered by TheMLS IDX. See something you like? Reach out any time — I'm happy to help.</p>
+      <p class="search-hero-sub">Browse active MLS listings across Los Angeles in real time. See something you like? Reach out any time — I'm happy to help.</p>
     </div>
   </div>
 </section>
 
-<!-- IDX SEARCH WIDGET -->
+<!-- LISTING SEARCH -->
 <section id="search">
   <div class="wrap">
-    <div class="idx-outer">
-      <div class="idx-scale-wrap" id="idxScaleWrap">
-        <script type="text/javascript" src="https://www.themls.com/IDXNET/Scripts/idxwidget.js"></script>
-        <iframe id="idxFrame" style="padding:0; margin:0; padding-top: 0px; border:0px solid transparent; background-color:transparent;" frameborder="0" scrolling="no" src="https://www.themls.com/IDXNET/Default.aspx?wid=i52PQlKM4PzYGId0obh0gITc7Vl13eUY%2bcMFCvMWHAkEQL" width="1000" height="700"></iframe>
+    <div class="listing-search-bar">
+      <div class="field lsb-field lsb-field-wide">
+        <span class="field-label">Location</span>
+        <input class="fi" id="ls_location" type="text" placeholder="City, neighborhood, or ZIP" onkeydown="if(event.key==='Enter')applyListingFilters()">
       </div>
+      <div class="field lsb-field">
+        <span class="field-label">Price Min</span>
+        <select class="fs" id="ls_pricemin">
+          <option value="">No Min</option>
+          <option value="500000">$500K</option>
+          <option value="1000000">$1M</option>
+          <option value="2000000">$2M</option>
+          <option value="3000000">$3M</option>
+          <option value="5000000">$5M</option>
+        </select>
+      </div>
+      <div class="field lsb-field">
+        <span class="field-label">Price Max</span>
+        <select class="fs" id="ls_pricemax">
+          <option value="">No Max</option>
+          <option value="1000000">$1M</option>
+          <option value="2000000">$2M</option>
+          <option value="3000000">$3M</option>
+          <option value="5000000">$5M</option>
+          <option value="10000000">$10M</option>
+        </select>
+      </div>
+      <div class="field lsb-field">
+        <span class="field-label">Beds</span>
+        <select class="fs" id="ls_beds">
+          <option value="">Any</option>
+          <option value="1">1+</option>
+          <option value="2">2+</option>
+          <option value="3">3+</option>
+          <option value="4">4+</option>
+          <option value="5">5+</option>
+        </select>
+      </div>
+      <div class="field lsb-field">
+        <span class="field-label">Baths</span>
+        <select class="fs" id="ls_baths">
+          <option value="">Any</option>
+          <option value="1">1+</option>
+          <option value="2">2+</option>
+          <option value="3">3+</option>
+          <option value="4">4+</option>
+        </select>
+      </div>
+      <div class="field lsb-field">
+        <span class="field-label">Property Type</span>
+        <select class="fs" id="ls_type">
+          <option value="">All Types</option>
+          <option>Single Family</option>
+          <option>Condo</option>
+          <option>Multi-Family</option>
+          <option>Land</option>
+        </select>
+      </div>
+      <button type="button" class="btn-sub lsb-btn" onclick="applyListingFilters()">Search</button>
+    </div>
+
+    <div class="listing-results-meta">
+      <span class="listing-results-count" id="ls_resultcount">0 Listings</span>
+      <span class="listing-updated">Listing data last updated: <span id="ls_updated"></span></span>
+    </div>
+
+    <div class="listing-grid" id="listingGrid"></div>
+
+    <div class="listing-loadmore-wrap" id="listingLoadMoreWrap" style="display:none">
+      <button type="button" class="btn-outline" id="ls_loadmore" onclick="loadMoreListings()">Load More Listings</button>
+    </div>
+
+    <div class="idx-compliance">
+      <p>Listing information is deemed reliable but not guaranteed and should be independently verified. Listings are provided courtesy of participants of the Multiple Listing Service. © 2026 TheMLS. All rights reserved.</p>
     </div>
   </div>
 </section>
@@ -227,24 +335,92 @@ window.addEventListener('resize', () => {
   if (window.innerWidth > 768) closeMobileNav();
 });
 
-/* Scale the fixed-size IDX widget down proportionally to fit narrower
-   viewports -- the widget itself isn't responsive, so this keeps it
-   rendering at its native (usable) resolution while shrinking its visual
-   footprint, rather than letting it overflow or reflow awkwardly. */
-(function () {
-  var BASE_W = 1000, BASE_H = 700;
-  var wrap = document.getElementById('idxScaleWrap');
-  var frame = document.getElementById('idxFrame');
-  function resize() {
-    var available = wrap.parentElement.clientWidth;
-    var scale = Math.min(1, available / BASE_W);
-    frame.style.transformOrigin = 'top left';
-    frame.style.transform = 'scale(' + scale + ')';
-    wrap.style.width = Math.round(BASE_W * scale) + 'px';
-    wrap.style.height = Math.round(BASE_H * scale) + 'px';
-  }
-  window.addEventListener('resize', resize);
-  resize();
+/* ---------- Listing search (design mockup) ----------
+   This renders a hardcoded sample dataset so the page's look and
+   interactions can be reviewed before real MLS data is wired in. Once
+   RESO Web API / RETS credentials are available, replace
+   loadSampleListings() with a fetch() to a serverless endpoint (e.g.
+   api/listings.py) that queries the feed server-side -- MLS credentials
+   must never be exposed to the client -- and keep the same render/filter
+   functions below, since they only depend on the listing object shape. */
+const SAMPLE_LISTINGS = [
+  { price: 3495000, address: '1420 Blue Jay Way, Los Angeles, CA 90069', beds: 4, baths: 4.5, sqft: 3820, type: 'Single Family', status: 'active', courtesy: 'The Agency' },
+  { price: 1895000, address: '8541 Franklin Ave #302, West Hollywood, CA 90069', beds: 2, baths: 2, sqft: 1540, type: 'Condo', status: 'active', courtesy: 'The Agency' },
+  { price: 6250000, address: '1010 Loma Vista Dr, Beverly Hills, CA 90210', beds: 5, baths: 6, sqft: 5960, type: 'Single Family', status: 'active', courtesy: 'The Agency' },
+  { price: 899000, address: '4472 Elmer Ave, Studio City, CA 91602', beds: 3, baths: 2, sqft: 1610, type: 'Single Family', status: 'pending', courtesy: 'Coldwell Banker' },
+  { price: 2150000, address: '1650 Micheltorena St, Silver Lake, CA 90026', beds: 3, baths: 3, sqft: 2280, type: 'Single Family', status: 'active', courtesy: 'The Agency' },
+  { price: 749000, address: '5225 Colfax Ave #6, Valley Village, CA 91607', beds: 2, baths: 2, sqft: 1180, type: 'Condo', status: 'active', courtesy: 'Compass' },
+  { price: 12500000, address: '901 Bel Air Rd, Bel Air, CA 90077', beds: 7, baths: 9, sqft: 11200, type: 'Single Family', status: 'active', courtesy: 'The Agency' },
+  { price: 1349000, address: '2233 Sunset Plaza Dr, Los Angeles, CA 90069', beds: 3, baths: 2.5, sqft: 2010, type: 'Single Family', status: 'sold', courtesy: 'The Agency' },
+  { price: 1675000, address: '320 S Almont Dr #4, Beverly Hills, CA 90211', beds: 2, baths: 2.5, sqft: 1720, type: 'Condo', status: 'active', courtesy: 'Douglas Elliman' },
+  { price: 4200000, address: '1547 Blue Heights Dr, Los Angeles, CA 90069', beds: 4, baths: 4, sqft: 3400, type: 'Single Family', status: 'pending', courtesy: 'The Agency' },
+  { price: 1050000, address: '4110 W 5th St, Los Angeles, CA 90005', beds: 6, baths: 4, sqft: 3200, type: 'Multi-Family', status: 'active', courtesy: 'Keller Williams' },
+  { price: 625000, address: '815 N Sycamore Ave #12, Los Angeles, CA 90038', beds: 1, baths: 1, sqft: 780, type: 'Condo', status: 'active', courtesy: 'The Agency' },
+  { price: 2895000, address: '9200 Wonderland Park Ave, Los Angeles, CA 90046', beds: 4, baths: 3.5, sqft: 3050, type: 'Single Family', status: 'active', courtesy: 'The Agency' },
+  { price: 3100000, address: '1201 Laurel Way, Beverly Hills, CA 90210', beds: 0, baths: 0, sqft: 8400, type: 'Land', status: 'active', courtesy: 'Sotheby\'s' }
+];
+const LISTING_PAGE_SIZE = 6;
+let filteredListings = SAMPLE_LISTINGS.slice();
+let listingVisibleCount = LISTING_PAGE_SIZE;
+
+const HOUSE_ICON_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L2 12h3v8h5v-6h4v6h5v-8h3z"/></svg>';
+
+function formatPrice(n) {
+  return '$' + n.toLocaleString('en-US');
+}
+function renderListingCard(l) {
+  const statusLabel = l.status.charAt(0).toUpperCase() + l.status.slice(1);
+  const statsHtml = l.type === 'Land'
+    ? '<span>' + l.sqft.toLocaleString('en-US') + ' Lot SqFt</span>'
+    : '<span>' + l.beds + ' bd</span><span>' + l.baths + ' ba</span><span>' + l.sqft.toLocaleString('en-US') + ' sqft</span>';
+  return '<article class="listing-card">' +
+    '<div class="listing-photo">' + HOUSE_ICON_SVG +
+      '<span class="listing-status listing-status-' + l.status + '">' + statusLabel + '</span>' +
+    '</div>' +
+    '<div class="listing-body">' +
+      '<div class="listing-price">' + formatPrice(l.price) + '</div>' +
+      '<div class="listing-address">' + l.address + '</div>' +
+      '<div class="listing-stats">' + statsHtml + '</div>' +
+      '<div class="listing-courtesy">Courtesy of ' + l.courtesy + '</div>' +
+    '</div>' +
+  '</article>';
+}
+function renderListings() {
+  const grid = document.getElementById('listingGrid');
+  const visible = filteredListings.slice(0, listingVisibleCount);
+  grid.innerHTML = visible.length
+    ? visible.map(renderListingCard).join('')
+    : '<div class="listing-empty">No listings match your search. Try widening your filters.</div>';
+  document.getElementById('ls_resultcount').textContent = filteredListings.length + (filteredListings.length === 1 ? ' Listing' : ' Listings');
+  document.getElementById('listingLoadMoreWrap').style.display = listingVisibleCount < filteredListings.length ? 'block' : 'none';
+}
+function applyListingFilters() {
+  const location = document.getElementById('ls_location').value.trim().toLowerCase();
+  const priceMin = parseInt(document.getElementById('ls_pricemin').value, 10) || 0;
+  const priceMax = parseInt(document.getElementById('ls_pricemax').value, 10) || Infinity;
+  const beds = parseInt(document.getElementById('ls_beds').value, 10) || 0;
+  const baths = parseInt(document.getElementById('ls_baths').value, 10) || 0;
+  const type = document.getElementById('ls_type').value;
+  filteredListings = SAMPLE_LISTINGS.filter(function (l) {
+    if (location && l.address.toLowerCase().indexOf(location) === -1) return false;
+    if (l.price < priceMin || l.price > priceMax) return false;
+    if (l.beds < beds) return false;
+    if (l.baths < baths) return false;
+    if (type && l.type !== type) return false;
+    return true;
+  });
+  listingVisibleCount = LISTING_PAGE_SIZE;
+  renderListings();
+}
+function loadMoreListings() {
+  listingVisibleCount += LISTING_PAGE_SIZE;
+  renderListings();
+}
+(function initListings() {
+  document.getElementById('ls_updated').textContent = new Date().toLocaleString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
+  });
+  renderListings();
 })();
 </script>
 
