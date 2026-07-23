@@ -114,6 +114,24 @@ body>iframe{display:none !important}
 .idx-compliance{margin-top:44px;padding-top:24px;border-top:1px solid var(--g3)}
 .idx-compliance p{font-size:.64rem;color:var(--g5);line-height:1.7;font-weight:300}
 
+/* COMING SOON GATE -- client-side only soft-gate (not real security, since
+   there's no backend on this static site); it just keeps casual visitors
+   from landing on the incomplete search page while real MLS data isn't
+   wired in yet. Locked by default in the raw HTML (body has the
+   search-locked class hardcoded) so there's no flash of unblurred content
+   before JS runs; JS only ever removes the class, never flashes it on. */
+.search-gate{position:relative}
+.search-gate-inner{transition:filter .3s ease,opacity .3s ease}
+body.search-locked .search-gate-inner{filter:blur(8px);opacity:.7;pointer-events:none;user-select:none}
+.coming-soon-overlay{display:none;position:fixed;inset:0;align-items:center;justify-content:center;z-index:250;padding:24px;background:rgba(0,0,0,.4)}
+body.search-locked .coming-soon-overlay{display:flex}
+.coming-soon-card{background:rgba(10,10,10,.94);border:1px solid var(--g3);padding:40px 36px;max-width:400px;width:100%;text-align:center}
+.coming-soon-title{font-family:var(--serif);font-size:1.9rem;font-weight:400;color:var(--white);margin-top:10px}
+.coming-soon-sub{font-size:.85rem;color:var(--g6);line-height:1.7;font-weight:300;margin-top:14px}
+.coming-soon-admin-btn{margin-top:24px;background:none;border:1px solid var(--g4);color:var(--g5);padding:8px 18px;font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:all .2s}
+.admin-passcode-form{margin-top:22px;display:flex;flex-direction:column;gap:10px;text-align:left}
+.admin-passcode-error{color:var(--red);font-size:.7rem;display:none;text-align:left}
+
 @media(max-width:1024px){.listing-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:640px){
   .listing-grid{grid-template-columns:1fr}
@@ -153,10 +171,11 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 .nav-links a:hover{color:var(--white)}
 .nav-cta:hover{background:var(--red-h)}
 .nav-mobile a.nav-cta:hover{background:var(--red-h)}
+.coming-soon-admin-btn:hover{border-color:var(--white);color:var(--white)}
 }
 </style>
 </head>
-<body>
+<body class="search-locked">
 
 <!-- NAV -->
 <nav id="nav">
@@ -207,6 +226,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 <!-- LISTING SEARCH -->
 <section id="search">
   <div class="wrap">
+  <div class="search-gate">
+  <div class="search-gate-inner" id="searchGateInner">
     <div class="listing-search-bar">
       <div class="field lsb-field lsb-field-wide">
         <span class="field-label">Location</span>
@@ -283,6 +304,28 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
       <p>Listing information is deemed reliable but not guaranteed and should be independently verified. Listings are provided courtesy of participants of the Multiple Listing Service. © 2026 TheMLS. All rights reserved.</p>
     </div>
   </div>
+
+  <div class="coming-soon-overlay" id="comingSoonOverlay">
+    <div class="coming-soon-card">
+      <div id="comingSoonMain">
+        <span class="label label-red">Coming Soon</span>
+        <h2 class="coming-soon-title">Property Search</h2>
+        <p class="coming-soon-sub">This feature is launching soon. Check back shortly, or reach out any time — I'm happy to help you find something in the meantime.</p>
+        <button type="button" class="coming-soon-admin-btn" onclick="showAdminPasscode()">Admin</button>
+      </div>
+      <div id="comingSoonAdminForm" style="display:none">
+        <span class="field-label">Enter Passcode</span>
+        <div class="admin-passcode-form">
+          <input type="password" class="fi" id="adminPasscodeInput" placeholder="Passcode" autocomplete="off" onkeydown="if(event.key==='Enter')tryUnlockSearch()">
+          <button type="button" class="btn-sub" onclick="tryUnlockSearch()">Unlock</button>
+          <div class="admin-passcode-error" id="adminPasscodeError">Incorrect passcode.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+  </div>
 </section>
 
 <footer>
@@ -334,6 +377,34 @@ function closeMobileNav() {
 window.addEventListener('resize', () => {
   if (window.innerWidth > 768) closeMobileNav();
 });
+
+/* ---------- Coming Soon gate ----------
+   Client-side only -- there's no backend on this static site, so this is
+   a soft gate to keep casual visitors off the incomplete search page,
+   not real security. The passcode is intentionally visible in this
+   source file. Once real MLS data is wired in, remove this block and
+   the "search-locked" class on <body>. */
+const SEARCH_ADMIN_PASSCODE = 'RE369';
+function unlockSearchPage() {
+  document.body.classList.remove('search-locked');
+}
+function showAdminPasscode() {
+  document.getElementById('comingSoonMain').style.display = 'none';
+  document.getElementById('comingSoonAdminForm').style.display = 'block';
+  document.getElementById('adminPasscodeInput').focus();
+}
+function tryUnlockSearch() {
+  const input = document.getElementById('adminPasscodeInput');
+  if (input.value === SEARCH_ADMIN_PASSCODE) {
+    localStorage.setItem('searchAdminUnlocked', 'true');
+    unlockSearchPage();
+  } else {
+    document.getElementById('adminPasscodeError').style.display = 'block';
+    input.value = '';
+    input.focus();
+  }
+}
+if (localStorage.getItem('searchAdminUnlocked') === 'true') unlockSearchPage();
 
 /* ---------- Listing search (design mockup) ----------
    This renders a hardcoded sample dataset so the page's look and
