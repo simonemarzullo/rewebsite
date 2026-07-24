@@ -137,8 +137,8 @@ body>iframe{display:none !important}
 .hero-photo-area{position:absolute;right:0;top:0;bottom:0;width:44%;overflow:hidden}
 .hero-photo-placeholder{width:100%;height:100%;background:var(--hero-photo-ph);display:none;align-items:center;justify-content:center}
 .hero-photo-placeholder span{font-size:.62rem;letter-spacing:.4em;color:var(--grid-line);font-weight:500}
-.hero-photo-area picture{display:contents}
-.hero-photo-img{width:100%;height:100%;object-fit:cover;object-position:50% 22%}
+.hero-photo-img{width:100%;height:100%;object-fit:cover;object-position:50% 22%;opacity:0;transition:opacity .3s ease}
+.hero-photo-img.loaded{opacity:1}
 .hero-fade{position:absolute;inset:0;background:var(--hero-fade-x),var(--hero-fade-y)}
 .hero-content{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:0 48px;width:100%}
 .hero-eyebrow{display:flex;align-items:center;gap:12px;margin-bottom:28px}
@@ -355,13 +355,12 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 <section id="hero">
   <div class="hero-bg"></div>
   <div class="hero-photo-area">
-    <!-- The photo panel is hidden below 1025px, but a plain <img> would still
-         be downloaded there; the <picture> media query makes phones fetch the
-         inline 1x1 pixel instead of the ~400KB photo. -->
-    <picture>
-      <source media="(min-width:1025px)" srcset="assets/hero-skyline.jpg">
-      <img class="hero-photo-img" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Downtown Los Angeles skyline at night" onerror="this.style.display='none';document.getElementById('hero-photo-ph').style.display='flex'">
-    </picture>
+    <!-- The photo panel is hidden below 1025px, so JS only assigns a real
+         src on desktop widths -- mobile keeps the inline 1x1 placeholder
+         and never downloads either photo. Which photo loads (night vs.
+         dawn) is driven by the resolved theme; see updateHeroPhoto() near
+         the theme picker JS. -->
+    <img class="hero-photo-img" id="heroPhotoImg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Downtown Los Angeles skyline" onload="this.classList.add('loaded')" onerror="this.style.display='none';document.getElementById('hero-photo-ph').style.display='flex'">
     <div class="hero-photo-placeholder" id="hero-photo-ph"><span>LOS ANGELES</span></div>
     <div class="hero-fade"></div>
   </div>
@@ -1058,6 +1057,27 @@ function updateThemePickerUI(choice) {
     btn.classList.toggle('active', btn.dataset.themeChoice === choice);
   });
 }
+/* The hero photo is a genuinely different shot per theme (night skyline
+   vs. a real dawn photo) rather than a filtered version of one image --
+   a brightened/warmed night photo still reads as night, since the light
+   source pattern (glowing windows against a dark sky) doesn't invert
+   with color filters alone. Only loaded on desktop widths; mobile keeps
+   the 1x1 placeholder either way. */
+const HERO_PHOTO_NIGHT = 'assets/hero-skyline.jpg';
+const HERO_PHOTO_DAY = 'assets/hero-skyline-day.jpg';
+const HERO_PLACEHOLDER = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+function updateHeroPhoto(resolvedTheme) {
+  const img = document.getElementById('heroPhotoImg');
+  if (!img) return;
+  const desktop = window.matchMedia('(min-width:1025px)').matches;
+  const wanted = !desktop ? HERO_PLACEHOLDER : (resolvedTheme === 'light' ? HERO_PHOTO_DAY : HERO_PHOTO_NIGHT);
+  if (img.getAttribute('src') !== wanted) {
+    img.classList.remove('loaded');
+    img.src = wanted;
+  }
+}
+window.addEventListener('resize', () => updateHeroPhoto(document.documentElement.getAttribute('data-theme')));
+
 function applyThemeChoice(choice) {
   const resolved = choice === 'auto'
     ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
@@ -1065,6 +1085,7 @@ function applyThemeChoice(choice) {
   document.documentElement.setAttribute('data-theme', resolved);
   document.documentElement.setAttribute('data-theme-choice', choice);
   updateThemePickerUI(choice);
+  updateHeroPhoto(resolved);
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', resolved === 'light' ? '#FFFFFF' : '#000000');
 }
@@ -1078,6 +1099,7 @@ if (window.matchMedia) {
   });
 }
 updateThemePickerUI(document.documentElement.getAttribute('data-theme-choice') || 'auto');
+updateHeroPhoto(document.documentElement.getAttribute('data-theme'));
 
 function toggleMobileNav() {
   const menu = document.getElementById('nav-mobile');
