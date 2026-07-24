@@ -239,6 +239,18 @@ body>iframe{display:none !important}
 .stat-val{font-family:var(--serif);font-size:1.9rem;font-weight:400;color:var(--white);line-height:1;margin-bottom:5px}
 .stat-lbl{font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--g5);font-weight:400}
 
+/* WESTSIDE AREA GUIDES TEASER */
+.areas-teaser-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:1px}
+.areas-teaser-card{position:relative;display:flex;align-items:flex-end;min-height:220px;overflow:hidden;background:var(--g1);border:1px solid var(--g3)}
+.areas-teaser-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.areas-teaser-scrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.85) 0%,rgba(0,0,0,.3) 55%,rgba(0,0,0,.05) 100%)}
+.areas-teaser-content{position:relative;z-index:2;padding:20px 22px}
+.areas-teaser-kicker{font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.75);font-weight:500;margin-bottom:6px}
+.areas-teaser-name{font-family:var(--serif);font-size:1.35rem;color:#fff}
+.areas-teaser-list{display:flex;flex-direction:column;border-top:1px solid var(--g3)}
+.areas-teaser-list a{display:flex;justify-content:space-between;align-items:center;padding:16px 4px;border-bottom:1px solid var(--g3);font-size:.85rem;color:var(--g7);transition:color .2s}
+.areas-teaser-list-tags{font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;color:var(--g5)}
+
 /* POWER OF THE AGENCY */
 .agency-head{text-align:center;max-width:680px;margin:0 auto 48px}
 .agency-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--g3);max-width:1000px;margin:0 auto}
@@ -305,6 +317,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   .hero-actions{gap:12px}
   #hero{padding-bottom:110px}
   .hero-scroll{right:6px}
+  .areas-teaser-grid{grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){
   .scroll-bar::after{animation:none}
@@ -330,6 +343,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 .agency-link:hover{color:var(--white)}
 .ci-value a:hover{color:var(--red)}
 .theme-opt:not(.active):hover{color:var(--white)}
+.areas-teaser-card:hover .areas-teaser-name{color:var(--red)}
+.areas-teaser-list a:hover{color:var(--white)}
 }
 </style>
 </head>
@@ -345,12 +360,11 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
     </div>
   </a>
   <ul class="nav-links">
-    <li><a href="#action" onclick="showStageAndScroll(event,'stage-valuation-form')">Home Value</a></li>
-    <li><a href="#action" onclick="showStageAndScroll(event,'stage-sell-menu')">Sellers</a></li>
-    <li><a href="#action" onclick="showStageAndScroll(event,'stage-buy-menu')">Buyers</a></li>
-    <li><a href="#action" onclick="event.preventDefault();openSellForm('cash-offer')">Get a Cash Offer</a></li>
-    <li><a href="flip-calculator.html">Flip Calculator</a></li>
+    <li><a href="/home" onclick="goToActionHome(event)">Start</a></li>
+    <li><a href="/areas">Areas</a></li>
     <li><a href="/about" onclick="goToAnchor(event,'about')">About</a></li>
+    <li><a href="/#the-agency" onclick="goToAnchor(event,'the-agency')">The Agency</a></li>
+    <li><a href="flip-calculator.html">Calculator</a></li>
     <li><a href="/contact" onclick="goToAnchor(event,'contact')">Contact</a></li>
   </ul>
   <button type="button" class="nav-toggle" aria-expanded="false" aria-label="Menu" onclick="toggleMobileNav()">
@@ -359,12 +373,11 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 </nav>
 
 <div class="nav-mobile" id="nav-mobile">
-  <a href="#action" onclick="closeMobileNavAndGo(event,'stage-sell-menu')">I'm a Seller</a>
-  <a href="#action" onclick="closeMobileNavAndGo(event,'stage-buy-menu')">I'm a Buyer</a>
-  <a href="#action" onclick="closeMobileNavAndGo(event,'stage-valuation-form')">Home Valuation</a>
-  <a href="#action" onclick="closeMobileNavAndOpenCashOffer(event)">Get a Cash Offer</a>
-  <a href="flip-calculator.html">Flip Calculator</a>
+  <a href="/home" onclick="closeMobileNavAndGoHome(event)">Start</a>
+  <a href="/areas">Areas</a>
   <a href="/about" onclick="closeMobileNavAndGoToAnchor(event,'about')">About</a>
+  <a href="/#the-agency" onclick="closeMobileNavAndGoToAnchor(event,'the-agency')">The Agency</a>
+  <a href="flip-calculator.html">Calculator</a>
   <a href="/contact" onclick="closeMobileNavAndGoToAnchor(event,'contact')">Contact</a>
   <a href="/home" class="nav-cta" onclick="closeMobileNavAndGoHome(event)">Get Started</a>
   <div class="nav-mobile-theme-row">
@@ -773,6 +786,52 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
       </div>
     </div>
 
+  </div>
+</section>
+
+<!-- WESTSIDE AREA GUIDES -->
+<section id="areas-teaser" class="section section-alt" style="scroll-margin-top:72px">
+  <div class="wrap">
+    <span class="label label-red">The Westside</span>
+    <h2 class="action-title" style="margin:14px 0 12px">Places with character</h2>
+    <p class="about-copy" style="max-width:640px;margin-bottom:40px">Not every neighborhood asks the same of a home — or of its owner. Start with the areas that define coastal and central Westside living.</p>
+    <div class="areas-teaser-grid">
+      <a class="areas-teaser-card" href="/areas/santa-monica">
+        <img class="areas-teaser-img" src="assets/hero-skyline-day.jpg" alt="Santa Monica, Los Angeles" loading="lazy">
+        <div class="areas-teaser-scrim"></div>
+        <div class="areas-teaser-content">
+          <div class="areas-teaser-kicker">Coastal City</div>
+          <div class="areas-teaser-name">Santa Monica</div>
+        </div>
+      </a>
+      <a class="areas-teaser-card" href="/areas/venice">
+        <img class="areas-teaser-img" src="assets/hero-skyline-day.jpg" alt="Venice, Los Angeles" loading="lazy">
+        <div class="areas-teaser-scrim"></div>
+        <div class="areas-teaser-content">
+          <div class="areas-teaser-kicker">Canals &amp; Coast</div>
+          <div class="areas-teaser-name">Venice</div>
+        </div>
+      </a>
+      <a class="areas-teaser-card" href="/areas/beverly-hills">
+        <img class="areas-teaser-img" src="assets/hero-skyline-day.jpg" alt="Beverly Hills, Los Angeles" loading="lazy">
+        <div class="areas-teaser-scrim"></div>
+        <div class="areas-teaser-content">
+          <div class="areas-teaser-kicker">Global Address</div>
+          <div class="areas-teaser-name">Beverly Hills</div>
+        </div>
+      </a>
+    </div>
+    <div class="areas-teaser-list">
+      <a href="/areas/bel-air"><span>Bel Air</span><span class="areas-teaser-list-tags">Estates · Views</span></a>
+      <a href="/areas/malibu"><span>Malibu</span><span class="areas-teaser-list-tags">Coast · Compounds</span></a>
+      <a href="/areas/culver-city"><span>Culver City</span><span class="areas-teaser-list-tags">Media · Downtown</span></a>
+      <a href="/areas/century-city"><span>Century City</span><span class="areas-teaser-list-tags">Towers · Amenities</span></a>
+      <a href="/areas/mar-vista"><span>Mar Vista</span><span class="areas-teaser-list-tags">Character · Community</span></a>
+      <a href="/areas/hollywood"><span>Hollywood</span><span class="areas-teaser-list-tags">Hills · Iconic</span></a>
+    </div>
+    <div style="text-align:center;margin-top:32px">
+      <a href="/areas" class="agency-link">View All Westside Guides →</a>
+    </div>
   </div>
 </section>
 

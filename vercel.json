@@ -24,6 +24,16 @@
     { "source": "/flipcalculator", "destination": "/flip-calculator.html" },
     { "source": "/home", "destination": "/index.html" },
     { "source": "/about", "destination": "/api/about-page" },
-    { "source": "/contact", "destination": "/api/contact-page" }
+    { "source": "/contact", "destination": "/api/contact-page" },
+    { "source": "/areas", "destination": "/api/areas" },
+    { "source": "/areas/santa-monica", "destination": "/api/area-santa-monica" },
+    { "source": "/areas/venice", "destination": "/api/area-venice" },
+    { "source": "/areas/beverly-hills", "destination": "/api/area-beverly-hills" },
+    { "source": "/areas/bel-air", "destination": "/api/area-bel-air" },
+    { "source": "/areas/malibu", "destination": "/api/area-malibu" },
+    { "source": "/areas/culver-city", "destination": "/api/area-culver-city" },
+    { "source": "/areas/century-city", "destination": "/api/area-century-city" },
+    { "source": "/areas/mar-vista", "destination": "/api/area-mar-vista" },
+    { "source": "/areas/hollywood", "destination": "/api/area-hollywood" }
   ]
 }
