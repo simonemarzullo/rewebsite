@@ -281,14 +281,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   .choice-grid{grid-template-columns:1fr;max-width:480px}
   .footer-inner{grid-template-columns:1fr}
   .f-legal{text-align:left}
-  .hero-photo-img,.hero-scrim{display:none}
-  #hero{background:var(--hero-gradient);min-height:88vh}
-  .hero-eyebrow-text,.hero-headline,.hero-headline em,.hero-sub,.hero-scroll span{color:var(--white)}
-  .hero-headline em{color:var(--em-accent)}
-  .hero-sub{color:var(--g5)}
-  .scroll-bar{background:var(--g3)}
-  .btn-hero-outline{border-color:var(--g3);color:var(--white)}
   .agency-stats-grid{grid-template-columns:1fr 1fr}
+  .hero-content{padding:0 32px}
 }
 @media(max-width:768px){
   #nav{padding:0 20px}
@@ -304,6 +298,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   .agency-stats-grid{grid-template-columns:1fr}
   .choice-btn{min-height:150px;padding:28px 22px}
   .fi,.fs,.ft,.opt,.btn-next,.btn-sub{font-size:16px}
+  .hero-content{padding:0 20px}
+  .hero-actions{gap:12px}
 }
 @media(prefers-reduced-motion:reduce){
   .scroll-bar::after{animation:none}
@@ -372,10 +368,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 
 <!-- HERO -->
 <section id="hero">
-  <!-- Full-bleed photo, hidden below 1025px so mobile never downloads
-       it -- see the media query and updateHeroPhoto()'s own matchMedia
-       check, which only assigns a real src on desktop widths. Which
-       photo loads (night vs. dawn) follows the resolved theme. -->
+  <!-- Full-bleed photo on all screen sizes; which photo loads (night vs.
+       dawn) follows the resolved theme -- see updateHeroPhoto(). -->
   <img class="hero-photo-img" id="heroPhotoImg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Downtown Los Angeles skyline" onload="this.classList.add('loaded')" onerror="this.style.display='none';document.getElementById('hero-photo-ph').style.display='flex'">
   <div class="hero-photo-placeholder" id="hero-photo-ph"><span>LOS ANGELES</span></div>
   <div class="hero-scrim"></div>
@@ -1077,22 +1071,18 @@ function updateThemePickerUI(choice) {
    vs. a real dawn photo) rather than a filtered version of one image --
    a brightened/warmed night photo still reads as night, since the light
    source pattern (glowing windows against a dark sky) doesn't invert
-   with color filters alone. Only loaded on desktop widths; mobile keeps
-   the 1x1 placeholder either way. */
+   with color filters alone. Shown full-bleed on all screen sizes. */
 const HERO_PHOTO_NIGHT = 'assets/hero-skyline.jpg';
 const HERO_PHOTO_DAY = 'assets/hero-skyline-day.jpg';
-const HERO_PLACEHOLDER = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 function updateHeroPhoto(resolvedTheme) {
   const img = document.getElementById('heroPhotoImg');
   if (!img) return;
-  const desktop = window.matchMedia('(min-width:1025px)').matches;
-  const wanted = !desktop ? HERO_PLACEHOLDER : (resolvedTheme === 'light' ? HERO_PHOTO_DAY : HERO_PHOTO_NIGHT);
+  const wanted = resolvedTheme === 'light' ? HERO_PHOTO_DAY : HERO_PHOTO_NIGHT;
   if (img.getAttribute('src') !== wanted) {
     img.classList.remove('loaded');
     img.src = wanted;
   }
 }
-window.addEventListener('resize', () => updateHeroPhoto(document.documentElement.getAttribute('data-theme')));
 
 function applyThemeChoice(choice) {
   const resolved = choice === 'auto'
@@ -1117,14 +1107,13 @@ if (window.matchMedia) {
 updateThemePickerUI(document.documentElement.getAttribute('data-theme-choice') || 'auto');
 updateHeroPhoto(document.documentElement.getAttribute('data-theme'));
 
-/* Nav is transparent over the hero photo at the very top of the page on
-   desktop; scrolling even a little (or being on mobile, where the hero
-   has no photo) solidifies it back to the normal themed bar. */
+/* Nav is transparent over the hero photo at the very top of the page,
+   on any screen size; scrolling even a little solidifies it back to
+   the normal themed bar. */
 function updateNavTransparency() {
   const nav = document.getElementById('nav');
   if (!nav) return;
-  const isDesktop = window.matchMedia('(min-width:1025px)').matches;
-  nav.classList.toggle('nav-transparent', isDesktop && window.scrollY < 40);
+  nav.classList.toggle('nav-transparent', window.scrollY < 40);
 }
 window.addEventListener('scroll', updateNavTransparency, { passive: true });
 window.addEventListener('resize', updateNavTransparency);
@@ -1413,9 +1402,9 @@ window.widgetTracker("send", "pageview");
 .mcf{display:flex;position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:9999;flex-direction:column;align-items:flex-end;gap:10px}
 .mcf-menu{display:flex;flex-direction:column;gap:10px;align-items:flex-end;opacity:0;pointer-events:none;transform:translateY(10px) scale(.92);transition:opacity .22s ease,transform .22s ease}
 .mcf.on .mcf-menu{opacity:1;pointer-events:auto;transform:translateY(0) scale(1)}
-.mcf-item{display:flex;align-items:center;gap:10px;background:#161616;border:1px solid rgba(255,255,255,.14);color:#fff;text-decoration:none;padding:13px 23px 13px 17px;border-radius:999px;font-family:var(--sans);font-size:1.01rem;font-weight:500;letter-spacing:.02em;box-shadow:0 6px 18px rgba(0,0,0,.4);white-space:nowrap}
+.mcf-item{display:flex;align-items:center;gap:10px;background:var(--g2);border:1px solid var(--g3);color:var(--white);text-decoration:none;padding:13px 23px 13px 17px;border-radius:999px;font-family:var(--sans);font-size:1.01rem;font-weight:500;letter-spacing:.02em;box-shadow:0 6px 18px rgba(0,0,0,.4);white-space:nowrap}
 .mcf-item svg{width:20px;height:20px;fill:var(--red);flex-shrink:0}
-.mcf-toggle{position:relative;width:64px;height:64px;border-radius:50%;background:#161616;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .2s ease}
+.mcf-toggle{position:relative;width:64px;height:64px;border-radius:50%;background-color:var(--g2);border:1px solid var(--g3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .2s ease}
 .mcf-toggle:active{transform:scale(.9)}
 .mcf-toggle svg{position:absolute;width:25px;height:25px;fill:var(--red);pointer-events:none;transition:opacity .2s ease,transform .2s ease}
 .mcf-icon-close{opacity:0;transform:rotate(-45deg) scale(.4)}
