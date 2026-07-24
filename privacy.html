@@ -3,10 +3,15 @@
 <head>
 <script>
 // Set the theme before CSS paints so there's no flash of the wrong theme.
+// themeChoice is what the visitor picked (dark/light/auto); data-theme is
+// the resolved value CSS actually keys off -- when choice is "auto" it
+// follows the device/OS's own prefers-color-scheme setting, which on
+// iOS/Android/macOS/Windows may itself be tied to sunset-to-sunrise.
 (function () {
-  var stored = localStorage.getItem('siteTheme');
-  var theme = stored || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-  document.documentElement.setAttribute('data-theme', theme);
+  var choice = localStorage.getItem('themeChoice') || 'auto';
+  var resolved = choice === 'auto' ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : choice;
+  document.documentElement.setAttribute('data-theme', resolved);
+  document.documentElement.setAttribute('data-theme-choice', choice);
 })();
 </script>
 <meta charset="UTF-8">
@@ -58,11 +63,10 @@ strong{color:var(--g7);font-weight:500}
 footer{background:var(--g1);border-top:1px solid var(--g3);padding:40px 24px;text-align:center}
 .f-line{font-size:.68rem;color:var(--g5);font-weight:300;line-height:1.9}
 .theme-toggle-row{display:flex;justify-content:center;margin-top:16px}
-.theme-toggle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--g3);background:none;color:var(--g5);transition:border-color .2s,color .2s}
-.theme-toggle svg{width:16px;height:16px}
-.theme-toggle .theme-icon-moon{display:none}
-:root[data-theme="light"] .theme-toggle .theme-icon-sun{display:none}
-:root[data-theme="light"] .theme-toggle .theme-icon-moon{display:block}
+.theme-picker{display:inline-flex;gap:2px;border:1px solid var(--g3);border-radius:999px;padding:3px}
+.theme-opt{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--g5);transition:background .2s,color .2s}
+.theme-opt svg{width:14px;height:14px}
+.theme-opt.active{background:var(--red);color:var(--white)}
 
 @media(max-width:640px){
   #nav{padding:0 20px}
@@ -79,7 +83,7 @@ body>iframe{display:none !important}
 @media(hover:hover){
 a:hover{color:var(--white)}
 .nav-back:hover{color:var(--white)}
-.theme-toggle:hover{border-color:var(--white);color:var(--white)}
+.theme-opt:not(.active):hover{color:var(--white)}
 }
 </style>
 </head>
@@ -161,30 +165,51 @@ a:hover{color:var(--white)}
 <footer>
   <div class="f-line">Equal Housing Opportunity · © 2026 Simone Marzullo. All rights reserved. · CA DRE# 02174253</div>
   <div class="theme-toggle-row">
-    <button type="button" class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Switch to light mode">
-      <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
-      <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-    </button>
+    <div class="theme-picker" role="group" aria-label="Theme">
+      <button type="button" class="theme-opt" data-theme-choice="light" onclick="setThemeChoice('light')" aria-label="Light theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+      </button>
+      <button type="button" class="theme-opt" data-theme-choice="dark" onclick="setThemeChoice('dark')" aria-label="Dark theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+      <button type="button" class="theme-opt" data-theme-choice="auto" onclick="setThemeChoice('auto')" aria-label="Match device setting">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 010 18z" fill="currentColor" stroke="none"></path></svg>
+      </button>
+    </div>
   </div>
 </footer>
 
 <script>
-/* ---------- Theme toggle ----------
-   The actual theme attribute is set as early as possible in <head>
-   (before CSS paints) to avoid a flash of the wrong theme; this just
-   handles the button's state and persists changes after that. */
-function setThemeButtonLabel(theme) {
-  var btn = document.getElementById('themeToggle');
-  if (btn) btn.setAttribute('aria-label', theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+/* ---------- Theme picker (Dark / Light / Auto) ----------
+   The resolved theme attribute is set as early as possible in <head>
+   (before CSS paints) to avoid a flash of the wrong theme; this handles
+   the picker's active state, persists the CHOICE (not the resolved
+   value), and -- when the choice is "auto" -- keeps the theme in sync
+   live if the device's own light/dark setting changes while the tab is
+   open (e.g. an OS-level sunset-to-sunrise schedule firing). */
+function updateThemePickerUI(choice) {
+  document.querySelectorAll('.theme-opt').forEach(function (btn) {
+    btn.classList.toggle('active', btn.dataset.themeChoice === choice);
+  });
 }
-function toggleTheme() {
-  var current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-  var next = current === 'light' ? 'dark' : 'light';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('siteTheme', next);
-  setThemeButtonLabel(next);
+function applyThemeChoice(choice) {
+  var resolved = choice === 'auto'
+    ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    : choice;
+  document.documentElement.setAttribute('data-theme', resolved);
+  document.documentElement.setAttribute('data-theme-choice', choice);
+  updateThemePickerUI(choice);
 }
-setThemeButtonLabel(document.documentElement.getAttribute('data-theme'));
+function setThemeChoice(choice) {
+  localStorage.setItem('themeChoice', choice);
+  applyThemeChoice(choice);
+}
+if (window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function () {
+    if ((localStorage.getItem('themeChoice') || 'auto') === 'auto') applyThemeChoice('auto');
+  });
+}
+updateThemePickerUI(document.documentElement.getAttribute('data-theme-choice') || 'auto');
 </script>
 <!-- begin Widget Tracker Code -->
 <script>
