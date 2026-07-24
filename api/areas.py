@@ -49,7 +49,8 @@ AREAS = [
      "photo_alt": "Rodeo Drive in Beverly Hills, California"},
     {"slug": "bel-air", "name": "Bel Air", "region_label": "Westside Hills",
      "tags": "ESTATES · VIEWS", "photo": "/assets/neighborhoods/bel-air.jpg",
-     "photo_alt": "White mansion with manicured hedges and palm trees in Bel Air, Los Angeles"},
+     "photo_alt": "White mansion with manicured hedges and palm trees in Bel Air, Los Angeles",
+     "photo_position": "50% 12%"},
     {"slug": "malibu", "name": "Malibu", "region_label": "Coastal Estates",
      "tags": "COAST · COMPOUNDS", "photo": "/assets/neighborhoods/malibu.jpg",
      "photo_alt": "Malibu coastline along the Pacific Coast Highway, California"},
@@ -757,7 +758,7 @@ def render_area_page(slug):
 
     return f"""
 <section class="area-hero">
-  <img class="area-hero-img" src="{area['photo']}" alt="{area['photo_alt']}" loading="eager">
+  <img class="area-hero-img" src="{area['photo']}" alt="{area['photo_alt']}" loading="eager" style="object-position:{area.get('photo_position', '50% 20%')}">
   <div class="area-hero-scrim"></div>
   <div class="area-hero-content">
     {breadcrumb_html([("Home", "/"), ("Areas", "/areas"), (data['name'], None)])}
@@ -846,7 +847,7 @@ def render_area_page(slug):
 def build_hub_html():
     cards = "".join(f"""
     <a class="hub-card" href="/areas/{a['slug']}">
-      <img class="hub-card-img" src="{a['photo']}" alt="{a['photo_alt']}" loading="lazy">
+      <img class="hub-card-img" src="{a['photo']}" alt="{a['photo_alt']}" loading="lazy" style="object-position:{a.get('photo_position', '50% 50%')}">
       <div class="hub-card-scrim"></div>
       <div class="hub-card-content">
         <div class="hub-card-kicker">{a['region_label']}</div>
