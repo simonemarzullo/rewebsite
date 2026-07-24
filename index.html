@@ -143,7 +143,7 @@ body>iframe{display:none !important}
    The scrim keeps text legible against the photo, so hero text uses
    fixed light colors here rather than the theme variables that flip
    elsewhere on the page. */
-#hero{position:relative;min-height:100vh;display:flex;align-items:flex-end;overflow:hidden;padding-top:72px;padding-bottom:110px;background:var(--black)}
+#hero{position:relative;min-height:100vh;min-height:100svh;display:flex;align-items:flex-end;overflow:hidden;padding-top:72px;padding-bottom:110px;background:var(--black)}
 .hero-photo-placeholder{position:absolute;inset:0;background:var(--hero-photo-ph);display:none;align-items:center;justify-content:center}
 .hero-photo-placeholder span{font-size:.62rem;letter-spacing:.4em;color:var(--grid-line);font-weight:500}
 .hero-photo-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 30%;opacity:0;transition:opacity .3s ease}
@@ -302,7 +302,9 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   .choice-btn{min-height:150px;padding:28px 22px}
   .fi,.fs,.ft,.opt,.btn-next,.btn-sub{font-size:16px}
   .hero-content{padding:0 20px}
-  .hero-actions{gap:12px}
+  .hero-actions{gap:12px;flex-direction:column;align-items:stretch}
+  .btn-primary,.btn-hero-outline{justify-content:center;width:100%;box-sizing:border-box}
+  #hero{padding-bottom:150px}
 }
 @media(prefers-reduced-motion:reduce){
   .scroll-bar::after{animation:none}
