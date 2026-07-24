@@ -182,6 +182,8 @@ body>iframe{display:none !important}
 .choice-title{font-family:var(--serif);font-size:1.35rem;font-weight:400;color:var(--white);line-height:1.2}
 .choice-desc{font-size:.78rem;color:var(--g5);line-height:1.65;font-weight:300}
 .choice-arrow{margin-top:auto;font-size:.63rem;letter-spacing:.18em;text-transform:uppercase;color:var(--red);font-weight:500}
+.choice-bar{background:var(--black);border:1px solid var(--g3);padding:24px 32px;display:flex;align-items:center;justify-content:space-between;gap:24px;max-width:1100px;width:100%;margin:16px auto 0;text-align:left;transition:border-color .2s,background .2s}
+.choice-bar .choice-arrow{margin-top:0;flex-shrink:0}
 .form-shell{max-width:620px;margin:0 auto}
 
 /* SERVICES TABS (legacy classes retained, unused) */
@@ -312,6 +314,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   .stats-grid{grid-template-columns:1fr}
   .agency-stats-grid{grid-template-columns:1fr}
   .choice-btn{min-height:150px;padding:28px 22px}
+  .choice-bar{flex-direction:column;align-items:flex-start;gap:14px;padding:24px 22px}
   .fi,.fs,.ft,.opt,.btn-next,.btn-sub{font-size:16px}
   .hero-content{padding:0 20px}
   .hero-actions{gap:12px}
@@ -335,6 +338,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 .btn-hero-outline:hover{border-color:#fff;background:rgba(255,255,255,.1)}
 .stage-back:hover{color:var(--white)}
 .choice-btn:hover{border-color:var(--red);background:rgba(200,16,46,.06);transform:translateY(-2px)}
+.choice-bar:hover{border-color:var(--red);background:rgba(200,16,46,.06)}
 .opt:hover{border-color:var(--g5);color:var(--white)}
 .btn-back:hover{color:var(--white)}
 .btn-next:hover{background:var(--g7)}
@@ -432,7 +436,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
         <h2 class="action-title">Let's Get Started</h2>
         <p class="action-sub">Choose an option below — it only takes a minute.</p>
       </div>
-      <div class="choice-grid choice-grid-2">
+      <div class="choice-grid">
         <button type="button" class="choice-btn" onclick="showStage('stage-sell-menu')">
           <div class="choice-title">I'm a Seller</div>
           <div class="choice-desc">Get expert guidance to list, sell privately, or receive a cash offer.</div>
@@ -443,17 +447,19 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           <div class="choice-desc">Find your next home, an income property, or your next project.</div>
           <span class="choice-arrow">Continue →</span>
         </button>
-        <button type="button" class="choice-btn" onclick="showStage('stage-valuation-form')">
-          <div class="choice-title">Home Valuation</div>
-          <div class="choice-desc">Get a free, no-obligation estimate of your property's value.</div>
-          <span class="choice-arrow">Continue →</span>
-        </button>
         <button type="button" class="choice-btn" onclick="showStage('stage-investor-menu')">
           <div class="choice-title">For Investors</div>
           <div class="choice-desc">Get off-market opportunities matched to your criteria, or run your numbers with the flip calculator.</div>
           <span class="choice-arrow">Continue →</span>
         </button>
       </div>
+      <button type="button" class="choice-bar" onclick="showStage('stage-valuation-form')">
+        <div class="choice-bar-text">
+          <div class="choice-title">Home Valuation</div>
+          <div class="choice-desc">Get a free, no-obligation estimate of your property's value.</div>
+        </div>
+        <span class="choice-arrow">Continue →</span>
+      </button>
     </div>
 
     <!-- STAGE: SELL MENU -->
