@@ -173,6 +173,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 @media(max-width:768px){
   #nav{padding:0 20px}
   .nav-links{display:none}
+  #nav>a.nav-cta{display:none}
   .nav-toggle{display:flex}
   .wrap{padding:0 20px}
   .section{padding:56px 0}
