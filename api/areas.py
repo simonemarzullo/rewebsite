@@ -81,18 +81,18 @@ PAGE_DATA = {
             "North of Montana is the city's most prestigious residential pocket — larger lots and a short walk to Montana Avenue's boutiques. Ocean Park and Sunset Park trade some of that polish for a more relaxed, architecturally eclectic feel, while downtown towers cater to buyers who want low-maintenance living within steps of transit and retail.",
             "Coastal proximity brings real tradeoffs: marine-layer humidity, stricter coastal-zone permitting on renovations, and premium pricing for ocean views or beach access. Buyers should weigh those against the walkability, mild climate, and direct beach access that define the city.",
         ],
-        "who_thrives": "Buyers who want to walk to the beach, dining, and transit without giving up single-family living — from young professionals in downtown condos to families settling north of Montana.",
+        "who_thrives": "Walkable access to the beach, dining, and transit within a single-family residential setting, spanning downtown condos to the larger lots north of Montana Avenue.",
         "market_pulse": [
             ("DEMAND", "Consistently strong, coastal premium"),
             ("INVENTORY STYLE", "Beachfront, downtown condo, inland single-family"),
-            ("BUYER MIX", "Owner-occupants, second-home buyers, downsizers"),
+            ("BUYER MIX", "Owner-occupants, second-home buyers, investors"),
         ],
         "market_pulse_note": "Santa Monica pricing varies sharply by proximity to the beach and by neighborhood — a tailored comp set matters more here than almost anywhere on the Westside.",
         "why_choose": [
             ("Walkability as a lifestyle", "The Promenade, the Pier, and Montana Avenue put daily errands, dining, and the beach within walking distance of most residential pockets."),
             ("Coastal climate", "The marine layer keeps summers cooler and winters milder than inland LA — a meaningful draw for buyers prioritizing comfort."),
-            ("Transit and commute options", "Metro's E Line and proximity to the 10 Freeway give Santa Monica some of the Westside's best access to Downtown LA and the Valley."),
-            ("School and family draw", "Santa Monica-Malibu Unified schools consistently draw families willing to pay a premium for the address."),
+            ("Transit and commute options", "Metro's E Line provides direct rail access to Downtown LA, while the 10 Freeway offers a driving route toward the Valley — two of the Westside's better commute options."),
+            ("School district factor", "Santa Monica-Malibu Unified serves the area; enrollment is address-specific, so buyers should verify boundaries directly with the district before assuming assignment."),
         ],
         "what_stands_out": [
             ("Beach proximity premium", "Distance to sand measured in blocks, not miles, drives meaningful price differences between otherwise similar homes."),
@@ -127,11 +127,11 @@ PAGE_DATA = {
             "Silicon Beach's tech presence, including major offices within Venice and neighboring Playa Vista, has reshaped demand over the past decade, bringing younger, higher-income buyers into a neighborhood that was historically more bohemian and artist-driven.",
             "Lot sizes in the canals and walk-street areas tend to be small and irregular, and many homes require creative architectural solutions for parking and outdoor space — a real consideration for buyers used to standard suburban lots.",
         ],
-        "who_thrives": "Buyers drawn to walkable, design-forward living near the beach — tech professionals, creatives, and anyone comfortable trading lot size for character and location.",
+        "who_thrives": "Walkable, design-forward living near the beach, trading lot size and parking convenience for character, canal or walk-street access, and location.",
         "market_pulse": [
             ("DEMAND", "Strong among creative and tech buyers"),
             ("INVENTORY STYLE", "Small, irregular lots; high renovation variance"),
-            ("BUYER MIX", "Tech-adjacent professionals, creatives, investors"),
+            ("BUYER MIX", "Owner-occupants, investors, relocation buyers"),
         ],
         "market_pulse_note": "Venice's canal and walk-street lots vary enormously in size and buildable footprint — pricing should be evaluated property by property rather than by neighborhood average.",
         "why_choose": [
@@ -173,7 +173,7 @@ PAGE_DATA = {
             "The Flats favor traditional and Mediterranean-style estates on generous, regular lots, while the hillside areas offer view-oriented, architecturally significant homes with more topographical variety and privacy from the street.",
             "Beverly Hills carries a globally recognized address, which factors into both pricing and buyer profile — many purchasers are drawn as much to the name and the Beverly Hills Unified school district as to any specific property type.",
         ],
-        "who_thrives": "Buyers who want a globally recognized address alongside genuine walkability to world-class retail and dining, or hillside privacy in Trousdale's architecturally significant homes.",
+        "who_thrives": "A globally recognized address with genuine walkability to world-class retail and dining in the Flats, or hillside privacy in Trousdale's architecturally significant homes.",
         "market_pulse": [
             ("DEMAND", "Consistently high, name-driven"),
             ("INVENTORY STYLE", "Flats: regular lots. Hillside: view-driven, irregular"),
@@ -184,7 +184,7 @@ PAGE_DATA = {
             ("Global brand recognition", "Few residential addresses carry the same immediate international recognition, which can matter for resale and for buyers relocating from abroad."),
             ("Walkable luxury core", "The Flats put Rodeo Drive, fine dining, and Beverly Hills' civic core within walking distance for many residents."),
             ("Trousdale's architectural pedigree", "A concentrated collection of mid-century modern homes, prized for both design and hillside privacy."),
-            ("School district draw", "Beverly Hills Unified is a significant factor for family buyers evaluating this market against neighboring areas."),
+            ("School district factor", "Beverly Hills Unified enrollment depends on residence within the district's boundaries, not postal city alone — buyers should verify eligibility directly with the district."),
         ],
         "what_stands_out": [
             ("The Flats grid", "Wide, palm-lined streets on a regular grid, walkable to the retail core and civic center."),
@@ -217,7 +217,7 @@ PAGE_DATA = {
         "intro": [
             "Bel Air is Los Angeles at its most secluded: elevation, larger parcels, and homes designed around privacy. Architecture ranges from classic Spanish estates to glass-and-steel contemporaries. Buyers trade walkable retail for space, discretion, and a quieter residential tempo — still minutes from Beverly Hills, Westwood, and major corridors.",
         ],
-        "who_thrives": "Buyers who want space and discretion over walkability — relocating executives, creative principals, and anyone trading density for canyon calm.",
+        "who_thrives": "Space and discretion over walkability, trading proximity to retail and dining for larger parcels and canyon-topography privacy.",
         "market_pulse": [
             ("DEMAND", "Selective & high-end"),
             ("INVENTORY STYLE", "Low volume, high variance"),
@@ -263,7 +263,7 @@ PAGE_DATA = {
             "Much of Malibu's appeal is privacy and scale: larger parcels, gated compounds, and a rural, low-density character that's increasingly rare elsewhere in Los Angeles County. Surf breaks, beach access, and mountain trail access all factor into how specific streets and pockets are valued.",
             "Coastal and hillside living here carries real, well-documented considerations — wildfire risk in the canyons and hillsides, bluff erosion and geological review on some coastal parcels, and Coastal Commission permitting on new construction and major renovations. These are worth discussing property-by-property rather than assuming they apply uniformly across the city.",
         ],
-        "who_thrives": "Buyers prioritizing privacy, scale, and coastal or mountain access above walkability or density — from beachfront second-home buyers to full-time residents in the canyons.",
+        "who_thrives": "Privacy, scale, and coastal or mountain access, weighed against a rural, low-density character and the due-diligence considerations of coastal and canyon parcels.",
         "market_pulse": [
             ("DEMAND", "Selective, privacy- and scale-driven"),
             ("INVENTORY STYLE", "Low volume; wide variance by coastal vs. canyon location"),
@@ -309,11 +309,11 @@ PAGE_DATA = {
             "Housing ranges from early-20th-century bungalows in the established residential pockets to newer townhomes and infill construction near downtown and the Hayden Tract, a converted industrial area now home to creative offices and design firms.",
             "The Metro E Line runs directly through downtown Culver City, giving residents transit access toward Santa Monica in one direction and Downtown LA in the other — a genuine commute advantage relative to many surrounding neighborhoods.",
         ],
-        "who_thrives": "Buyers who want walkable downtown amenities and media-industry proximity without Santa Monica or Venice pricing — from studio employees to families in the established bungalow neighborhoods.",
+        "who_thrives": "Walkable downtown amenities and media-industry proximity, at pricing that has historically undercut Santa Monica and Venice for comparable square footage.",
         "market_pulse": [
             ("DEMAND", "Steady, industry- and transit-driven"),
             ("INVENTORY STYLE", "Mix of historic bungalows and newer infill"),
-            ("BUYER MIX", "Media professionals, families, first-time buyers"),
+            ("BUYER MIX", "Owner-occupants, first-time buyers, investors"),
         ],
         "market_pulse_note": "Culver City pricing varies by proximity to downtown and the E Line — a block-by-block comparison matters more than a citywide average.",
         "why_choose": [
@@ -355,11 +355,11 @@ PAGE_DATA = {
             "Its central location — bordering Beverly Hills, Westwood, and Beverly Grove — makes it a genuine commute hub, with relatively fast access to the Westside beach cities, Downtown LA via the 10, and UCLA.",
             "Buyers here are typically prioritizing a lock-and-leave lifestyle, building amenities, and central access over lot size or architectural character — a different value proposition than the single-family neighborhoods surrounding it.",
         ],
-        "who_thrives": "Executives, empty-nesters, and buyers who want full-service, low-maintenance living centrally located between Beverly Hills, Westwood, and the Westside beach cities.",
+        "who_thrives": "Full-service, low-maintenance tower living centrally located between Beverly Hills, Westwood, and the Westside beach cities.",
         "market_pulse": [
             ("DEMAND", "Steady among lock-and-leave buyers"),
             ("INVENTORY STYLE", "Predominantly high-rise condo and tower units"),
-            ("BUYER MIX", "Executives, empty-nesters, investors"),
+            ("BUYER MIX", "Owner-occupants, investors, relocation buyers"),
         ],
         "market_pulse_note": "Century City pricing varies significantly by building, floor, and view orientation — tower-by-tower comparison is essential here.",
         "why_choose": [
@@ -393,19 +393,19 @@ PAGE_DATA = {
     "mar-vista": {
         "name": "Mar Vista",
         "title": "Mar Vista Real Estate | Simone Marzullo, The Agency",
-        "description": "Mar Vista homes for sale and area guide — mid-century Eichler homes and a family-friendly community feel, from Simone Marzullo, The Agency.",
-        "tagline": "Mid-century character and a tight-knit, family-friendly feel inland from the coast.",
+        "description": "Mar Vista homes for sale and area guide — mid-century Eichler homes and a tight-knit community feel, from Simone Marzullo, The Agency.",
+        "tagline": "Mid-century character and a tight-knit community feel inland from the coast.",
         "tags": ["CHARACTER", "COMMUNITY", "MID-CENTURY"],
         "intro": [
             "Mar Vista sits just inland from Venice and Santa Monica, and is known in particular for a cluster of Eichler-built mid-century modern homes — post-and-beam construction with atriums and clean, indoor-outdoor lines that have drawn a dedicated following of design-focused buyers.",
-            "The neighborhood has a genuinely family-friendly, community feel, anchored by a well-attended weekly farmers market and a growing restaurant and retail corridor along Venice and Centinela Boulevards.",
+            "The neighborhood has a genuinely tight-knit community feel, anchored by a well-attended weekly farmers market and a growing restaurant and retail corridor along Venice and Centinela Boulevards.",
             "Relative to Venice and Santa Monica, Mar Vista has historically offered more house for the price while still sitting within easy reach of the beach, the 405, and the 10 — though that gap has narrowed as the neighborhood's mid-century homes have drawn wider attention.",
         ],
-        "who_thrives": "Families and design-focused buyers looking for character architecture and a community feel, inland enough for relative value but still close to the coast.",
+        "who_thrives": "Mid-century architecture and a tight-knit community feel, positioned inland for relative value while staying close to the coast.",
         "market_pulse": [
             ("DEMAND", "Rising, especially for Eichler mid-century homes"),
             ("INVENTORY STYLE", "Mostly single-family, mid-century and postwar stock"),
-            ("BUYER MIX", "Families, design-focused buyers, move-up buyers"),
+            ("BUYER MIX", "Owner-occupants, move-up buyers, renovators"),
         ],
         "market_pulse_note": "Eichler and other mid-century homes in Mar Vista often command a distinct premium over comparable postwar stock nearby — worth evaluating separately in any comp set.",
         "why_choose": [
@@ -447,17 +447,17 @@ PAGE_DATA = {
             "Hillside homes range from modest mid-century cottages to significant view estates, with lot shape, road access, and view orientation driving much of the price variation between otherwise similar addresses.",
             "The flatter core has seen substantial reinvestment over the past decade, with new residential towers and a denser mix of dining and nightlife, while the hills retain a quieter, more residential character despite sitting minutes from the commercial corridor.",
         ],
-        "who_thrives": "Buyers drawn to hillside views and privacy with quick access to the entertainment industry and Hollywood's commercial core, or to walkable, transit-connected flatland living.",
+        "who_thrives": "Hillside views and privacy with quick access to the entertainment industry and Hollywood's commercial core, or walkable, transit-connected living in the flats.",
         "market_pulse": [
             ("DEMAND", "Strong for hillside view properties"),
             ("INVENTORY STYLE", "Hills: irregular view lots. Flats: apartments, condos, new mixed-use"),
-            ("BUYER MIX", "Entertainment-industry buyers, investors, urban lifestyle buyers"),
+            ("BUYER MIX", "Owner-occupants, investors, relocation buyers"),
         ],
         "market_pulse_note": "Hollywood Hills pricing depends heavily on view quality, road access, and lot usability — property-specific evaluation matters more than a neighborhood-wide average.",
         "why_choose": [
             ("Hillside views", "City-light and canyon views from the Hollywood Hills are a primary draw, with meaningful price variation by exposure and elevation."),
             ("Entertainment-industry proximity", "Major studios and production offices in Hollywood and neighboring Burbank keep the buyer pool tied to the industry."),
-            ("Transit and walkability in the flats", "The Metro Red Line and a growing walkable core give flatland buyers strong transit access toward Downtown LA and the Valley."),
+            ("Transit and walkability in the flats", "The Metro B Line and a growing walkable core give flatland buyers strong transit access toward Downtown LA and North Hollywood."),
             ("Ongoing revitalization", "Continued investment in Hollywood Boulevard and Sunset has brought new dining, retail, and residential towers to the commercial core."),
         ],
         "what_stands_out": [
@@ -466,7 +466,7 @@ PAGE_DATA = {
             ("Mixed housing stock", "Historic apartment buildings, new mixed-use towers, and hillside single-family homes all coexist within the same broader area."),
         ],
         "day_to_day": [
-            "Metro Red Line access in the flats",
+            "Metro B Line access in the flats",
             "Proximity to major studios and production offices",
             "Hillside hiking access near Runyon Canyon and Griffith Park",
             "Walk of Fame and Hollywood Boulevard nightlife and dining",
@@ -781,7 +781,7 @@ def render_area_page(slug):
         <h2 class="action-title" style="margin:14px 0 22px">Living in {data['name']}</h2>
         <div class="area-intro-copy">{intro_html}</div>
         <div class="area-callout">
-          <div class="area-callout-label">Who Thrives Here</div>
+          <div class="area-callout-label">What This Location Offers</div>
           <p>{data['who_thrives']}</p>
         </div>
       </div>
