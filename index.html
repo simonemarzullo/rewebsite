@@ -139,10 +139,10 @@ body>iframe{display:none !important}
 .nav-mobile a{font-size:.95rem;letter-spacing:.04em;color:var(--g7);font-weight:400;padding:18px 4px;border-bottom:1px solid var(--g3);background:none;border-left:none;border-right:none;border-top:none;text-align:left;width:100%}
 .nav-mobile a.nav-cta{background:var(--red);color:var(--white);border-bottom:none;justify-content:center;margin-top:20px;padding:16px 22px}
 
-/* HERO -- full-bleed photo (swapped per theme by updateHeroPhoto()) with
-   overlaid text. The scrim keeps text legible against either photo, so
-   hero text uses fixed light colors here rather than the theme
-   variables that flip elsewhere on the page. */
+/* HERO -- full-bleed photo (same in both themes) with overlaid text.
+   The scrim keeps text legible against the photo, so hero text uses
+   fixed light colors here rather than the theme variables that flip
+   elsewhere on the page. */
 #hero{position:relative;min-height:100vh;display:flex;align-items:flex-end;overflow:hidden;padding-top:72px;padding-bottom:110px;background:var(--black)}
 .hero-photo-placeholder{position:absolute;inset:0;background:var(--hero-photo-ph);display:none;align-items:center;justify-content:center}
 .hero-photo-placeholder span{font-size:.62rem;letter-spacing:.4em;color:var(--grid-line);font-weight:500}
@@ -273,6 +273,9 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 .theme-opt{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--g5);transition:background .2s,color .2s}
 .theme-opt svg{width:14px;height:14px}
 .theme-opt.active{background:var(--red);color:var(--white)}
+/* Second theme picker, inside the mobile hamburger menu itself so it's
+   reachable without closing the menu and scrolling to the footer. */
+.nav-mobile-theme-row{position:absolute;left:28px;bottom:28px}
 
 /* RESPONSIVE */
 @media(max-width:1024px){
@@ -364,13 +367,25 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   <a href="/about" onclick="closeMobileNavAndGoToAnchor(event,'about')">About</a>
   <a href="/contact" onclick="closeMobileNavAndGoToAnchor(event,'contact')">Contact</a>
   <a href="/home" class="nav-cta" onclick="closeMobileNavAndGoHome(event)">Get Started</a>
+  <div class="nav-mobile-theme-row">
+    <div class="theme-picker" role="group" aria-label="Theme">
+      <button type="button" class="theme-opt" data-theme-choice="light" onclick="setThemeChoice('light')" aria-label="Light theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+      </button>
+      <button type="button" class="theme-opt" data-theme-choice="dark" onclick="setThemeChoice('dark')" aria-label="Dark theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+      <button type="button" class="theme-opt" data-theme-choice="auto" onclick="setThemeChoice('auto')" aria-label="Match device setting">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 010 18z" fill="currentColor" stroke="none"></path></svg>
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- HERO -->
 <section id="hero">
-  <!-- Full-bleed photo on all screen sizes; which photo loads (night vs.
-       dawn) follows the resolved theme -- see updateHeroPhoto(). -->
-  <img class="hero-photo-img" id="heroPhotoImg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Downtown Los Angeles skyline" onload="this.classList.add('loaded')" onerror="this.style.display='none';document.getElementById('hero-photo-ph').style.display='flex'">
+  <!-- Full-bleed photo on all screen sizes, same in both themes. -->
+  <img class="hero-photo-img" id="heroPhotoImg" src="assets/hero-skyline-day.jpg" alt="Downtown Los Angeles skyline" onload="this.classList.add('loaded')" onerror="this.style.display='none';document.getElementById('hero-photo-ph').style.display='flex'">
   <div class="hero-photo-placeholder" id="hero-photo-ph"><span>LOS ANGELES</span></div>
   <div class="hero-scrim"></div>
   <div class="hero-content">
@@ -1067,23 +1082,6 @@ function updateThemePickerUI(choice) {
     btn.classList.toggle('active', btn.dataset.themeChoice === choice);
   });
 }
-/* The hero photo is a genuinely different shot per theme (night skyline
-   vs. a real dawn photo) rather than a filtered version of one image --
-   a brightened/warmed night photo still reads as night, since the light
-   source pattern (glowing windows against a dark sky) doesn't invert
-   with color filters alone. Shown full-bleed on all screen sizes. */
-const HERO_PHOTO_NIGHT = 'assets/hero-skyline.jpg';
-const HERO_PHOTO_DAY = 'assets/hero-skyline-day.jpg';
-function updateHeroPhoto(resolvedTheme) {
-  const img = document.getElementById('heroPhotoImg');
-  if (!img) return;
-  const wanted = resolvedTheme === 'light' ? HERO_PHOTO_DAY : HERO_PHOTO_NIGHT;
-  if (img.getAttribute('src') !== wanted) {
-    img.classList.remove('loaded');
-    img.src = wanted;
-  }
-}
-
 function applyThemeChoice(choice) {
   const resolved = choice === 'auto'
     ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
@@ -1091,7 +1089,6 @@ function applyThemeChoice(choice) {
   document.documentElement.setAttribute('data-theme', resolved);
   document.documentElement.setAttribute('data-theme-choice', choice);
   updateThemePickerUI(choice);
-  updateHeroPhoto(resolved);
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', resolved === 'light' ? '#FFFFFF' : '#000000');
 }
@@ -1105,7 +1102,6 @@ if (window.matchMedia) {
   });
 }
 updateThemePickerUI(document.documentElement.getAttribute('data-theme-choice') || 'auto');
-updateHeroPhoto(document.documentElement.getAttribute('data-theme'));
 
 /* Nav is transparent over the hero photo at the very top of the page,
    on any screen size; scrolling even a little solidifies it back to

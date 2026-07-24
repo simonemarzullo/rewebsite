@@ -177,6 +177,9 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 .theme-opt{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--g5);transition:background .2s,color .2s}
 .theme-opt svg{width:14px;height:14px}
 .theme-opt.active{background:var(--red);color:var(--white)}
+/* Second theme picker, inside the mobile hamburger menu itself so it's
+   reachable without closing the menu and scrolling to the footer. */
+.nav-mobile-theme-row{position:absolute;left:28px;bottom:28px}
 
 /* RESPONSIVE */
 @media(max-width:1024px){
@@ -239,6 +242,19 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   <a href="/about">About</a>
   <a href="/contact">Contact</a>
   <a href="index.html" class="nav-cta">Get Started</a>
+  <div class="nav-mobile-theme-row">
+    <div class="theme-picker" role="group" aria-label="Theme">
+      <button type="button" class="theme-opt" data-theme-choice="light" onclick="setThemeChoice('light')" aria-label="Light theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+      </button>
+      <button type="button" class="theme-opt" data-theme-choice="dark" onclick="setThemeChoice('dark')" aria-label="Dark theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+      <button type="button" class="theme-opt" data-theme-choice="auto" onclick="setThemeChoice('auto')" aria-label="Match device setting">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 010 18z" fill="currentColor" stroke="none"></path></svg>
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- PAGE HEADER -->
