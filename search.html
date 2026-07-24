@@ -2,6 +2,14 @@
 <html lang="en">
 <head>
 <script>if ('scrollRestoration' in history) history.scrollRestoration = 'manual';</script>
+<script>
+// Set the theme before CSS paints so there's no flash of the wrong theme.
+(function () {
+  var stored = localStorage.getItem('siteTheme');
+  var theme = stored || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', theme);
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Search MLS Listings | Simone Marzullo</title>
@@ -32,10 +40,20 @@
 :root{
   --black:#000000;--white:#FFFFFF;--red:#C8102E;--red-h:#a50d24;
   --g1:#111111;--g2:#1C1C1C;--g3:#2E2E2E;--g4:#555555;--g5:#888888;--g6:#BBBBBB;--g7:#E5E5E5;
-  --serif:'EB Garamond',Georgia,serif;--sans:'Inter',system-ui,sans-serif
+  --serif:'EB Garamond',Georgia,serif;--sans:'Inter',system-ui,sans-serif;
+  --nav-bg:rgba(0,0,0,.94);--nav-border:rgba(255,255,255,.06);--nav-mobile-bg:rgba(0,0,0,.98);
+  --hero-gradient:linear-gradient(160deg,#0d0d0d 0%,#000 60%);
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --black:#FFFFFF;--white:#161311;
+  --g1:#F4F1EC;--g2:#EAE5DC;--g3:#D8D1C4;--g4:#8C8578;--g5:#6B655C;--g6:#4A443C;--g7:#211E19;
+  --nav-bg:rgba(255,255,255,.94);--nav-border:rgba(0,0,0,.08);--nav-mobile-bg:rgba(255,255,255,.98);
+  --hero-gradient:linear-gradient(160deg,#F4F1EC 0%,#FFFFFF 60%);
+  color-scheme:light;
 }
 html{scroll-behavior:smooth;font-size:16px}
-body{font-family:var(--sans);background:var(--black);color:var(--white);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{font-family:var(--sans);background:var(--black);color:var(--white);-webkit-font-smoothing:antialiased;overflow-x:hidden;transition:background .25s ease,color .25s ease}
 a{color:inherit;text-decoration:none}
 button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webkit-tap-highlight-color:transparent}
 .label{font-size:.6875rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--g5)}
@@ -44,7 +62,7 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .section{padding:96px 0}
 
 /* NAV (shared with index.html) */
-#nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:72px;background:rgba(0,0,0,0.94);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,0.06)}
+#nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:72px;background:var(--nav-bg);backdrop-filter:blur(16px);border-bottom:1px solid var(--nav-border);transition:background .25s ease,border-color .25s ease}
 .nav-brand{display:flex;align-items:center;gap:12px}
 .nav-agency-logo{height:34px;width:34px;object-fit:cover;border-radius:6px;flex-shrink:0}
 .nav-brand-text{display:flex;flex-direction:column;gap:2px}
@@ -59,7 +77,7 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .nav-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
 .nav-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
 .nav-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
-.nav-mobile{display:none;position:fixed;top:72px;left:0;right:0;bottom:0;z-index:199;background:rgba(0,0,0,0.98);backdrop-filter:blur(16px);flex-direction:column;padding:32px 28px;gap:4px;overflow-y:auto}
+.nav-mobile{display:none;position:fixed;top:72px;left:0;right:0;bottom:0;z-index:199;background:var(--nav-mobile-bg);backdrop-filter:blur(16px);flex-direction:column;padding:32px 28px;gap:4px;overflow-y:auto}
 @media(max-width:768px){.nav-mobile.on{display:flex}}
 /* Hide the Follow Up Boss widget iframe (see custom Call/Text button near the
    end of body) so it never paints in the first place. */
@@ -68,7 +86,7 @@ body>iframe{display:none !important}
 .nav-mobile a.nav-cta{background:var(--red);color:var(--white);border-bottom:none;justify-content:center;margin-top:20px;padding:16px 22px}
 
 /* PAGE HEADER */
-#search-hero{padding:150px 0 48px;background:linear-gradient(160deg,#0d0d0d 0%,#000 60%);border-bottom:1px solid var(--g3)}
+#search-hero{padding:150px 0 48px;background:var(--hero-gradient);border-bottom:1px solid var(--g3)}
 .search-hero-head{max-width:680px}
 .search-hero-title{font-family:var(--serif);font-size:clamp(2.4rem,4.6vw,4rem);font-weight:400;color:var(--white);line-height:1.05;margin-top:14px}
 .search-hero-sub{font-size:.88rem;line-height:1.8;color:var(--g5);font-weight:300;margin-top:18px;max-width:560px}
@@ -97,7 +115,7 @@ body>iframe{display:none !important}
 
 .listing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
 .listing-card{background:var(--g2);border:1px solid var(--g3);overflow:hidden;transition:border-color .2s}
-.listing-photo{position:relative;aspect-ratio:4/3;background:linear-gradient(135deg,#222,#0a0a0a);display:flex;align-items:center;justify-content:center}
+.listing-photo{position:relative;aspect-ratio:4/3;background:linear-gradient(135deg,var(--g2),var(--black));display:flex;align-items:center;justify-content:center}
 .listing-photo svg{width:44px;height:44px;opacity:.16}
 .listing-status{position:absolute;top:12px;left:12px;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;font-weight:500;padding:5px 10px;background:rgba(0,0,0,.72);backdrop-filter:blur(4px)}
 .listing-status-active{color:#4ade80}
@@ -125,7 +143,7 @@ body>iframe{display:none !important}
 body.search-locked .search-gate-inner{filter:blur(8px);opacity:.7;pointer-events:none;user-select:none}
 .coming-soon-overlay{display:none;position:fixed;inset:0;align-items:center;justify-content:center;z-index:250;padding:24px;background:rgba(0,0,0,.4)}
 body.search-locked .coming-soon-overlay{display:flex}
-.coming-soon-card{background:rgba(10,10,10,.94);border:1px solid var(--g3);padding:40px 36px;max-width:400px;width:100%;text-align:center}
+.coming-soon-card{background:var(--g2);border:1px solid var(--g3);padding:40px 36px;max-width:400px;width:100%;text-align:center}
 .coming-soon-title{font-family:var(--serif);font-size:1.9rem;font-weight:400;color:var(--white);margin-top:10px}
 .coming-soon-sub{font-size:.85rem;color:var(--g6);line-height:1.7;font-weight:300;margin-top:14px}
 .coming-soon-admin-btn{margin-top:24px;background:none;border:1px solid var(--g4);color:var(--g5);padding:8px 18px;font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:all .2s}
@@ -149,6 +167,12 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 .f-eq{font-size:1.1rem;opacity:.25;margin-bottom:8px}
 .f-copy{font-size:.6rem;color:var(--g5);font-weight:300;line-height:1.9}
 @media(max-width:1024px){.footer-inner{grid-template-columns:1fr}.f-legal{text-align:left}}
+.theme-toggle-row{max-width:1200px;margin:20px auto 0}
+.theme-toggle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--g3);background:none;color:var(--g5);transition:border-color .2s,color .2s}
+.theme-toggle svg{width:16px;height:16px}
+.theme-toggle .theme-icon-moon{display:none}
+:root[data-theme="light"] .theme-toggle .theme-icon-sun{display:none}
+:root[data-theme="light"] .theme-toggle .theme-icon-moon{display:block}
 
 /* RESPONSIVE */
 @media(max-width:1024px){
@@ -172,6 +196,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 .nav-cta:hover{background:var(--red-h)}
 .nav-mobile a.nav-cta:hover{background:var(--red-h)}
 .coming-soon-admin-btn:hover{border-color:var(--white);color:var(--white)}
+.theme-toggle:hover{border-color:var(--white);color:var(--white)}
 }
 </style>
 </head>
@@ -349,6 +374,12 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
       <div class="f-copy" style="margin-top:10px"><a href="privacy.html" style="color:var(--g5);text-decoration:underline">Privacy Policy</a></div>
     </div>
   </div>
+  <div class="theme-toggle-row">
+    <button type="button" class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Switch to light mode">
+      <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+      <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+    </button>
+  </div>
 </footer>
 
 <script>
@@ -362,6 +393,25 @@ window.scrollTo(0, 0);
 window.addEventListener('pageshow', function() {
   window.scrollTo(0, 0);
 });
+
+/* ---------- Theme toggle ----------
+   The actual theme attribute is set as early as possible in <head>
+   (before CSS paints) to avoid a flash of the wrong theme; this just
+   handles the button's state and persists changes after that. */
+function setThemeButtonLabel(theme) {
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.setAttribute('aria-label', theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', theme === 'light' ? '#FFFFFF' : '#000000');
+}
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  const next = current === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('siteTheme', next);
+  setThemeButtonLabel(next);
+}
+setThemeButtonLabel(document.documentElement.getAttribute('data-theme'));
 
 function toggleMobileNav() {
   const menu = document.getElementById('nav-mobile');

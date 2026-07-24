@@ -2,6 +2,14 @@
 <html lang="en">
 <head>
 <script>if ('scrollRestoration' in history) history.scrollRestoration = 'manual';</script>
+<script>
+// Set the theme before CSS paints so there's no flash of the wrong theme.
+(function () {
+  var stored = localStorage.getItem('siteTheme');
+  var theme = stored || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', theme);
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Simone Marzullo | REALTOR® | The Agency Los Angeles</title>
@@ -61,10 +69,30 @@
 :root{
   --black:#000000;--white:#FFFFFF;--red:#C8102E;--red-h:#a50d24;
   --g1:#111111;--g2:#1C1C1C;--g3:#2E2E2E;--g4:#555555;--g5:#888888;--g6:#BBBBBB;--g7:#E5E5E5;
-  --serif:'EB Garamond',Georgia,serif;--sans:'Inter',system-ui,sans-serif
+  --serif:'EB Garamond',Georgia,serif;--sans:'Inter',system-ui,sans-serif;
+  --nav-bg:rgba(0,0,0,.94);--nav-border:rgba(255,255,255,.06);--nav-mobile-bg:rgba(0,0,0,.98);
+  --hero-gradient:linear-gradient(160deg,#0d0d0d 0%,#000 60%);
+  --hero-photo-ph:linear-gradient(170deg,#181818,#080808);
+  --hero-fade-x:linear-gradient(to right,#000 0%,transparent 38%);
+  --hero-fade-y:linear-gradient(to top,#000 0%,transparent 22%);
+  --em-accent:rgba(255,255,255,.65);
+  --grid-line:rgba(255,255,255,.012);
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --black:#FFFFFF;--white:#161311;
+  --g1:#F4F1EC;--g2:#EAE5DC;--g3:#D8D1C4;--g4:#8C8578;--g5:#6B655C;--g6:#4A443C;--g7:#211E19;
+  --nav-bg:rgba(255,255,255,.94);--nav-border:rgba(0,0,0,.08);--nav-mobile-bg:rgba(255,255,255,.98);
+  --hero-gradient:linear-gradient(160deg,#F4F1EC 0%,#FFFFFF 60%);
+  --hero-photo-ph:linear-gradient(170deg,#EAE5DC,#F4F1EC);
+  --hero-fade-x:linear-gradient(to right,#FFFFFF 0%,transparent 38%);
+  --hero-fade-y:linear-gradient(to top,#FFFFFF 0%,transparent 22%);
+  --em-accent:rgba(0,0,0,.6);
+  --grid-line:rgba(0,0,0,.02);
+  color-scheme:light;
 }
 html{scroll-behavior:smooth;font-size:16px}
-body{font-family:var(--sans);background:var(--black);color:var(--white);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{font-family:var(--sans);background:var(--black);color:var(--white);-webkit-font-smoothing:antialiased;overflow-x:hidden;transition:background .25s ease,color .25s ease}
 a{color:inherit;text-decoration:none}
 button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webkit-tap-highlight-color:transparent}
 input,textarea,select{font-family:var(--sans)}
@@ -74,7 +102,7 @@ input,textarea,select{font-family:var(--sans)}
 .wrap{max-width:1200px;margin:0 auto;padding:0 48px}
 
 /* NAV */
-#nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:72px;background:rgba(0,0,0,0.94);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,0.06)}
+#nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:72px;background:var(--nav-bg);backdrop-filter:blur(16px);border-bottom:1px solid var(--nav-border);transition:background .25s ease,border-color .25s ease}
 .nav-brand{display:flex;align-items:center;gap:12px}
 .nav-agency-logo{height:34px;width:34px;object-fit:cover;border-radius:6px;flex-shrink:0}
 .nav-brand-text{display:flex;flex-direction:column;gap:2px}
@@ -88,7 +116,7 @@ input,textarea,select{font-family:var(--sans)}
 .nav-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
 .nav-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
 .nav-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
-.nav-mobile{display:none;position:fixed;top:72px;left:0;right:0;bottom:0;z-index:199;background:rgba(0,0,0,0.98);backdrop-filter:blur(16px);flex-direction:column;padding:32px 28px;gap:4px;overflow-y:auto}
+.nav-mobile{display:none;position:fixed;top:72px;left:0;right:0;bottom:0;z-index:199;background:var(--nav-mobile-bg);backdrop-filter:blur(16px);flex-direction:column;padding:32px 28px;gap:4px;overflow-y:auto}
 @media(max-width:768px){.nav-mobile.on{display:flex}}
 /* Hide the Follow Up Boss widget iframe on mobile via our own page CSS
    (not injected into the iframe) so it never paints in the first place --
@@ -99,20 +127,20 @@ body>iframe{display:none !important}
 
 /* HERO */
 #hero{min-height:88vh;display:flex;align-items:center;position:relative;overflow:hidden;padding-top:72px;padding-bottom:64px}
-.hero-bg{position:absolute;inset:0;background:linear-gradient(160deg,#0d0d0d 0%,#000 60%)}
-.hero-bg::after{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px);background-size:80px 80px}
+.hero-bg{position:absolute;inset:0;background:var(--hero-gradient)}
+.hero-bg::after{content:'';position:absolute;inset:0;background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);background-size:80px 80px}
 .hero-photo-area{position:absolute;right:0;top:0;bottom:0;width:44%;overflow:hidden}
-.hero-photo-placeholder{width:100%;height:100%;background:linear-gradient(170deg,#181818,#080808);display:none;align-items:center;justify-content:center}
-.hero-photo-placeholder span{font-size:.62rem;letter-spacing:.4em;color:rgba(255,255,255,.06);font-weight:500}
+.hero-photo-placeholder{width:100%;height:100%;background:var(--hero-photo-ph);display:none;align-items:center;justify-content:center}
+.hero-photo-placeholder span{font-size:.62rem;letter-spacing:.4em;color:var(--grid-line);font-weight:500}
 .hero-photo-area picture{display:contents}
 .hero-photo-img{width:100%;height:100%;object-fit:cover;object-position:50% 22%}
-.hero-fade{position:absolute;inset:0;background:linear-gradient(to right,#000 0%,transparent 38%),linear-gradient(to top,#000 0%,transparent 22%)}
+.hero-fade{position:absolute;inset:0;background:var(--hero-fade-x),var(--hero-fade-y)}
 .hero-content{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:0 48px;width:100%}
 .hero-eyebrow{display:flex;align-items:center;gap:12px;margin-bottom:28px}
 .hero-eyebrow-line{width:32px;height:1px;background:var(--red)}
 .hero-eyebrow-text{font-size:.62rem;letter-spacing:.28em;text-transform:uppercase;color:var(--red);font-weight:500}
 .hero-headline{font-family:var(--serif);font-size:clamp(3.5rem,6.5vw,7.5rem);font-weight:400;line-height:.95;color:var(--white);max-width:620px;margin-bottom:28px}
-.hero-headline em{font-style:italic;color:rgba(255,255,255,.65)}
+.hero-headline em{font-style:italic;color:var(--em-accent)}
 .hero-sub{font-size:.88rem;line-height:1.8;color:var(--g5);max-width:380px;font-weight:300;margin-bottom:44px}
 .hero-actions{display:flex;gap:16px;flex-wrap:wrap}
 .btn-primary{display:inline-flex;align-items:center;background:var(--red);color:var(--white);padding:14px 32px;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;transition:background .2s,transform .15s}
@@ -223,6 +251,12 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 .f-eq{font-size:1.1rem;opacity:.25;margin-bottom:8px}
 .f-copy{font-size:.6rem;color:var(--g5);font-weight:300;line-height:1.9}
 .f-disclaimer{max-width:1200px;margin:32px auto 0;padding-top:24px;border-top:1px solid var(--g3);font-size:.6rem;color:var(--g5);font-weight:300;line-height:1.9}
+.theme-toggle-row{max-width:1200px;margin:20px auto 0}
+.theme-toggle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--g3);background:none;color:var(--g5);transition:border-color .2s,color .2s}
+.theme-toggle svg{width:16px;height:16px}
+.theme-toggle .theme-icon-moon{display:none}
+:root[data-theme="light"] .theme-toggle .theme-icon-sun{display:none}
+:root[data-theme="light"] .theme-toggle .theme-icon-moon{display:block}
 
 /* RESPONSIVE */
 @media(max-width:1024px){
@@ -271,6 +305,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 .consent-note a:hover{color:var(--white)}
 .agency-link:hover{color:var(--white)}
 .ci-value a:hover{color:var(--red)}
+.theme-toggle:hover{border-color:var(--white);color:var(--white)}
 }
 </style>
 </head>
@@ -828,6 +863,12 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
     </div>
   </div>
   <div class="f-disclaimer">Simone Marzullo | REALTOR® | DRE#02174253 is a real estate salesperson licensed by the state of California affiliated with The Agency. The Agency is a real estate broker licensed by the state of California and abides by equal housing opportunity laws. All material presented herein is intended for informational purposes only. Information is compiled from sources deemed reliable but is subject to errors, omissions, changes in price, condition, sale, or withdrawal without notice. No statement is made as to accuracy of any description. All measurements and square footages are approximate. This is not intended to solicit property already listed. Nothing herein shall be construed as legal, accounting or other professional advice outside the realm of real estate brokerage.</div>
+  <div class="theme-toggle-row">
+    <button type="button" class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Switch to light mode">
+      <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+      <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+    </button>
+  </div>
 </footer>
 
 <script>
@@ -994,6 +1035,25 @@ function openInvestorForm() {
 }
 
 /* ---------- Mobile nav ---------- */
+/* ---------- Theme toggle ----------
+   The actual theme attribute is set as early as possible in <head>
+   (before CSS paints) to avoid a flash of the wrong theme; this just
+   handles the button's state and persists changes after that. */
+function setThemeButtonLabel(theme) {
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.setAttribute('aria-label', theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', theme === 'light' ? '#FFFFFF' : '#000000');
+}
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  const next = current === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('siteTheme', next);
+  setThemeButtonLabel(next);
+}
+setThemeButtonLabel(document.documentElement.getAttribute('data-theme'));
+
 function toggleMobileNav() {
   const menu = document.getElementById('nav-mobile');
   const btn = document.querySelector('.nav-toggle');

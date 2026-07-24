@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+// Set the theme before CSS paints so there's no flash of the wrong theme.
+(function () {
+  var stored = localStorage.getItem('siteTheme');
+  var theme = stored || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', theme);
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Privacy Policy | Simone Marzullo | The Agency Los Angeles</title>
@@ -14,14 +22,22 @@
 :root{
   --black:#000000;--white:#FFFFFF;--red:#C8102E;--red-h:#a50d24;
   --g1:#111111;--g2:#1C1C1C;--g3:#2E2E2E;--g4:#555555;--g5:#888888;--g6:#BBBBBB;--g7:#E5E5E5;
-  --serif:'EB Garamond',Georgia,serif;--sans:'Inter',system-ui,sans-serif
+  --serif:'EB Garamond',Georgia,serif;--sans:'Inter',system-ui,sans-serif;
+  --nav-bg:rgba(0,0,0,.94);--nav-border:rgba(255,255,255,.06);
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --black:#FFFFFF;--white:#161311;
+  --g1:#F4F1EC;--g2:#EAE5DC;--g3:#D8D1C4;--g4:#8C8578;--g5:#6B655C;--g6:#4A443C;--g7:#211E19;
+  --nav-bg:rgba(255,255,255,.94);--nav-border:rgba(0,0,0,.08);
+  color-scheme:light;
 }
 html{scroll-behavior:smooth;font-size:16px}
-body{font-family:var(--sans);background:var(--black);color:var(--white);-webkit-font-smoothing:antialiased}
+body{font-family:var(--sans);background:var(--black);color:var(--white);-webkit-font-smoothing:antialiased;transition:background .25s ease,color .25s ease}
 a{color:var(--g6);text-decoration:underline;transition:color .2s}
 .wrap{max-width:760px;margin:0 auto;padding:0 24px}
 
-#nav{position:sticky;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:72px;background:rgba(0,0,0,0.94);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,0.06)}
+#nav{position:sticky;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:72px;background:var(--nav-bg);backdrop-filter:blur(16px);border-bottom:1px solid var(--nav-border);transition:background .25s ease,border-color .25s ease}
 .nav-brand{display:flex;align-items:center;gap:12px;text-decoration:none}
 .nav-agency-logo{height:34px;width:34px;object-fit:cover;border-radius:6px;flex-shrink:0}
 .nav-name{font-family:var(--serif);font-size:1.1rem;font-weight:400;letter-spacing:.06em;color:var(--white);line-height:1}
@@ -41,6 +57,12 @@ strong{color:var(--g7);font-weight:500}
 
 footer{background:var(--g1);border-top:1px solid var(--g3);padding:40px 24px;text-align:center}
 .f-line{font-size:.68rem;color:var(--g5);font-weight:300;line-height:1.9}
+.theme-toggle-row{display:flex;justify-content:center;margin-top:16px}
+.theme-toggle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--g3);background:none;color:var(--g5);transition:border-color .2s,color .2s}
+.theme-toggle svg{width:16px;height:16px}
+.theme-toggle .theme-icon-moon{display:none}
+:root[data-theme="light"] .theme-toggle .theme-icon-sun{display:none}
+:root[data-theme="light"] .theme-toggle .theme-icon-moon{display:block}
 
 @media(max-width:640px){
   #nav{padding:0 20px}
@@ -57,6 +79,7 @@ body>iframe{display:none !important}
 @media(hover:hover){
 a:hover{color:var(--white)}
 .nav-back:hover{color:var(--white)}
+.theme-toggle:hover{border-color:var(--white);color:var(--white)}
 }
 </style>
 </head>
@@ -137,8 +160,32 @@ a:hover{color:var(--white)}
 
 <footer>
   <div class="f-line">Equal Housing Opportunity · © 2026 Simone Marzullo. All rights reserved. · CA DRE# 02174253</div>
+  <div class="theme-toggle-row">
+    <button type="button" class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Switch to light mode">
+      <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+      <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+    </button>
+  </div>
 </footer>
 
+<script>
+/* ---------- Theme toggle ----------
+   The actual theme attribute is set as early as possible in <head>
+   (before CSS paints) to avoid a flash of the wrong theme; this just
+   handles the button's state and persists changes after that. */
+function setThemeButtonLabel(theme) {
+  var btn = document.getElementById('themeToggle');
+  if (btn) btn.setAttribute('aria-label', theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+}
+function toggleTheme() {
+  var current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  var next = current === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('siteTheme', next);
+  setThemeButtonLabel(next);
+}
+setThemeButtonLabel(document.documentElement.getAttribute('data-theme'));
+</script>
 <!-- begin Widget Tracker Code -->
 <script>
 (function(w,i,d,g,e,t){w["WidgetTrackerObject"]=g;(w[g]=w[g]||function()
