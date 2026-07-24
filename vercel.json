@@ -26,14 +26,14 @@
     { "source": "/about", "destination": "/api/about-page" },
     { "source": "/contact", "destination": "/api/contact-page" },
     { "source": "/areas", "destination": "/api/areas" },
-    { "source": "/areas/santa-monica", "destination": "/api/area-santa-monica" },
-    { "source": "/areas/venice", "destination": "/api/area-venice" },
-    { "source": "/areas/beverly-hills", "destination": "/api/area-beverly-hills" },
-    { "source": "/areas/bel-air", "destination": "/api/area-bel-air" },
-    { "source": "/areas/malibu", "destination": "/api/area-malibu" },
-    { "source": "/areas/culver-city", "destination": "/api/area-culver-city" },
-    { "source": "/areas/century-city", "destination": "/api/area-century-city" },
-    { "source": "/areas/mar-vista", "destination": "/api/area-mar-vista" },
-    { "source": "/areas/hollywood", "destination": "/api/area-hollywood" }
+    { "source": "/areas/santa-monica", "destination": "/api/areas?slug=santa-monica" },
+    { "source": "/areas/venice", "destination": "/api/areas?slug=venice" },
+    { "source": "/areas/beverly-hills", "destination": "/api/areas?slug=beverly-hills" },
+    { "source": "/areas/bel-air", "destination": "/api/areas?slug=bel-air" },
+    { "source": "/areas/malibu", "destination": "/api/areas?slug=malibu" },
+    { "source": "/areas/culver-city", "destination": "/api/areas?slug=culver-city" },
+    { "source": "/areas/century-city", "destination": "/api/areas?slug=century-city" },
+    { "source": "/areas/mar-vista", "destination": "/api/areas?slug=mar-vista" },
+    { "source": "/areas/hollywood", "destination": "/api/areas?slug=hollywood" }
   ]
 }
