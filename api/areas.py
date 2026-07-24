@@ -49,7 +49,7 @@ AREAS = [
      "photo_alt": "Rodeo Drive in Beverly Hills, California"},
     {"slug": "bel-air", "name": "Bel Air", "region_label": "Westside Hills",
      "tags": "ESTATES · VIEWS", "photo": "/assets/neighborhoods/bel-air.jpg",
-     "photo_alt": "Benedict Canyon hillside landscape near Bel Air, Los Angeles"},
+     "photo_alt": "White mansion with manicured hedges and palm trees in Bel Air, Los Angeles"},
     {"slug": "malibu", "name": "Malibu", "region_label": "Coastal Estates",
      "tags": "COAST · COMPOUNDS", "photo": "/assets/neighborhoods/malibu.jpg",
      "photo_alt": "Malibu coastline along the Pacific Coast Highway, California"},
