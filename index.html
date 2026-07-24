@@ -108,6 +108,15 @@ input,textarea,select{font-family:var(--sans)}
 
 /* NAV */
 #nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:72px;background:var(--nav-bg);backdrop-filter:blur(16px);border-bottom:1px solid var(--nav-border);transition:background .25s ease,border-color .25s ease}
+/* Transparent over the hero photo at the top of the page (desktop only,
+   see updateNavTransparency()); solidifies back to the normal themed
+   bar on scroll, or immediately on mobile where the hero has no photo. */
+#nav.nav-transparent{background:transparent;backdrop-filter:none;border-bottom-color:transparent}
+#nav.nav-transparent .nav-name{color:#fff}
+#nav.nav-transparent .nav-sub{color:rgba(255,255,255,.7)}
+#nav.nav-transparent .nav-links a{color:rgba(255,255,255,.85)}
+#nav.nav-transparent .nav-links a.active{color:#fff}
+#nav.nav-transparent .nav-toggle span{background:#fff}
 .nav-brand{display:flex;align-items:center;gap:12px}
 .nav-agency-logo{height:34px;width:34px;object-fit:cover;border-radius:6px;flex-shrink:0}
 .nav-brand-text{display:flex;flex-direction:column;gap:2px}
@@ -130,28 +139,31 @@ body>iframe{display:none !important}
 .nav-mobile a{font-size:.95rem;letter-spacing:.04em;color:var(--g7);font-weight:400;padding:18px 4px;border-bottom:1px solid var(--g3);background:none;border-left:none;border-right:none;border-top:none;text-align:left;width:100%}
 .nav-mobile a.nav-cta{background:var(--red);color:var(--white);border-bottom:none;justify-content:center;margin-top:20px;padding:16px 22px}
 
-/* HERO */
-#hero{min-height:88vh;display:flex;align-items:center;position:relative;overflow:hidden;padding-top:72px;padding-bottom:64px}
-.hero-bg{position:absolute;inset:0;background:var(--hero-gradient)}
-.hero-bg::after{content:'';position:absolute;inset:0;background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);background-size:80px 80px}
-.hero-photo-area{position:absolute;right:0;top:0;bottom:0;width:44%;overflow:hidden}
-.hero-photo-placeholder{width:100%;height:100%;background:var(--hero-photo-ph);display:none;align-items:center;justify-content:center}
+/* HERO -- full-bleed photo (swapped per theme by updateHeroPhoto()) with
+   overlaid text. The scrim keeps text legible against either photo, so
+   hero text uses fixed light colors here rather than the theme
+   variables that flip elsewhere on the page. */
+#hero{position:relative;min-height:100vh;display:flex;align-items:flex-end;overflow:hidden;padding-top:72px;padding-bottom:110px;background:var(--black)}
+.hero-photo-placeholder{position:absolute;inset:0;background:var(--hero-photo-ph);display:none;align-items:center;justify-content:center}
 .hero-photo-placeholder span{font-size:.62rem;letter-spacing:.4em;color:var(--grid-line);font-weight:500}
-.hero-photo-img{width:100%;height:100%;object-fit:cover;object-position:50% 22%;opacity:0;transition:opacity .3s ease}
+.hero-photo-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 30%;opacity:0;transition:opacity .3s ease}
 .hero-photo-img.loaded{opacity:1}
-.hero-fade{position:absolute;inset:0;background:var(--hero-fade-x),var(--hero-fade-y)}
+.hero-scrim{position:absolute;inset:0;background:
+  linear-gradient(to top,rgba(0,0,0,.82) 0%,rgba(0,0,0,.5) 32%,rgba(0,0,0,.1) 58%,rgba(0,0,0,.32) 100%),
+  linear-gradient(100deg,rgba(0,0,0,.6) 0%,rgba(0,0,0,.18) 42%,transparent 65%)}
 .hero-content{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:0 48px;width:100%}
 .hero-eyebrow{display:flex;align-items:center;gap:12px;margin-bottom:28px}
 .hero-eyebrow-line{width:32px;height:1px;background:var(--red)}
-.hero-eyebrow-text{font-size:.62rem;letter-spacing:.28em;text-transform:uppercase;color:var(--red);font-weight:500}
-.hero-headline{font-family:var(--serif);font-size:clamp(3.5rem,6.5vw,7.5rem);font-weight:400;line-height:.95;color:var(--white);max-width:620px;margin-bottom:28px}
-.hero-headline em{font-style:italic;color:var(--em-accent)}
-.hero-sub{font-size:.88rem;line-height:1.8;color:var(--g5);max-width:380px;font-weight:300;margin-bottom:44px}
-.hero-actions{display:flex;gap:16px;flex-wrap:wrap}
-.btn-primary{display:inline-flex;align-items:center;background:var(--red);color:var(--white);padding:14px 32px;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;transition:background .2s,transform .15s}
-.hero-scroll{position:absolute;right:48px;bottom:80px;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:2}
-.hero-scroll span{font-size:.56rem;letter-spacing:.28em;text-transform:uppercase;color:var(--g5);writing-mode:vertical-rl}
-.scroll-bar{width:1px;height:48px;background:var(--g3);position:relative;overflow:hidden}
+.hero-eyebrow-text{font-size:.62rem;letter-spacing:.28em;text-transform:uppercase;color:#fff;font-weight:500}
+.hero-headline{font-family:var(--serif);font-size:clamp(3rem,6vw,6.5rem);font-weight:400;line-height:1.02;color:#fff;max-width:680px;margin-bottom:24px}
+.hero-headline em{font-style:italic;color:rgba(255,255,255,.75)}
+.hero-sub{font-size:.9rem;line-height:1.8;color:rgba(255,255,255,.8);max-width:460px;font-weight:300;margin-bottom:40px}
+.hero-actions{display:flex;gap:14px;flex-wrap:wrap}
+.btn-primary{display:inline-flex;align-items:center;background:var(--red);color:#fff;padding:14px 32px;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;transition:background .2s,transform .15s}
+.btn-hero-outline{display:inline-flex;align-items:center;background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;padding:13px 30px;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;transition:border-color .2s,background .2s}
+.hero-scroll{position:absolute;right:48px;bottom:36px;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:2}
+.hero-scroll span{font-size:.56rem;letter-spacing:.28em;text-transform:uppercase;color:rgba(255,255,255,.8);writing-mode:vertical-rl}
+.scroll-bar{width:1px;height:48px;background:rgba(255,255,255,.3);position:relative;overflow:hidden}
 .scroll-bar::after{content:'';position:absolute;top:-100%;width:1px;height:100%;background:var(--red);animation:scrollDown 1.8s ease-in-out infinite}
 @keyframes scrollDown{0%{top:-100%}100%{top:200%}}
 
@@ -269,7 +281,13 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   .choice-grid{grid-template-columns:1fr;max-width:480px}
   .footer-inner{grid-template-columns:1fr}
   .f-legal{text-align:left}
-  .hero-photo-area{display:none}
+  .hero-photo-img,.hero-scrim{display:none}
+  #hero{background:var(--hero-gradient);min-height:88vh}
+  .hero-eyebrow-text,.hero-headline,.hero-headline em,.hero-sub,.hero-scroll span{color:var(--white)}
+  .hero-headline em{color:var(--em-accent)}
+  .hero-sub{color:var(--g5)}
+  .scroll-bar{background:var(--g3)}
+  .btn-hero-outline{border-color:var(--g3);color:var(--white)}
   .agency-stats-grid{grid-template-columns:1fr 1fr}
 }
 @media(max-width:768px){
@@ -300,6 +318,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 .nav-cta:hover{background:var(--red-h)}
 .nav-mobile a.nav-cta:hover{background:var(--red-h)}
 .btn-primary:hover{background:var(--red-h);transform:translateY(-1px)}
+.btn-hero-outline:hover{border-color:#fff;background:rgba(255,255,255,.1)}
 .stage-back:hover{color:var(--white)}
 .choice-btn:hover{border-color:var(--red);background:rgba(200,16,46,.06);transform:translateY(-2px)}
 .opt:hover{border-color:var(--g5);color:var(--white)}
@@ -353,17 +372,13 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 
 <!-- HERO -->
 <section id="hero">
-  <div class="hero-bg"></div>
-  <div class="hero-photo-area">
-    <!-- The photo panel is hidden below 1025px, so JS only assigns a real
-         src on desktop widths -- mobile keeps the inline 1x1 placeholder
-         and never downloads either photo. Which photo loads (night vs.
-         dawn) is driven by the resolved theme; see updateHeroPhoto() near
-         the theme picker JS. -->
-    <img class="hero-photo-img" id="heroPhotoImg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Downtown Los Angeles skyline" onload="this.classList.add('loaded')" onerror="this.style.display='none';document.getElementById('hero-photo-ph').style.display='flex'">
-    <div class="hero-photo-placeholder" id="hero-photo-ph"><span>LOS ANGELES</span></div>
-    <div class="hero-fade"></div>
-  </div>
+  <!-- Full-bleed photo, hidden below 1025px so mobile never downloads
+       it -- see the media query and updateHeroPhoto()'s own matchMedia
+       check, which only assigns a real src on desktop widths. Which
+       photo loads (night vs. dawn) follows the resolved theme. -->
+  <img class="hero-photo-img" id="heroPhotoImg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Downtown Los Angeles skyline" onload="this.classList.add('loaded')" onerror="this.style.display='none';document.getElementById('hero-photo-ph').style.display='flex'">
+  <div class="hero-photo-placeholder" id="hero-photo-ph"><span>LOS ANGELES</span></div>
+  <div class="hero-scrim"></div>
   <div class="hero-content">
     <div class="hero-eyebrow">
       <div class="hero-eyebrow-line"></div>
@@ -375,6 +390,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
     <p class="hero-sub">Serving buyers and sellers across Los Angeles with strategic representation and local expertise.</p>
     <div class="hero-actions">
       <a href="/home" class="btn-primary" onclick="goToActionHome(event)">Get Started</a>
+      <a href="/about" class="btn-hero-outline" onclick="goToAnchor(event,'about')">About Simone</a>
     </div>
   </div>
   <div class="hero-scroll">
@@ -1100,6 +1116,19 @@ if (window.matchMedia) {
 }
 updateThemePickerUI(document.documentElement.getAttribute('data-theme-choice') || 'auto');
 updateHeroPhoto(document.documentElement.getAttribute('data-theme'));
+
+/* Nav is transparent over the hero photo at the very top of the page on
+   desktop; scrolling even a little (or being on mobile, where the hero
+   has no photo) solidifies it back to the normal themed bar. */
+function updateNavTransparency() {
+  const nav = document.getElementById('nav');
+  if (!nav) return;
+  const isDesktop = window.matchMedia('(min-width:1025px)').matches;
+  nav.classList.toggle('nav-transparent', isDesktop && window.scrollY < 40);
+}
+window.addEventListener('scroll', updateNavTransparency, { passive: true });
+window.addEventListener('resize', updateNavTransparency);
+updateNavTransparency();
 
 function toggleMobileNav() {
   const menu = document.getElementById('nav-mobile');
