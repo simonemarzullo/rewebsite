@@ -958,12 +958,12 @@ def build_market_report_html():
     neighborhood_rows = "".join(f"""
       <tr>
         <td><a href="/areas/{n['slug']}">{n['name']}</a>{f'<span class="market-table-note">MLS: {n["mls_label"]}</span>' if n['mls_label'] else ''}</td>
-        <td>{n['sf_2025']}</td>
-        <td>{n['sf_2026']}</td>
-        <td class="{_pct_class(n['sf_change'])}">{n['sf_change']}</td>
-        <td>{n['condo_2025']}</td>
-        <td>{n['condo_2026'] or '—'}</td>
-        <td class="{_pct_class(n['condo_change']) if n['condo_change'] != 'N/A' else ''}">{n['condo_change']}</td>
+        <td class="mkt-sf">{n['sf_2025']}</td>
+        <td class="mkt-sf">{n['sf_2026']}</td>
+        <td class="mkt-sf {_pct_class(n['sf_change'])}">{n['sf_change']}</td>
+        <td class="mkt-condo mkt-divider">{n['condo_2025']}</td>
+        <td class="mkt-condo">{n['condo_2026'] or '—'}</td>
+        <td class="mkt-condo {_pct_class(n['condo_change']) if n['condo_change'] != 'N/A' else ''}">{n['condo_change']}</td>
       </tr>""" for n in MARKET_REPORT["neighborhoods"])
 
     body = f"""
@@ -997,12 +997,12 @@ def build_market_report_html():
         <thead>
           <tr>
             <th rowspan="2">Neighborhood</th>
-            <th colspan="3">Single-Family Median</th>
-            <th colspan="3">Condo Median</th>
+            <th colspan="3" class="mkt-sf mkt-group-label">Single-Family Median</th>
+            <th colspan="3" class="mkt-condo mkt-group-label mkt-divider">Condo Median</th>
           </tr>
           <tr>
-            <th>Q1 2025</th><th>Q1 2026</th><th>Change</th>
-            <th>Q1 2025</th><th>Q1 2026</th><th>Change</th>
+            <th class="mkt-sf">Q1 2025</th><th class="mkt-sf">Q1 2026</th><th class="mkt-sf">Change</th>
+            <th class="mkt-condo mkt-divider">Q1 2025</th><th class="mkt-condo">Q1 2026</th><th class="mkt-condo">Change</th>
           </tr>
         </thead>
         <tbody>{neighborhood_rows}</tbody>
