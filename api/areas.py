@@ -69,6 +69,21 @@ AREAS = [
 ]
 AREAS_BY_SLUG = {a["slug"]: a for a in AREAS}
 
+# Curated by actual geographic proximity / market character, not list order --
+# each area links to areas a buyer comparing it would realistically also
+# consider, not just "whichever three come first in AREAS."
+RELATED_AREAS = {
+    "santa-monica": ["venice", "mar-vista", "malibu"],
+    "venice": ["santa-monica", "mar-vista", "culver-city"],
+    "beverly-hills": ["bel-air", "century-city", "hollywood"],
+    "bel-air": ["beverly-hills", "century-city", "hollywood"],
+    "malibu": ["santa-monica", "venice", "mar-vista"],
+    "culver-city": ["venice", "mar-vista", "century-city"],
+    "century-city": ["beverly-hills", "bel-air", "culver-city"],
+    "mar-vista": ["venice", "santa-monica", "culver-city"],
+    "hollywood": ["beverly-hills", "bel-air", "century-city"],
+}
+
 PAGE_DATA = {
     "santa-monica": {
         "name": "Santa Monica",
@@ -711,7 +726,10 @@ def render_page(title, description, canonical, body_html, active_nav=None, extra
 
 
 def related_areas_html(current_slug, count=3):
-    others = [a for a in AREAS if a["slug"] != current_slug][:count]
+    related_slugs = RELATED_AREAS.get(current_slug, [])
+    others = [AREAS_BY_SLUG[slug] for slug in related_slugs if slug in AREAS_BY_SLUG][:count]
+    if not others:
+        others = [a for a in AREAS if a["slug"] != current_slug][:count]
     cards = "".join(f"""
       <a class="area-related-card" href="/areas/{a['slug']}">
         <div class="area-related-kicker">{a['region_label']}</div>
