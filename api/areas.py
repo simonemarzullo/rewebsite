@@ -996,7 +996,7 @@ def _mini_bar_chart(v2024, v2025, v2026, metric_type):
     fmt = _fmt_price_compact if metric_type == "currency" else _fmt_count_compact
     values, years, colors = (v2024, v2025, v2026), ("2024", "2025", "2026"), ("var(--g4)", "var(--g5)", "var(--red)")
     max_v = max(values) or 1
-    top_pad, chart_h, bottom_pad, bar_w, gap = 22, 92, 22, 40, 22
+    top_pad, chart_h, bottom_pad, bar_w, gap = 18, 64, 18, 24, 12
     total_w = bar_w * 3 + gap * 3
     total_h = top_pad + chart_h + bottom_pad
     parts = []
@@ -1032,7 +1032,7 @@ def build_market_report_html():
     regional_cards = "".join(f"""
       <div class="market-region-card">
         <div class="market-region-label">{seg['label']}</div>
-        <div class="market-region-rows">{_regional_card_rows(seg)}</div>
+        <div class="market-region-rows{' market-region-rows-chart' if seg.get('chart') else ''}">{_regional_card_rows(seg)}</div>
       </div>""" for seg in MARKET_REPORT["regional"])
 
     neighborhood_rows = "".join(f"""
