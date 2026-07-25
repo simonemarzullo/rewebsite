@@ -1036,11 +1036,12 @@ window.scrollTo(0, 0);
 // point can be relied on to have executed. Force the scroll back to top
 // every time the page is (re)shown, not just when event.persisted is true,
 // since that flag isn't consistently set on iOS Safari's tab-snapshot
-// restores. Skip it on /about, /contact, and /home, which intentionally
-// load pre-scrolled to their section.
+// restores. Skip it on every route that intentionally loads pre-scrolled
+// to its section or stage (anchors, and every STAGE_PATHS route).
 window.addEventListener('pageshow', function() {
   const path = window.location.pathname;
-  if (path === '/about' || path === '/contact' || path === '/home') return;
+  const preScrolledPaths = ['/about', '/contact', '/home', '/sell', '/buy', '/homevaluation', '/invest', '/cashoffer'];
+  if (preScrolledPaths.includes(path)) return;
   window.scrollTo(0, 0);
 });
 
