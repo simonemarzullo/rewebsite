@@ -37,7 +37,7 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .nav-brand-text{display:flex;flex-direction:column;gap:2px}
 .nav-name{font-family:var(--serif);font-size:1.1rem;font-weight:400;letter-spacing:.06em;color:var(--white);line-height:1}
 .nav-sub{font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;color:var(--g5)}
-.nav-links{display:flex;align-items:center;gap:28px;list-style:none}
+.nav-links{display:flex;align-items:center;gap:18px;list-style:none}
 .nav-links a{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--g6);transition:color .2s;background:none;border:none;cursor:pointer}
 .nav-links a.active{color:var(--white)}
 .nav-cta{display:inline-flex;align-items:center;background:var(--red);color:var(--white);padding:10px 22px;font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;transition:background .2s}
@@ -47,7 +47,7 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .nav-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
 .nav-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
 .nav-mobile{display:none;position:fixed;top:72px;left:0;right:0;bottom:0;z-index:199;background:var(--nav-mobile-bg);backdrop-filter:blur(16px);flex-direction:column;padding:32px 28px;gap:4px;overflow-y:auto}
-@media(max-width:768px){.nav-mobile.on{display:flex}}
+@media(max-width:920px){.nav-mobile.on{display:flex}.nav-links{display:none}.nav-toggle{display:flex}#nav>a.nav-cta{display:none}}
 .nav-mobile a{font-size:.95rem;letter-spacing:.04em;color:var(--g7);font-weight:400;padding:18px 4px;border-bottom:1px solid var(--g3);background:none;border-left:none;border-right:none;border-top:none;text-align:left;width:100%}
 .nav-mobile a.nav-cta{background:var(--red);color:var(--white);border-bottom:none;justify-content:center;margin-top:20px;padding:16px 22px}
 .theme-toggle-row{max-width:1200px;margin:20px auto 0}
@@ -235,9 +235,6 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 }
 @media(max-width:768px){
   #nav{padding:0 20px}
-  .nav-links{display:none}
-  #nav>a.nav-cta{display:none}
-  .nav-toggle{display:flex}
   .wrap{padding:0 20px}
   .section{padding:56px 0}
   footer{padding:36px 24px}

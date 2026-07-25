@@ -502,6 +502,7 @@ PAGE_DATA = {
 NAV_ITEMS = [
     ("START", "/home"),
     ("AREAS", "/areas"),
+    ("OFF-MARKET", "/off-market"),
     ("ABOUT", "/about"),
     ("THE AGENCY", "/#the-agency"),
     ("CALCULATOR", "/flipcalculator"),
