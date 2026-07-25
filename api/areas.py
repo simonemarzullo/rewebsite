@@ -1072,6 +1072,10 @@ def build_market_report_html():
     <span class="label label-red">Your Neighborhoods</span>
     <h2 class="action-title" style="margin:14px 0 12px">Single-family &amp; condo medians, Q1 2025 vs. Q1 2026</h2>
     <p style="font-size:.85rem;color:var(--g5);font-weight:300;max-width:680px;margin-bottom:28px">Some MLS-defined areas combine or split neighborhoods differently than this site's guides &mdash; noted where relevant. Small sample sizes (a handful of sales) can swing a median sharply quarter to quarter, so treat single-digit sale counts as directional, not definitive.</p>
+    <div class="market-table-hint" aria-hidden="true">
+      <span>Swipe to see Condo data</span>
+      <svg class="market-table-hint-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </div>
     <div class="market-table-wrap">
       <table class="market-table">
         <thead>
