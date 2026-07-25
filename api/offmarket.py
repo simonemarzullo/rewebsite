@@ -63,7 +63,8 @@ NAV_ITEMS = [
     ("CONTACT", "/contact"),
 ]
 
-THEME_INIT_SCRIPT = """<script>if ('scrollRestoration' in history) history.scrollRestoration = 'manual';</script>
+THEME_INIT_SCRIPT = """<script>if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; window.scrollTo(0, 0);</script>
+<script>window.addEventListener('pageshow', function () { window.scrollTo(0, 0); });</script>
 <script>
 (function () {
   var choice = localStorage.getItem('themeChoice') || 'auto';
@@ -321,7 +322,7 @@ def build_listings_html():
         listings_html = """<div class="om-empty">No active off-market opportunities right now. Check back soon &mdash; new opportunities are shared here before they reach the open market.</div>"""
 
     body = f"""
-<section class="area-hero" style="min-height:36vh">
+<section class="area-hero om-hero-compact">
   <img class="area-hero-img" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk" loading="eager" style="object-position:50% 55%">
   <div class="area-hero-scrim"></div>
   <div class="area-hero-content">
