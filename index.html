@@ -253,7 +253,7 @@ body>iframe{display:none !important}
 .areas-teaser-content{position:relative;z-index:2;padding:20px 22px}
 .areas-teaser-kicker{font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.75);font-weight:500;margin-bottom:6px}
 .areas-teaser-name{font-family:var(--serif);font-size:1.35rem;color:#fff}
-.areas-teaser-list{display:flex;flex-direction:column;border-top:1px solid var(--g3)}
+.areas-teaser-list{display:none;flex-direction:column;border-top:1px solid var(--g3)}
 .areas-teaser-list a{display:flex;justify-content:space-between;align-items:center;padding:16px 4px;border-bottom:1px solid var(--g3);font-size:.85rem;color:var(--g7);transition:color .2s}
 .areas-teaser-list-tags{font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;color:var(--g5)}
 
@@ -326,6 +326,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   #hero{padding-bottom:110px}
   .hero-scroll{right:6px}
   .areas-teaser-grid{grid-template-columns:1fr}
+  .areas-teaser-card-extra{display:none}
+  .areas-teaser-list{display:flex}
 }
 @media(prefers-reduced-motion:reduce){
   .scroll-bar::after{animation:none}
@@ -831,6 +833,54 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
         <div class="areas-teaser-content">
           <div class="areas-teaser-kicker">Global Address</div>
           <div class="areas-teaser-name">Beverly Hills</div>
+        </div>
+      </a>
+      <a class="areas-teaser-card areas-teaser-card-extra" href="/areas/bel-air">
+        <img class="areas-teaser-img" src="assets/neighborhoods/bel-air.jpg" alt="Gated hillside home with a hedge and mountain backdrop in Bel Air, Los Angeles" loading="lazy" style="object-position:50% 68%">
+        <div class="areas-teaser-scrim"></div>
+        <div class="areas-teaser-content">
+          <div class="areas-teaser-kicker">Westside Hills</div>
+          <div class="areas-teaser-name">Bel Air</div>
+        </div>
+      </a>
+      <a class="areas-teaser-card areas-teaser-card-extra" href="/areas/malibu">
+        <img class="areas-teaser-img" src="assets/neighborhoods/malibu.jpg" alt="Malibu coastline along the Pacific Coast Highway, California" loading="lazy">
+        <div class="areas-teaser-scrim"></div>
+        <div class="areas-teaser-content">
+          <div class="areas-teaser-kicker">Coastal Estates</div>
+          <div class="areas-teaser-name">Malibu</div>
+        </div>
+      </a>
+      <a class="areas-teaser-card areas-teaser-card-extra" href="/areas/culver-city">
+        <img class="areas-teaser-img" src="assets/neighborhoods/culver-city.jpg" alt="The Culver Hotel in downtown Culver City, California" loading="lazy">
+        <div class="areas-teaser-scrim"></div>
+        <div class="areas-teaser-content">
+          <div class="areas-teaser-kicker">Media &amp; Downtown</div>
+          <div class="areas-teaser-name">Culver City</div>
+        </div>
+      </a>
+      <a class="areas-teaser-card areas-teaser-card-extra" href="/areas/century-city">
+        <img class="areas-teaser-img" src="assets/neighborhoods/century-city.jpg" alt="Century City skyline, Los Angeles" loading="lazy">
+        <div class="areas-teaser-scrim"></div>
+        <div class="areas-teaser-content">
+          <div class="areas-teaser-kicker">Towers &amp; Amenities</div>
+          <div class="areas-teaser-name">Century City</div>
+        </div>
+      </a>
+      <a class="areas-teaser-card areas-teaser-card-extra" href="/areas/mar-vista">
+        <img class="areas-teaser-img" src="assets/neighborhoods/mar-vista.jpg" alt="Shoppers and vendor tents at the Mar Vista Farmers Market in Los Angeles" loading="lazy">
+        <div class="areas-teaser-scrim"></div>
+        <div class="areas-teaser-content">
+          <div class="areas-teaser-kicker">Character &amp; Community</div>
+          <div class="areas-teaser-name">Mar Vista</div>
+        </div>
+      </a>
+      <a class="areas-teaser-card areas-teaser-card-extra" href="/areas/hollywood">
+        <img class="areas-teaser-img" src="assets/neighborhoods/hollywood.jpg" alt="The Hollywood Sign in the Hollywood Hills, Los Angeles" loading="lazy">
+        <div class="areas-teaser-scrim"></div>
+        <div class="areas-teaser-content">
+          <div class="areas-teaser-kicker">Hills &amp; Iconic</div>
+          <div class="areas-teaser-name">Hollywood</div>
         </div>
       </a>
     </div>
