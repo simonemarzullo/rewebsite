@@ -880,22 +880,25 @@ MARKET_REPORT = {
     "regional": [
         {
             "label": "Single-Family Homes",
+            "chart": True,
             "rows": [
-                ("Median Price", "$1,749,000", "$1,702,500", "-2.66%"),
-                ("Sales Volume", "$6,088,792,404", "$5,452,786,066", "-10.45%"),
-                ("Homes Sold", "2,519", "2,418", "-4.01%"),
+                ("Median Price", "currency", 1675000, 1749000, 1702500, "-2.66%"),
+                ("Sales Volume", "currency", 4914561179, 6088792404, 5452786066, "-10.45%"),
+                ("Homes Sold", "count", 2286, 2519, 2418, "-4.01%"),
             ],
         },
         {
             "label": "Condos / Co-ops",
+            "chart": True,
             "rows": [
-                ("Median Price", "$700,000", "$663,500", "-5.21%"),
-                ("Sales Volume", "$1,432,653,629", "$1,222,795,894", "-14.65%"),
-                ("Homes Sold", "1,187", "1,122", "-5.48%"),
+                ("Median Price", "currency", 745000, 700000, 663500, "-5.21%"),
+                ("Sales Volume", "currency", 1145746293, 1432653629, 1222795894, "-14.65%"),
+                ("Homes Sold", "count", 1152, 1187, 1122, "-5.48%"),
             ],
         },
         {
             "label": "Leases",
+            "chart": False,
             "rows": [
                 ("Median Rent", "$4,950", "$4,500", "-9.09%"),
                 ("Lease Volume", "$40,621,211", "$28,685,844", "-29.38%"),
@@ -903,37 +906,70 @@ MARKET_REPORT = {
             ],
         },
     ],
-    # Per-neighborhood single-family + condo figures for the 9 areas this site
-    # covers, read directly from the report's own data tables (not the bar
-    # charts), so there's no ordering ambiguity here.
+    # Per-neighborhood single-family + condo figures, read directly from the
+    # report's own data tables (not the bar/map charts), so there's no
+    # ordering ambiguity. Ordered by geographic proximity -- coastal areas
+    # north to south, then the central Westside basin, then Hollywood, then
+    # the San Fernando Valley areas reached over the hill from Bel Air --
+    # rather than alphabetically, so neighboring markets sit next to each
+    # other in the table. Areas without a dedicated /areas guide on this
+    # site (slug=None) still show their real data but render as plain text
+    # instead of a broken link.
     "neighborhoods": [
+        {"slug": "malibu", "name": "Malibu", "mls_label": None,
+         "sf_2025": "$4,475,000", "sf_2026": "$3,350,000", "sf_change": "-25%", "sf_sold": "28",
+         "condo_2025": "$1,000,000", "condo_2026": "$1,560,700", "condo_change": "+56%", "condo_sold": "5"},
+        {"slug": None, "name": "Pacific Palisades", "mls_label": None,
+         "sf_2025": "$4,112,000", "sf_2026": "$4,812,500", "sf_change": "+17%", "sf_sold": "30",
+         "condo_2025": "$2,005,000", "condo_2026": "$1,167,500", "condo_change": "-41%", "condo_sold": "14"},
         {"slug": "santa-monica", "name": "Santa Monica", "mls_label": None,
          "sf_2025": "$4,355,475", "sf_2026": "$2,952,227", "sf_change": "-32%", "sf_sold": "40",
          "condo_2025": "$1,434,500", "condo_2026": "$1,315,000", "condo_change": "-8%", "condo_sold": "78"},
         {"slug": "venice", "name": "Venice", "mls_label": None,
          "sf_2025": "$2,892,500", "sf_2026": "$2,447,197", "sf_change": "-15%", "sf_sold": "46",
          "condo_2025": "$2,275,000", "condo_2026": "$1,027,500", "condo_change": "-54%", "condo_sold": "6"},
-        {"slug": "beverly-hills", "name": "Beverly Hills", "mls_label": None,
-         "sf_2025": "$7,201,900", "sf_2026": "$9,351,000", "sf_change": "+29%", "sf_sold": "32",
-         "condo_2025": "$2,050,000", "condo_2026": "$1,600,000", "condo_change": "-21%", "condo_sold": "25"},
-        {"slug": "bel-air", "name": "Bel Air", "mls_label": "Bel Air-Holmby Hills",
-         "sf_2025": "$6,000,000", "sf_2026": "$2,950,000", "sf_change": "-50%", "sf_sold": "24",
-         "condo_2025": "$2,250,000", "condo_2026": None, "condo_change": "N/A", "condo_sold": "0"},
-        {"slug": "malibu", "name": "Malibu", "mls_label": None,
-         "sf_2025": "$4,475,000", "sf_2026": "$3,350,000", "sf_change": "-25%", "sf_sold": "28",
-         "condo_2025": "$1,000,000", "condo_2026": "$1,560,700", "condo_change": "+56%", "condo_sold": "5"},
-        {"slug": "culver-city", "name": "Culver City", "mls_label": None,
-         "sf_2025": "$1,581,385", "sf_2026": "$1,660,000", "sf_change": "+4%", "sf_sold": "35",
-         "condo_2025": "$700,000", "condo_2026": "$659,500", "condo_change": "-5%", "condo_sold": "24"},
-        {"slug": "century-city", "name": "Century City", "mls_label": "Westwood-Century City",
-         "sf_2025": "$3,375,000", "sf_2026": "$2,627,500", "sf_change": "-22%", "sf_sold": "39",
-         "condo_2025": "$1,155,000", "condo_2026": "$1,237,625", "condo_change": "+7%", "condo_sold": "80"},
         {"slug": "mar-vista", "name": "Mar Vista", "mls_label": "Palms-Mar Vista",
          "sf_2025": "$2,212,500", "sf_2026": "$2,055,000", "sf_change": "-7%", "sf_sold": "51",
          "condo_2025": "$785,000", "condo_2026": "$700,000", "condo_change": "-10%", "condo_sold": "11"},
+        {"slug": None, "name": "Playa del Rey", "mls_label": None,
+         "sf_2025": "$2,099,995", "sf_2026": "$2,000,000", "sf_change": "-4%", "sf_sold": "9",
+         "condo_2025": "$815,000", "condo_2026": "$700,000", "condo_change": "-14%", "condo_sold": "21"},
+        {"slug": None, "name": "Westchester", "mls_label": None,
+         "sf_2025": "$2,075,000", "sf_2026": "$1,707,500", "sf_change": "-17%", "sf_sold": "42",
+         "condo_2025": "$690,000", "condo_2026": "$675,000", "condo_change": "-2%", "condo_sold": "3"},
+        {"slug": "culver-city", "name": "Culver City", "mls_label": None,
+         "sf_2025": "$1,581,385", "sf_2026": "$1,660,000", "sf_change": "+4%", "sf_sold": "35",
+         "condo_2025": "$700,000", "condo_2026": "$659,500", "condo_change": "-5%", "condo_sold": "24"},
+        {"slug": None, "name": "Cheviot Hills", "mls_label": "Cheviot Hills-Rancho Park",
+         "sf_2025": "$2,775,000", "sf_2026": "$2,905,000", "sf_change": "+4%", "sf_sold": "12",
+         "condo_2025": None, "condo_2026": None, "condo_change": "N/A", "condo_sold": "0"},
+        {"slug": "century-city", "name": "Century City", "mls_label": "Westwood-Century City",
+         "sf_2025": "$3,375,000", "sf_2026": "$2,627,500", "sf_change": "-22%", "sf_sold": "39",
+         "condo_2025": "$1,155,000", "condo_2026": "$1,237,625", "condo_change": "+7%", "condo_sold": "80"},
+        {"slug": "beverly-hills", "name": "Beverly Hills", "mls_label": None,
+         "sf_2025": "$7,201,900", "sf_2026": "$9,351,000", "sf_change": "+29%", "sf_sold": "32",
+         "condo_2025": "$2,050,000", "condo_2026": "$1,600,000", "condo_change": "-21%", "condo_sold": "25"},
+        {"slug": None, "name": "West Hollywood", "mls_label": "West Hollywood Vicinity",
+         "sf_2025": "$2,402,000", "sf_2026": "$2,290,000", "sf_change": "-4%", "sf_sold": "24",
+         "condo_2025": "$957,500", "condo_2026": "$905,000", "condo_change": "-5%", "condo_sold": "64"},
+        {"slug": "bel-air", "name": "Bel Air", "mls_label": "Bel Air-Holmby Hills",
+         "sf_2025": "$6,000,000", "sf_2026": "$2,950,000", "sf_change": "-50%", "sf_sold": "24",
+         "condo_2025": "$2,250,000", "condo_2026": None, "condo_change": "N/A", "condo_sold": "0"},
         {"slug": "hollywood", "name": "Hollywood", "mls_label": None,
          "sf_2025": "$1,289,000", "sf_2026": "$1,250,000", "sf_change": "-3%", "sf_sold": "19",
          "condo_2025": "$882,150", "condo_2026": "$660,000", "condo_change": "-25%", "condo_sold": "13"},
+        {"slug": None, "name": "Sherman Oaks", "mls_label": None,
+         "sf_2025": "$1,749,000", "sf_2026": "$1,700,000", "sf_change": "-2%", "sf_sold": "91",
+         "condo_2025": "$763,750", "condo_2026": "$655,000", "condo_change": "-14%", "condo_sold": "42"},
+        {"slug": None, "name": "Encino", "mls_label": None,
+         "sf_2025": "$2,220,000", "sf_2026": "$1,774,472", "sf_change": "-20%", "sf_sold": "64",
+         "condo_2025": "$547,000", "condo_2026": "$413,500", "condo_change": "-24%", "condo_sold": "31"},
+        {"slug": None, "name": "Woodland Hills", "mls_label": None,
+         "sf_2025": "$1,400,000", "sf_2026": "$1,450,000", "sf_change": "+3%", "sf_sold": "112",
+         "condo_2025": "$611,000", "condo_2026": "$555,000", "condo_change": "-9%", "condo_sold": "32"},
+        {"slug": None, "name": "Calabasas", "mls_label": None,
+         "sf_2025": "$2,600,000", "sf_2026": "$1,800,000", "sf_change": "-30%", "sf_sold": "44",
+         "condo_2025": "$741,500", "condo_2026": "$650,000", "condo_change": "-12%", "condo_sold": "14"},
     ],
 }
 
@@ -942,26 +978,70 @@ def _pct_class(pct_str):
     return "market-pct-up" if pct_str.strip().startswith("+") else "market-pct-down"
 
 
+def _fmt_price_compact(n):
+    if n >= 1_000_000_000:
+        return f"${n / 1_000_000_000:.2f}B"
+    if n >= 1_000_000:
+        return f"${n / 1_000_000:.2f}M"
+    if n >= 1_000:
+        return f"${n / 1_000:.0f}K"
+    return f"${n:,.0f}"
+
+
+def _fmt_count_compact(n):
+    return f"{n:,}"
+
+
+def _mini_bar_chart(v2024, v2025, v2026, metric_type):
+    fmt = _fmt_price_compact if metric_type == "currency" else _fmt_count_compact
+    values, years, colors = (v2024, v2025, v2026), ("2024", "2025", "2026"), ("var(--g4)", "var(--g5)", "var(--red)")
+    max_v = max(values) or 1
+    top_pad, chart_h, bottom_pad, bar_w, gap = 22, 92, 22, 40, 22
+    total_w = bar_w * 3 + gap * 3
+    total_h = top_pad + chart_h + bottom_pad
+    parts = []
+    x = gap / 2
+    for v, yr, color in zip(values, years, colors):
+        h = max(6, round((v / max_v) * chart_h))
+        y = top_pad + (chart_h - h)
+        cx = x + bar_w / 2
+        parts.append(f'<text x="{cx:.0f}" y="{y - 8}" text-anchor="middle" class="mkt-chart-val">{fmt(v)}</text>')
+        parts.append(f'<rect x="{x:.0f}" y="{y}" width="{bar_w}" height="{h}" rx="2" fill="{color}"/>')
+        parts.append(f'<text x="{cx:.0f}" y="{top_pad + chart_h + 16}" text-anchor="middle" class="mkt-chart-year">{yr}</text>')
+        x += bar_w + gap
+    return f'<svg viewBox="0 0 {total_w:.0f} {total_h}" class="mkt-chart-svg" role="img" aria-label="{years[0]} to {years[-1]} comparison">{"".join(parts)}</svg>'
+
+
+def _regional_card_rows(seg):
+    if seg.get("chart"):
+        return "".join(f"""
+          <div class="market-region-row market-region-row-chart">
+            <div class="market-region-row-label">{label}</div>
+            {_mini_bar_chart(v2024, v2025, v2026, metric_type)}
+            <div class="mkt-chart-caption {_pct_class(change)}">{change}<span class="mkt-chart-caption-note">vs. Q1 2025</span></div>
+          </div>""" for label, metric_type, v2024, v2025, v2026, change in seg["rows"])
+    return "".join(f"""
+      <div class="market-region-row">
+        <span class="market-region-row-label">{label}</span>
+        <span class="market-region-row-val">{v2026}<span class="market-region-row-prev">from {v2025}</span></span>
+        <span class="market-pct {_pct_class(change)}">{change}</span>
+      </div>""" for label, v2025, v2026, change in seg["rows"])
+
+
 def build_market_report_html():
     regional_cards = "".join(f"""
       <div class="market-region-card">
         <div class="market-region-label">{seg['label']}</div>
-        <div class="market-region-rows">
-          {''.join(f'''<div class="market-region-row">
-            <span class="market-region-row-label">{label}</span>
-            <span class="market-region-row-val">{v2026}<span class="market-region-row-prev">from {v2025}</span></span>
-            <span class="market-pct {_pct_class(change)}">{change}</span>
-          </div>''' for label, v2025, v2026, change in seg['rows'])}
-        </div>
+        <div class="market-region-rows">{_regional_card_rows(seg)}</div>
       </div>""" for seg in MARKET_REPORT["regional"])
 
     neighborhood_rows = "".join(f"""
       <tr>
-        <td><a href="/areas/{n['slug']}">{n['name']}</a>{f'<span class="market-table-note">MLS: {n["mls_label"]}</span>' if n['mls_label'] else ''}</td>
+        <td>{f'<a href="/areas/{n["slug"]}">{n["name"]}</a>' if n['slug'] else n['name']}{f'<span class="market-table-note">MLS: {n["mls_label"]}</span>' if n['mls_label'] else ''}</td>
         <td class="mkt-sf">{n['sf_2025']}</td>
         <td class="mkt-sf">{n['sf_2026']}</td>
         <td class="mkt-sf {_pct_class(n['sf_change'])}">{n['sf_change']}</td>
-        <td class="mkt-condo mkt-divider">{n['condo_2025']}</td>
+        <td class="mkt-condo mkt-divider">{n['condo_2025'] or '—'}</td>
         <td class="mkt-condo">{n['condo_2026'] or '—'}</td>
         <td class="mkt-condo {_pct_class(n['condo_change']) if n['condo_change'] != 'N/A' else ''}">{n['condo_change']}</td>
       </tr>""" for n in MARKET_REPORT["neighborhoods"])
