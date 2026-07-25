@@ -149,7 +149,7 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .om-card-specs{font-size:.78rem;color:var(--g5);font-weight:300}
 .om-card-desc{font-size:.8rem;line-height:1.7;color:var(--g6);font-weight:300}
 .om-status{display:inline-block;font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border:1px solid var(--g3);color:var(--g5);margin-left:8px;vertical-align:middle}
-.om-empty{text-align:center;padding:60px 20px;color:var(--g5);font-size:.9rem;font-weight:300;max-width:480px;margin:0 auto}
+.om-empty{text-align:center;color:var(--g5);font-size:.9rem;font-weight:300;max-width:480px;margin:0 auto}
 .om-logout{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--g5);text-decoration:underline}
 
 /* CARD GRIDS -- why choose / what stands out */
@@ -255,6 +255,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   .market-table .mkt-group-label{font-size:.6rem}
   .market-table-note{font-size:.56rem}
   .om-grid{grid-template-columns:1fr}
+  .om-input{font-size:16px}
 }
 @media(prefers-reduced-motion:reduce){*{transition-duration:0ms!important}}
 @media(hover:hover){
