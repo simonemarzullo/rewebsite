@@ -142,6 +142,30 @@ shows an inline message asking the visitor to call/text or email directly —
 no lead is silently lost without the visitor knowing, and you still get an
 email either way.
 
+## Off-market opportunities page
+
+`/off-market` is a private, password-gated page for sharing off-market
+listings with select buyers/investors before they hit the open market.
+
+- **Access code**: set `OFFMARKET_PASSWORD` in Vercel (Project Settings →
+  Environment Variables) to whatever code you want to hand out, then
+  redeploy. It's a single shared code, not a per-person login — anyone with
+  the code plus a valid email gets in. Change it anytime (redeploy required)
+  to rotate access; rotating it also signs out everyone currently logged in.
+- **How visitors get in**: they go to `/off-market`, enter their email and
+  the code. Their email is logged to FollowUpBoss (tagged "Off-Market
+  Access") and you get an email notification, so you know who's asked in.
+  After that, a cookie keeps them signed in for 90 days.
+- **Adding listings**: there's no admin form for this — message me the
+  property details (address, price, beds/baths/sqft, a short description,
+  and a photo) and I'll add them to `api/offmarket.py` and deploy. This
+  matches how every other page on this site is updated.
+- **Not linked anywhere public**: no nav or footer link points to it, so
+  it's only reachable by whoever you send the URL to directly. Let me know
+  if you'd rather have a small discreet link somewhere (e.g. the footer).
+- **Not in the sitemap**, and the page sends `noindex` — it won't show up
+  in Google.
+
 ## Known gaps / things to add later
 
 - **Photos**: `index.html` now tries to load `assets/headshot.jpg` (hero +
