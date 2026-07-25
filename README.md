@@ -155,7 +155,8 @@ listings with select buyers/investors before they hit the open market.
 - **How visitors get in**: they go to `/off-market`, enter their email and
   the code. Their email is logged to FollowUpBoss (tagged "Off-Market
   Access") and you get an email notification, so you know who's asked in.
-  After that, a cookie keeps them signed in for 90 days.
+  After that, a cookie keeps them signed in for 24 hours before they need
+  to re-enter the code.
 - **Adding listings**: there's no admin form for this — message me the
   property details (address, price, beds/baths/sqft, a short description,
   and a photo) and I'll add them to `api/offmarket.py` and deploy. This

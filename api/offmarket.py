@@ -10,8 +10,8 @@ helpers in a separate module returned 404s in production despite working
 locally.
 
 Auth model: a single shared password (OFFMARKET_PASSWORD env var, rotatable
-in the Vercel dashboard with no code change or redeploy) that Simone hands
-out to specific contacts. A visitor enters their email plus that password;
+in the Vercel dashboard with no code change -- just a redeploy) that Simone
+hands out to specific contacts. A visitor enters their email plus that password;
 on success their email is logged to FollowUpBoss (tag "Off-Market Access")
 and a signed, expiring cookie is set so they don't have to re-enter it on
 later visits. The cookie is HMAC-signed using OFFMARKET_PASSWORD itself as
@@ -34,7 +34,7 @@ from http.server import BaseHTTPRequestHandler
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 COOKIE_NAME = "offmarket_session"
-SESSION_DAYS = 90
+SESSION_HOURS = 24
 FUB_EVENTS_URL = "https://api.followupboss.com/v1/events"
 
 # Real, currently-available off-market opportunities. Empty until Simone
@@ -342,7 +342,7 @@ def build_listings_html():
 
 def make_session_token():
     secret = os.environ.get("OFFMARKET_PASSWORD", "")
-    expiry = int(time.time()) + SESSION_DAYS * 86400
+    expiry = int(time.time()) + SESSION_HOURS * 3600
     payload = str(expiry)
     sig = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
     return f"{payload}.{sig}"
@@ -504,7 +504,7 @@ class handler(BaseHTTPRequestHandler):
             f"{email} entered the off-market access code and was granted access to /off-market.",
         )
 
-        cookie = f"{COOKIE_NAME}={make_session_token()}; Path=/; Max-Age={SESSION_DAYS * 86400}; HttpOnly; Secure; SameSite=Lax"
+        cookie = f"{COOKIE_NAME}={make_session_token()}; Path=/; Max-Age={SESSION_HOURS * 3600}; HttpOnly; Secure; SameSite=Lax"
         self._send_json(200, {"ok": True}, set_cookie=cookie)
 
     def log_message(self, fmt, *args):
