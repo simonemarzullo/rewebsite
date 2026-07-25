@@ -30,7 +30,6 @@ import base64
 import urllib.request
 import urllib.error
 from email.message import EmailMessage
-from html import escape
 from http.server import BaseHTTPRequestHandler
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -303,23 +302,7 @@ document.getElementById('om-form').addEventListener('submit', async function (e)
     return render_page(body)
 
 
-def build_watermark_html(viewer_email):
-    timestamp = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
-    label = escape(f"{viewer_email} · {timestamp}")
-    return f"""
-<div class="om-watermark" aria-hidden="true">
-  <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <pattern id="omwm" width="380" height="220" patternTransform="rotate(-28)" patternUnits="userSpaceOnUse">
-        <text x="0" y="70">{label}</text>
-      </pattern>
-    </defs>
-    <rect width="100%" height="100%" fill="url(#omwm)"></rect>
-  </svg>
-</div>"""
-
-
-def build_listings_html(viewer_email):
+def build_listings_html():
     if OFFMARKET_LISTINGS:
         cards = "".join(f"""
       <div class="om-card">
@@ -337,7 +320,6 @@ def build_listings_html(viewer_email):
         listings_html = """<div class="om-empty">No active off-market opportunities right now. Check back soon &mdash; new opportunities are shared here before they reach the open market.</div>"""
 
     body = f"""
-{build_watermark_html(viewer_email)}
 <section class="area-hero" style="min-height:36vh">
   <img class="area-hero-img" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk" loading="eager" style="object-position:50% 55%">
   <div class="area-hero-scrim"></div>
@@ -358,35 +340,27 @@ def build_listings_html(viewer_email):
     return render_page(body)
 
 
-def make_session_token(email):
+def make_session_token():
     secret = os.environ.get("OFFMARKET_PASSWORD", "")
     expiry = int(time.time()) + SESSION_HOURS * 3600
-    raw_payload = f"{expiry}|{email}"
-    payload = base64.urlsafe_b64encode(raw_payload.encode("utf-8")).decode("ascii").rstrip("=")
+    payload = str(expiry)
     sig = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
     return f"{payload}.{sig}"
 
 
 def verify_session_token(token):
-    """Returns the viewer's email if the session cookie is valid and
-    unexpired, otherwise None (also used as the falsy "not logged in" case)."""
     secret = os.environ.get("OFFMARKET_PASSWORD", "")
     if not token or not secret or "." not in token:
-        return None
+        return False
     payload, _, sig = token.partition(".")
     expected = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(expected, sig):
-        return None
+        return False
     try:
-        padded = payload + "=" * (-len(payload) % 4)
-        raw_payload = base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8")
-        expiry_str, _, email = raw_payload.partition("|")
-        expiry = int(expiry_str)
-    except (ValueError, UnicodeDecodeError):
-        return None
-    if time.time() >= expiry or not email:
-        return None
-    return email
+        expiry = int(payload)
+    except ValueError:
+        return False
+    return time.time() < expiry
 
 
 def get_cookie(cookie_header, name):
@@ -488,9 +462,8 @@ class handler(BaseHTTPRequestHandler):
             return
 
         token = get_cookie(self.headers.get("Cookie", ""), COOKIE_NAME)
-        viewer_email = verify_session_token(token)
-        if viewer_email:
-            self._send_html(200, build_listings_html(viewer_email))
+        if verify_session_token(token):
+            self._send_html(200, build_listings_html())
         else:
             self._send_html(200, build_gate_html())
 
@@ -531,7 +504,7 @@ class handler(BaseHTTPRequestHandler):
             f"{email} entered the off-market access code and was granted access to /off-market.",
         )
 
-        cookie = f"{COOKIE_NAME}={make_session_token(email)}; Path=/; Max-Age={SESSION_HOURS * 3600}; HttpOnly; Secure; SameSite=Lax"
+        cookie = f"{COOKIE_NAME}={make_session_token()}; Path=/; Max-Age={SESSION_HOURS * 3600}; HttpOnly; Secure; SameSite=Lax"
         self._send_json(200, {"ok": True}, set_cookie=cookie)
 
     def log_message(self, fmt, *args):

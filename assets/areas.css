@@ -151,8 +151,6 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .om-status{display:inline-block;font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border:1px solid var(--g3);color:var(--g5);margin-left:8px;vertical-align:middle}
 .om-empty{text-align:center;color:var(--g5);font-size:.9rem;font-weight:300;max-width:480px;margin:0 auto}
 .om-logout{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--g5);text-decoration:underline}
-.om-watermark{position:fixed;inset:0;z-index:500;pointer-events:none;overflow:hidden;opacity:.09}
-.om-watermark text{font-family:var(--sans);font-size:13px;fill:var(--white)}
 
 /* CARD GRIDS -- why choose / what stands out */
 .area-cards-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--g3);border:1px solid var(--g3)}
