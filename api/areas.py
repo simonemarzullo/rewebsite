@@ -862,6 +862,180 @@ def render_area_page(slug):
 """
 
 
+
+# Q1 2026 Westside market data, sourced from THE MLS(tm)/CLAW quarterly
+# Market Climate Report (single-family + leases published 4.7.2026, condo
+# published 1.6.2026 in the source PDF). Covers the MLS/CLAW service area
+# "from Pacific Coast Highway to Downtown Los Angeles." Figures are quoted
+# directly from the report; year-to-value mappings on the regional bar
+# charts were disambiguated by checksumming against the report's own
+# stated percentage changes, not assumed from bar position.
+MARKET_REPORT = {
+    "quarter": "Q1 2026",
+    "period_label": "1st Quarter 2026",
+    "source_note": "THE MLS™/CLAW Market Climate Report, Q1 2026",
+    "coverage_note": "Covers the MLS/CLAW service area, from Pacific Coast Highway to Downtown Los Angeles.",
+    "published": "April 2026",
+    "next_update": "July 2026 (Q2 2026)",
+    "regional": [
+        {
+            "label": "Single-Family Homes",
+            "rows": [
+                ("Median Price", "$1,749,000", "$1,702,500", "-2.66%"),
+                ("Sales Volume", "$6,088,792,404", "$5,452,786,066", "-10.45%"),
+                ("Homes Sold", "2,519", "2,418", "-4.01%"),
+            ],
+        },
+        {
+            "label": "Condos / Co-ops",
+            "rows": [
+                ("Median Price", "$700,000", "$663,500", "-5.21%"),
+                ("Sales Volume", "$1,432,653,629", "$1,222,795,894", "-14.65%"),
+                ("Homes Sold", "1,187", "1,122", "-5.48%"),
+            ],
+        },
+        {
+            "label": "Leases",
+            "rows": [
+                ("Median Rent", "$4,950", "$4,500", "-9.09%"),
+                ("Lease Volume", "$40,621,211", "$28,685,844", "-29.38%"),
+                ("Homes Leased", "5,216", "4,623", "-11.37%"),
+            ],
+        },
+    ],
+    # Per-neighborhood single-family + condo figures for the 9 areas this site
+    # covers, read directly from the report's own data tables (not the bar
+    # charts), so there's no ordering ambiguity here.
+    "neighborhoods": [
+        {"slug": "santa-monica", "name": "Santa Monica", "mls_label": None,
+         "sf_2025": "$4,355,475", "sf_2026": "$2,952,227", "sf_change": "-32%", "sf_sold": "40",
+         "condo_2025": "$1,434,500", "condo_2026": "$1,315,000", "condo_change": "-8%", "condo_sold": "78"},
+        {"slug": "venice", "name": "Venice", "mls_label": None,
+         "sf_2025": "$2,892,500", "sf_2026": "$2,447,197", "sf_change": "-15%", "sf_sold": "46",
+         "condo_2025": "$2,275,000", "condo_2026": "$1,027,500", "condo_change": "-54%", "condo_sold": "6"},
+        {"slug": "beverly-hills", "name": "Beverly Hills", "mls_label": None,
+         "sf_2025": "$7,201,900", "sf_2026": "$9,351,000", "sf_change": "+29%", "sf_sold": "32",
+         "condo_2025": "$2,050,000", "condo_2026": "$1,600,000", "condo_change": "-21%", "condo_sold": "25"},
+        {"slug": "bel-air", "name": "Bel Air", "mls_label": "Bel Air-Holmby Hills",
+         "sf_2025": "$6,000,000", "sf_2026": "$2,950,000", "sf_change": "-50%", "sf_sold": "24",
+         "condo_2025": "$2,250,000", "condo_2026": None, "condo_change": "N/A", "condo_sold": "0"},
+        {"slug": "malibu", "name": "Malibu", "mls_label": None,
+         "sf_2025": "$4,475,000", "sf_2026": "$3,350,000", "sf_change": "-25%", "sf_sold": "28",
+         "condo_2025": "$1,000,000", "condo_2026": "$1,560,700", "condo_change": "+56%", "condo_sold": "5"},
+        {"slug": "culver-city", "name": "Culver City", "mls_label": None,
+         "sf_2025": "$1,581,385", "sf_2026": "$1,660,000", "sf_change": "+4%", "sf_sold": "35",
+         "condo_2025": "$700,000", "condo_2026": "$659,500", "condo_change": "-5%", "condo_sold": "24"},
+        {"slug": "century-city", "name": "Century City", "mls_label": "Westwood-Century City",
+         "sf_2025": "$3,375,000", "sf_2026": "$2,627,500", "sf_change": "-22%", "sf_sold": "39",
+         "condo_2025": "$1,155,000", "condo_2026": "$1,237,625", "condo_change": "+7%", "condo_sold": "80"},
+        {"slug": "mar-vista", "name": "Mar Vista", "mls_label": "Palms-Mar Vista",
+         "sf_2025": "$2,212,500", "sf_2026": "$2,055,000", "sf_change": "-7%", "sf_sold": "51",
+         "condo_2025": "$785,000", "condo_2026": "$700,000", "condo_change": "-10%", "condo_sold": "11"},
+        {"slug": "hollywood", "name": "Hollywood", "mls_label": None,
+         "sf_2025": "$1,289,000", "sf_2026": "$1,250,000", "sf_change": "-3%", "sf_sold": "19",
+         "condo_2025": "$882,150", "condo_2026": "$660,000", "condo_change": "-25%", "condo_sold": "13"},
+    ],
+}
+
+
+def _pct_class(pct_str):
+    return "market-pct-up" if pct_str.strip().startswith("+") else "market-pct-down"
+
+
+def build_market_report_html():
+    regional_cards = "".join(f"""
+      <div class="market-region-card">
+        <div class="market-region-label">{seg['label']}</div>
+        <div class="market-region-rows">
+          {''.join(f'''<div class="market-region-row">
+            <span class="market-region-row-label">{label}</span>
+            <span class="market-region-row-val">{v2026}<span class="market-region-row-prev">from {v2025}</span></span>
+            <span class="market-pct {_pct_class(change)}">{change}</span>
+          </div>''' for label, v2025, v2026, change in seg['rows'])}
+        </div>
+      </div>""" for seg in MARKET_REPORT["regional"])
+
+    neighborhood_rows = "".join(f"""
+      <tr>
+        <td><a href="/areas/{n['slug']}">{n['name']}</a>{f'<span class="market-table-note">MLS: {n["mls_label"]}</span>' if n['mls_label'] else ''}</td>
+        <td>{n['sf_2025']}</td>
+        <td>{n['sf_2026']}</td>
+        <td class="{_pct_class(n['sf_change'])}">{n['sf_change']}</td>
+        <td>{n['condo_2025']}</td>
+        <td>{n['condo_2026'] or '—'}</td>
+        <td class="{_pct_class(n['condo_change']) if n['condo_change'] != 'N/A' else ''}">{n['condo_change']}</td>
+      </tr>""" for n in MARKET_REPORT["neighborhoods"])
+
+    body = f"""
+<section class="area-hero" style="min-height:42vh">
+  <img class="area-hero-img" src="/assets/hero-skyline-day.jpg" alt="Los Angeles Westside skyline at dusk" loading="eager" style="object-position:50% 55%">
+  <div class="area-hero-scrim"></div>
+  <div class="area-hero-content">
+    {breadcrumb_html([("Home", "/"), ("Market Report", None)])}
+    <div class="area-eyebrow"><span class="area-eyebrow-line"></span><span class="area-eyebrow-text">Westside Market Report</span></div>
+    <h1 class="area-h1">{MARKET_REPORT['quarter']} Market Report</h1>
+    <p class="area-tagline">{MARKET_REPORT['period_label']} data for the Los Angeles Westside, sourced from THE MLS™/CLAW. Updated quarterly &mdash; last updated {MARKET_REPORT['published']}, next update {MARKET_REPORT['next_update']}.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <span class="label label-red">At a Glance</span>
+    <h2 class="action-title" style="margin:14px 0 12px">How the market moved this quarter</h2>
+    <p style="font-size:.85rem;color:var(--g5);font-weight:300;max-width:680px;margin-bottom:32px">First-quarter 2026 figures compared to first-quarter 2025, across the full MLS/CLAW service area. {MARKET_REPORT['coverage_note']}</p>
+    <div class="market-region-grid">{regional_cards}</div>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="wrap">
+    <span class="label label-red">Your Neighborhoods</span>
+    <h2 class="action-title" style="margin:14px 0 12px">Single-family &amp; condo medians, Q1 2025 vs. Q1 2026</h2>
+    <p style="font-size:.85rem;color:var(--g5);font-weight:300;max-width:680px;margin-bottom:28px">Some MLS-defined areas combine or split neighborhoods differently than this site's guides &mdash; noted where relevant. Small sample sizes (a handful of sales) can swing a median sharply quarter to quarter, so treat single-digit sale counts as directional, not definitive.</p>
+    <div class="market-table-wrap">
+      <table class="market-table">
+        <thead>
+          <tr>
+            <th rowspan="2">Neighborhood</th>
+            <th colspan="3">Single-Family Median</th>
+            <th colspan="3">Condo Median</th>
+          </tr>
+          <tr>
+            <th>Q1 2025</th><th>Q1 2026</th><th>Change</th>
+            <th>Q1 2025</th><th>Q1 2026</th><th>Change</th>
+          </tr>
+        </thead>
+        <tbody>{neighborhood_rows}</tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="text-align:center">
+  <div class="wrap" style="max-width:640px">
+    <span class="label label-red">Ask About Your Property</span>
+    <h2 class="action-title" style="margin-top:14px">Want a comp set for your specific home?</h2>
+    <p style="font-size:.88rem;color:var(--g5);font-weight:300;line-height:1.8;margin-top:16px">Area-wide medians don't capture what your street, view, or condition are actually worth. Get a tailored analysis before you list or make an offer.</p>
+    <div style="margin-top:28px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+      <a href="/homevaluation" class="btn-primary">Get a Home Valuation</a>
+      <a href="/contact" class="btn-hero-outline" style="border-color:var(--g3);color:var(--white)">Ask a Question</a>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt" style="text-align:center">
+  <div class="wrap" style="max-width:720px">
+    <p style="font-size:.68rem;color:var(--g5);font-weight:300;line-height:1.9">Source: {MARKET_REPORT['source_note']}. {MARKET_REPORT['coverage_note']} Information deemed reliable but not guaranteed; contact The MLS at helpdesk@themls.com with questions about the underlying data. This page is updated quarterly and reflects the most recently published MLS/CLAW Market Climate Report as of {MARKET_REPORT['published']}.</p>
+  </div>
+</section>
+"""
+    canonical = SITE_URL + "/market-report"
+    title = f"{MARKET_REPORT['quarter']} Los Angeles Westside Market Report | Simone Marzullo"
+    description = f"{MARKET_REPORT['period_label']} real estate market data for the LA Westside — median prices, sales volume, and neighborhood-level trends sourced from THE MLS/CLAW, from Simone Marzullo, The Agency."
+    schema = breadcrumb_schema([("Home", SITE_URL + "/"), ("Market Report", canonical)])
+    return render_page(title, description, canonical, body, active_nav=None, extra_schema=schema)
+
+
 def build_hub_html():
     cards = "".join(f"""
     <a class="hub-card" href="/areas/{a['slug']}">
@@ -892,6 +1066,14 @@ def build_hub_html():
 </section>
 <section class="section section-alt">
   <div class="wrap" style="text-align:center;max-width:640px">
+    <span class="label label-red">Data-Backed</span>
+    <h2 class="action-title" style="margin-top:14px">See the {MARKET_REPORT['quarter']} market numbers</h2>
+    <p style="font-size:.88rem;color:var(--g5);font-weight:300;line-height:1.8;margin-top:16px">Median prices, sales volume, and neighborhood-level trends, sourced from THE MLS™/CLAW and updated every quarter.</p>
+    <div style="margin-top:28px"><a href="/market-report" class="btn-primary">View the Market Report</a></div>
+  </div>
+</section>
+<section class="section">
+  <div class="wrap" style="text-align:center;max-width:640px">
     <span class="label label-red">Not Sure Where to Start?</span>
     <h2 class="action-title" style="margin-top:14px">Let's talk through your options</h2>
     <p style="font-size:.88rem;color:var(--g5);font-weight:300;line-height:1.8;margin-top:16px">Every Westside neighborhood trades off differently between privacy, walkability, schools, and commute. Tell me what matters most and I'll help you narrow it down.</p>
@@ -914,7 +1096,9 @@ def build_area_html(slug):
     return render_page(data["title"], data["description"], canonical, body, active_nav="AREAS", extra_schema=schema)
 
 
-def build_html(slug=None):
+def build_html(slug=None, report=None):
+    if report:
+        return build_market_report_html()
     if slug:
         if slug not in PAGE_DATA:
             raise ValueError("unknown area slug")
@@ -926,8 +1110,9 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         query = parse_qs(urlparse(self.path).query)
         slug = query.get("slug", [None])[0]
+        report = query.get("report", [None])[0]
         try:
-            html = build_html(slug)
+            html = build_html(slug, report)
         except ValueError:
             self.send_error(404)
             return
