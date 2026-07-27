@@ -189,7 +189,8 @@ body>iframe{display:none !important}
 .choice-bar .choice-desc{margin-top:2px}
 .choice-bar .choice-arrow{margin-top:0;flex-shrink:0}
 .choice-bar-pair{display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:1100px;width:100%;margin:48px auto 0}
-.choice-bar-half{max-width:none;width:100%;margin:0;flex-direction:column;align-items:flex-start;gap:14px}
+.choice-bar-half{max-width:none;width:100%;margin:0;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.off-market-teaser-mobile{display:none}
 .form-shell{max-width:620px;margin:0 auto}
 
 /* SERVICES TABS (legacy classes retained, unused) */
@@ -322,6 +323,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   .choice-bar{flex-direction:column;align-items:flex-start;gap:16px;padding:28px 22px;margin-top:20px;border:1px solid var(--g3);background:var(--black);min-height:150px;max-width:none}
   .choice-bar-title{font-size:1.35rem}
   .choice-bar-pair{grid-template-columns:1fr;gap:0;margin-top:0}
+  .choice-bar-desktop-only{display:none}
+  .off-market-teaser-mobile{display:block}
   .fi,.fs,.ft,.opt,.btn-next,.btn-sub{font-size:16px}
   .hero-content{padding:0 20px}
   .hero-actions{gap:12px}
@@ -475,7 +478,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           </div>
           <span class="choice-arrow">Continue →</span>
         </button>
-        <a href="/off-market" class="choice-bar choice-bar-half">
+        <a href="/off-market" class="choice-bar choice-bar-half choice-bar-desktop-only">
           <div class="choice-bar-text">
             <span class="choice-bar-kicker">Private Access</span>
             <div class="choice-bar-title">Off-Market Opportunities</div>
@@ -816,6 +819,16 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
       </div>
     </div>
 
+  </div>
+</section>
+
+<!-- OFF-MARKET (mobile only -- desktop shows it paired with Home Valuation above) -->
+<section id="off-market-teaser" class="section off-market-teaser-mobile" style="text-align:center;scroll-margin-top:72px">
+  <div class="wrap" style="max-width:640px">
+    <span class="label label-red">Private Access</span>
+    <h2 class="action-title" style="margin-top:14px">Off-Market Opportunities</h2>
+    <p style="font-size:.88rem;color:var(--g5);font-weight:300;line-height:1.8;margin-top:16px">Exclusive properties shared only with select buyers and investors before they reach the open market.</p>
+    <div style="margin-top:28px"><a href="/off-market" class="btn-primary">View Off-Market Listings</a></div>
   </div>
 </section>
 
