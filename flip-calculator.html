@@ -75,7 +75,7 @@ input,textarea,select{font-family:var(--sans)}
 .nav-brand-text{display:flex;flex-direction:column;gap:2px}
 .nav-name{font-family:var(--serif);font-size:1.1rem;font-weight:400;letter-spacing:.06em;color:var(--white);line-height:1}
 .nav-sub{font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;color:var(--g5)}
-.nav-links{display:flex;align-items:center;gap:28px;list-style:none}
+.nav-links{display:flex;align-items:center;gap:18px;list-style:none}
 .nav-links a{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--g6);transition:color .2s;background:none;border:none;cursor:pointer}
 .nav-links a.active{color:var(--white)}
 .nav-cta{display:inline-flex;align-items:center;background:var(--red);color:var(--white);padding:10px 22px;font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;transition:background .2s}
@@ -85,7 +85,7 @@ input,textarea,select{font-family:var(--sans)}
 .nav-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
 .nav-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
 .nav-mobile{display:none;position:fixed;top:72px;left:0;right:0;bottom:0;z-index:260;background:var(--nav-mobile-bg);backdrop-filter:blur(16px);flex-direction:column;padding:32px 28px;gap:4px;overflow-y:auto}
-@media(max-width:768px){.nav-mobile.on{display:flex}}
+@media(max-width:920px){.nav-mobile.on{display:flex}.nav-links{display:none}.nav-toggle{display:flex}}
 /* Hide the Follow Up Boss widget iframe on mobile via our own page CSS
    (not injected into the iframe) so it never paints in the first place --
    eliminates the flash-of-default-styling that a JS-polling approach can't avoid. */
@@ -194,8 +194,6 @@ body>iframe{display:none !important}
 }
 @media(max-width:768px){
   #nav{padding:0 20px}
-  .nav-links{display:none}
-  .nav-toggle{display:flex}
   .wrap{padding:0 20px}
   #calc-hero{padding:120px 0 40px}
   #calc{padding:40px 0 64px}
@@ -256,6 +254,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   <ul class="nav-links">
     <li><a href="/home">Start</a></li>
     <li><a href="/areas">Areas</a></li>
+    <li><a href="/off-market">Off-Market</a></li>
     <li><a href="/about">About</a></li>
     <li><a href="/#the-agency">The Agency</a></li>
     <li><a href="flip-calculator.html" class="active">Calculator</a></li>
@@ -269,11 +268,12 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
 <div class="nav-mobile" id="nav-mobile">
   <a href="/home">Start</a>
   <a href="/areas">Areas</a>
+  <a href="/off-market">Off-Market</a>
   <a href="/about">About</a>
   <a href="/#the-agency">The Agency</a>
   <a href="flip-calculator.html">Calculator</a>
   <a href="/contact">Contact</a>
-  <a href="index.html" class="nav-cta">Get Started</a>
+  <a href="/home" class="nav-cta">Get Started</a>
   <div class="nav-mobile-theme-row">
     <div class="theme-picker" role="group" aria-label="Theme">
       <button type="button" class="theme-opt" data-theme-choice="light" onclick="setThemeChoice('light')" aria-label="Light theme">
