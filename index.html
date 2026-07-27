@@ -188,6 +188,8 @@ body>iframe{display:none !important}
 .choice-bar-title{font-family:var(--serif);font-size:1.3rem;font-weight:400;color:var(--white);margin-top:3px}
 .choice-bar .choice-desc{margin-top:2px}
 .choice-bar .choice-arrow{margin-top:0;flex-shrink:0}
+.choice-bar-pair{display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:1100px;width:100%;margin:48px auto 0}
+.choice-bar-half{max-width:none;width:100%;margin:0;flex-direction:column;align-items:flex-start;gap:14px}
 .form-shell{max-width:620px;margin:0 auto}
 
 /* SERVICES TABS (legacy classes retained, unused) */
@@ -319,6 +321,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   .choice-btn{min-height:150px;padding:28px 22px}
   .choice-bar{flex-direction:column;align-items:flex-start;gap:16px;padding:28px 22px;margin-top:20px;border:1px solid var(--g3);background:var(--black);min-height:150px;max-width:none}
   .choice-bar-title{font-size:1.35rem}
+  .choice-bar-pair{grid-template-columns:1fr;gap:0;margin-top:0}
   .fi,.fs,.ft,.opt,.btn-next,.btn-sub{font-size:16px}
   .hero-content{padding:0 20px}
   .hero-actions{gap:12px}
@@ -463,22 +466,24 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           <span class="choice-arrow">Continue →</span>
         </button>
       </div>
-      <button type="button" class="choice-bar" onclick="showStage('stage-valuation-form')">
-        <div class="choice-bar-text">
-          <span class="choice-bar-kicker">Complimentary</span>
-          <div class="choice-bar-title">Home Valuation</div>
-          <div class="choice-desc">Get a free, no-obligation estimate of your property's value.</div>
-        </div>
-        <span class="choice-arrow">Continue →</span>
-      </button>
-      <a href="/off-market" class="choice-bar">
-        <div class="choice-bar-text">
-          <span class="choice-bar-kicker">Private Access</span>
-          <div class="choice-bar-title">Off-Market Opportunities</div>
-          <div class="choice-desc">Exclusive properties shared only with select buyers and investors.</div>
-        </div>
-        <span class="choice-arrow">Continue →</span>
-      </a>
+      <div class="choice-bar-pair">
+        <button type="button" class="choice-bar choice-bar-half" onclick="showStage('stage-valuation-form')">
+          <div class="choice-bar-text">
+            <span class="choice-bar-kicker">Complimentary</span>
+            <div class="choice-bar-title">Home Valuation</div>
+            <div class="choice-desc">Get a free, no-obligation estimate of your property's value.</div>
+          </div>
+          <span class="choice-arrow">Continue →</span>
+        </button>
+        <a href="/off-market" class="choice-bar choice-bar-half">
+          <div class="choice-bar-text">
+            <span class="choice-bar-kicker">Private Access</span>
+            <div class="choice-bar-title">Off-Market Opportunities</div>
+            <div class="choice-desc">Exclusive properties shared only with select buyers and investors.</div>
+          </div>
+          <span class="choice-arrow">Continue →</span>
+        </a>
+      </div>
     </div>
 
     <!-- STAGE: SELL MENU -->
