@@ -41,13 +41,6 @@ FUB_EVENTS_URL = "https://api.followupboss.com/v1/events"
 # provides live listings -- add entries here (matching this shape) and
 # redeploy to publish them; there is no separate admin UI by design.
 OFFMARKET_LISTINGS = [
-    {
-        "address": "12127 Juniette St, Los Angeles, CA 90230",
-        "area": "Culver City",
-        "status": "Available",
-        "price": "$1,300,000",
-        "beds": 4, "baths": 2, "sqft": "1,488",
-    },
     # {
     #     "address": "123 Example St, Beverly Hills, CA 90210",
     #     "area": "Beverly Hills",
