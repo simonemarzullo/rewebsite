@@ -223,6 +223,7 @@ def render_page(body_html):
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Off-Market Opportunities | Simone Marzullo</title>
 <meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
