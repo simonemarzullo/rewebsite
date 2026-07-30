@@ -156,13 +156,22 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 
 /* NEWS -- RSS roundup cards */
 .news-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--g3);border:1px solid var(--g3)}
-.news-card{background:var(--black);padding:28px 26px;display:flex;flex-direction:column;gap:10px;transition:background .2s}
+.news-card{background:var(--black);padding:28px 26px;display:flex;flex-direction:column;gap:10px;transition:background .2s;text-align:left;width:100%}
 .news-card-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .news-card-source{font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:var(--red);font-weight:500}
 .news-card-date{font-size:.6rem;color:var(--g5);font-weight:300}
 .news-card-title{font-family:var(--serif);font-size:1.1rem;font-weight:400;color:var(--white);line-height:1.3}
 .news-card-excerpt{font-size:.8rem;line-height:1.7;color:var(--g6);font-weight:300}
 .news-card-link{margin-top:auto;padding-top:6px;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--g5);font-weight:500;transition:color .2s}
+.news-modal-overlay{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.72);padding:24px;overflow-y:auto;align-items:flex-start;justify-content:center}
+.news-modal-overlay.on{display:flex}
+.news-modal{background:var(--black);border:1px solid var(--g3);max-width:560px;width:100%;margin:40px auto;padding:36px 32px;position:relative}
+.news-modal-close{position:absolute;top:16px;right:16px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--g5);font-size:.9rem;transition:color .2s}
+.news-modal-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;padding-right:32px}
+.news-modal-title{font-family:var(--serif);font-size:1.5rem;font-weight:400;color:var(--white);line-height:1.25;margin-bottom:14px}
+.news-modal-excerpt{font-size:.88rem;line-height:1.8;color:var(--g6);font-weight:300;margin-bottom:22px}
+.news-modal-divider{height:1px;background:var(--g3);margin:28px 0 22px}
+.news-modal-success{font-size:.85rem;color:var(--white);font-weight:400;margin-top:8px}
 
 /* CARD GRIDS -- why choose / what stands out */
 .area-cards-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--g3);border:1px solid var(--g3)}
@@ -278,6 +287,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   .market-pulse-cta:hover{background:var(--g3)}
   .news-card:hover{background:var(--g1)}
   .news-card:hover .news-card-link{color:var(--red)}
+  .news-modal-close:hover{color:var(--white)}
   .breadcrumb a:hover{color:#fff}
   .btn-primary:hover{background:var(--red-h);transform:translateY(-1px)}
   .btn-hero-outline:hover{border-color:#fff;background:rgba(255,255,255,.1)}

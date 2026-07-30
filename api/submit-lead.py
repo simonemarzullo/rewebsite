@@ -115,6 +115,10 @@ FIELD_LABELS = {
         ("Additional Criteria", "notes"),
         ("Full Name", "name"), ("Email", "email"), ("Phone", "phone"),
     ],
+    "article": [
+        ("Email", "email"), ("Article Title", "articleTitle"),
+        ("Article Source", "articleSource"), ("Article Link", "articleLink"),
+    ],
 }
 
 
@@ -142,6 +146,9 @@ def resolve_form_meta(form_type, data):
         return "Property Inquiry", "Flip-Website-Lead", "Flip Calculator Deal", None
     if form_type == "investor":
         return "Property Inquiry", "New-Investor-Website", "Investor Criteria Submission", None
+    if form_type == "article":
+        title = clean(data.get("articleTitle"))
+        return "General Inquiry", "Article Email Lead", "News Article Request", (f'Requested a copy of "{title}"' if title else None)
     return None, "Website Lead", f"Website Form ({form_type or 'unknown'})", None
 
 

@@ -16,8 +16,8 @@ feeds only actually get hit roughly once an hour.
 """
 
 import html
+import json
 import re
-import time
 import urllib.request
 import urllib.error
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -310,15 +310,31 @@ def build_news_html():
     articles = fetch_all_articles()
     if articles:
         cards = "".join(f"""
-      <a class="news-card" href="{html.escape(a['link'])}" target="_blank" rel="noopener noreferrer">
+      <button type="button" class="news-card" onclick="openArticleModal({i})">
         <div class="news-card-meta"><span class="news-card-source">{html.escape(a['source'])}</span>{f'<span class="news-card-date">{a["date_label"]}</span>' if a['date_label'] else ''}</div>
         <div class="news-card-title">{html.escape(a['title'])}</div>
         {f'<p class="news-card-excerpt">{html.escape(a["excerpt"])}</p>' if a['excerpt'] else ''}
         <span class="news-card-link">Read Article ↗</span>
-      </a>""" for a in articles)
+      </button>""" for i, a in enumerate(articles))
         news_html = f'<div class="news-grid">{cards}</div>'
     else:
         news_html = '<div class="om-empty">Unable to load news right now &mdash; please check back shortly.</div>'
+
+    # Embedded as JSON for the popup's JS to read from -- NOT the full
+    # article body (RSS feeds only ever carry a short summary, precisely
+    # so syndicating sites route readers back to the original source; the
+    # popup shows that same summary plus a genuine link out, it doesn't
+    # try to rehost anyone else's article).
+    articles_json = json.dumps([
+        {
+            "title": a["title"],
+            "source": a["source"],
+            "date": a["date_label"],
+            "excerpt": a["excerpt"],
+            "link": a["link"],
+        }
+        for a in articles
+    ]).replace("</", "<\\/")
 
     body = f"""
 <section class="area-hero om-hero-compact">
@@ -336,6 +352,99 @@ def build_news_html():
     {news_html}
   </div>
 </section>
+
+<div class="news-modal-overlay" id="news-modal-overlay" onclick="if(event.target===this)closeArticleModal()">
+  <div class="news-modal">
+    <button type="button" class="news-modal-close" aria-label="Close" onclick="closeArticleModal()">✕</button>
+    <div class="news-modal-meta"><span class="news-card-source" id="news-modal-source"></span><span class="news-card-date" id="news-modal-date"></span></div>
+    <h2 class="news-modal-title" id="news-modal-title"></h2>
+    <p class="news-modal-excerpt" id="news-modal-excerpt"></p>
+    <a class="btn-primary" id="news-modal-readmore" href="#" target="_blank" rel="noopener noreferrer" style="width:100%;justify-content:center;margin-top:6px">Read Full Article ↗</a>
+
+    <div class="news-modal-divider"></div>
+
+    <form id="news-email-form" novalidate>
+      <div class="om-field">
+        <span class="om-field-label">Email me this article</span>
+        <input type="email" id="news-email-input" class="om-input" placeholder="you@example.com" required autocomplete="email" style="margin-top:6px">
+        <input type="text" id="news-email-hp" style="position:absolute;left:-9999px" tabindex="-1" autocomplete="off">
+      </div>
+      <button type="submit" class="btn-primary" id="news-email-submit" style="width:100%;justify-content:center;margin-top:14px">Send</button>
+      <div class="om-error" id="news-email-error"></div>
+      <div class="news-modal-success" id="news-email-success" style="display:none">Sent — check your inbox shortly.</div>
+    </form>
+  </div>
+</div>
+
+<script>
+const NEWS_ARTICLES = {articles_json};
+let newsCurrentArticle = null;
+
+function openArticleModal(i) {{
+  const a = NEWS_ARTICLES[i];
+  if (!a) return;
+  newsCurrentArticle = a;
+  document.getElementById('news-modal-source').textContent = a.source;
+  document.getElementById('news-modal-date').textContent = a.date;
+  document.getElementById('news-modal-title').textContent = a.title;
+  const excerptEl = document.getElementById('news-modal-excerpt');
+  excerptEl.textContent = a.excerpt;
+  excerptEl.style.display = a.excerpt ? 'block' : 'none';
+  document.getElementById('news-modal-readmore').href = a.link;
+  document.getElementById('news-email-form').reset();
+  document.getElementById('news-email-error').style.display = 'none';
+  document.getElementById('news-email-success').style.display = 'none';
+  document.getElementById('news-email-form').style.display = 'block';
+  document.getElementById('news-modal-overlay').classList.add('on');
+  document.body.style.overflow = 'hidden';
+}}
+function closeArticleModal() {{
+  document.getElementById('news-modal-overlay').classList.remove('on');
+  document.body.style.overflow = '';
+}}
+document.addEventListener('keydown', function (e) {{
+  if (e.key === 'Escape') closeArticleModal();
+}});
+document.getElementById('news-email-form').addEventListener('submit', async function (e) {{
+  e.preventDefault();
+  if (!newsCurrentArticle) return;
+  const hp = document.getElementById('news-email-hp').value;
+  const errEl = document.getElementById('news-email-error');
+  errEl.style.display = 'none';
+  if (hp) {{
+    document.getElementById('news-email-success').style.display = 'block';
+    document.getElementById('news-email-form').style.display = 'none';
+    return;
+  }}
+  const email = document.getElementById('news-email-input').value.trim();
+  const btn = document.getElementById('news-email-submit');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {{
+    const res = await fetch('/api/submit-lead', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{
+        formType: 'article',
+        email: email,
+        articleTitle: newsCurrentArticle.title,
+        articleSource: newsCurrentArticle.source,
+        articleLink: newsCurrentArticle.link,
+        hp: hp,
+      }}),
+    }});
+    if (!res.ok) throw new Error('failed');
+    document.getElementById('news-email-success').style.display = 'block';
+    document.getElementById('news-email-form').style.display = 'none';
+  }} catch (err) {{
+    errEl.textContent = 'Something went wrong. Please try again or contact Simone directly.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }}
+}});
+</script>
 """
     return render_page(body)
 
