@@ -264,6 +264,19 @@ def _strip_leading_title(text, title):
     return text
 
 
+_TRAILING_BOILERPLATE_RE = re.compile(
+    r"\s*Follow us on social media.*$", re.IGNORECASE | re.DOTALL
+)
+
+
+def _strip_trailing_boilerplate(text):
+    """Urbanize LA's description field runs the real article straight into
+    a "Follow us on social media" share block, then tag/image-caption CMS
+    fields, all as one run-on paragraph once HTML is stripped -- cut
+    everything from that share block onward."""
+    return _TRAILING_BOILERPLATE_RE.sub("", text).strip()
+
+
 def _truncate(text, max_len):
     if len(text) <= max_len:
         return text
@@ -301,11 +314,13 @@ def _parse_feed(source):
         # the full article body for syndication; others (LA Times, Robb
         # Report) only ever include a one-line teaser. Either way this is
         # text the publisher chose to put in their own syndication feed,
-        # not scraped from their website -- shown here as a long preview,
-        # still capped well short of unlimited, with a real link back to
-        # the source for the complete piece.
-        desc_text = _strip_leading_title(_plain_text(desc_el.text if desc_el is not None else ""), title)
-        content_text = _strip_leading_title(_plain_text(content_el.text if content_el is not None else ""), title)
+        # not scraped from their website. When it's substantial (over
+        # 1000 characters), show the whole thing in the popup -- no need
+        # to send the visitor elsewhere to finish reading. When a feed
+        # only ever gives a short teaser, there genuinely isn't more to
+        # show, so the popup keeps a link to the source for that case.
+        desc_text = _strip_trailing_boilerplate(_strip_leading_title(_plain_text(desc_el.text if desc_el is not None else ""), title))
+        content_text = _strip_trailing_boilerplate(_strip_leading_title(_plain_text(content_el.text if content_el is not None else ""), title))
         best_text = content_text if len(content_text) > len(desc_text) else desc_text
 
         items.append({
@@ -315,7 +330,7 @@ def _parse_feed(source):
             "published": published,
             "date_label": published.strftime("%b %-d, %Y") if published else "",
             "excerpt": _truncate(best_text, 170),
-            "modal_excerpt": _truncate(best_text, 1000),
+            "modal_excerpt": _truncate(best_text, 20000),
         })
     return items
 
@@ -422,7 +437,18 @@ function openArticleModal(i) {{
   const excerptEl = document.getElementById('news-modal-excerpt');
   excerptEl.textContent = a.excerpt;
   excerptEl.style.display = a.excerpt ? 'block' : 'none';
-  document.getElementById('news-modal-readmore').href = a.link;
+  // Only offer the external link when the popup doesn't already have the
+  // full piece -- a short feed-provided teaser (under 1000 characters)
+  // genuinely has more to read only on the source's own site; anything
+  // longer than that is shown here in full already, so there's no reason
+  // to send the visitor away.
+  const readmoreEl = document.getElementById('news-modal-readmore');
+  if (a.excerpt.length > 1000) {{
+    readmoreEl.style.display = 'none';
+  }} else {{
+    readmoreEl.style.display = 'inline-flex';
+    readmoreEl.href = a.link;
+  }}
   document.getElementById('news-email-form').reset();
   document.getElementById('news-email-error').style.display = 'none';
   document.getElementById('news-email-success').style.display = 'none';
