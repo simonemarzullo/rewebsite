@@ -503,6 +503,7 @@ NAV_ITEMS = [
     ("START", "/home"),
     ("AREAS", "/areas"),
     ("OFF-MARKET", "/off-market"),
+    ("NEWS", "/news"),
     ("ABOUT", "/about"),
     ("THE AGENCY", "/#the-agency"),
     ("CALCULATOR", "/flipcalculator"),

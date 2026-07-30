@@ -28,6 +28,7 @@
     { "source": "/areas", "destination": "/api/areas" },
     { "source": "/market-report", "destination": "/api/areas?report=q1-2026" },
     { "source": "/off-market", "destination": "/api/offmarket" },
+    { "source": "/news", "destination": "/api/news" },
     { "source": "/areas/santa-monica", "destination": "/api/areas?slug=santa-monica" },
     { "source": "/areas/venice", "destination": "/api/areas?slug=venice" },
     { "source": "/areas/beverly-hills", "destination": "/api/areas?slug=beverly-hills" },

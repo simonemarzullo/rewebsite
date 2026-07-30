@@ -85,7 +85,7 @@ input,textarea,select{font-family:var(--sans)}
 .nav-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
 .nav-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
 .nav-mobile{display:none;position:fixed;top:72px;left:0;right:0;bottom:0;z-index:260;background:var(--nav-mobile-bg);backdrop-filter:blur(16px);flex-direction:column;padding:32px 28px;gap:4px;overflow-y:auto}
-@media(max-width:920px){.nav-mobile.on{display:flex}.nav-links{display:none}.nav-toggle{display:flex}}
+@media(max-width:1024px){.nav-mobile.on{display:flex}.nav-links{display:none}.nav-toggle{display:flex}}
 /* Hide the Follow Up Boss widget iframe on mobile via our own page CSS
    (not injected into the iframe) so it never paints in the first place --
    eliminates the flash-of-default-styling that a JS-polling approach can't avoid. */
@@ -255,6 +255,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
     <li><a href="/home">Start</a></li>
     <li><a href="/areas">Areas</a></li>
     <li><a href="/off-market">Off-Market</a></li>
+    <li><a href="/news">News</a></li>
     <li><a href="/about">About</a></li>
     <li><a href="/#the-agency">The Agency</a></li>
     <li><a href="flip-calculator.html" class="active">Calculator</a></li>
@@ -269,6 +270,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   <a href="/home">Start</a>
   <a href="/areas">Areas</a>
   <a href="/off-market">Off-Market</a>
+  <a href="/news">News</a>
   <a href="/about">About</a>
   <a href="/#the-agency">The Agency</a>
   <a href="flip-calculator.html">Calculator</a>
