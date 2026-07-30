@@ -233,17 +233,41 @@ def render_page(body_html):
 
 _TAG_RE = re.compile(r"<[^>]+>")
 _WS_RE = re.compile(r"\s+")
+CONTENT_ENCODED_TAG = "{http://purl.org/rss/1.0/modules/content/}encoded"
 
 
-def _clean_excerpt(raw, max_len=170):
+def _plain_text(raw):
     if not raw:
         return ""
     text = _TAG_RE.sub(" ", raw)
     text = html.unescape(text)
-    text = _WS_RE.sub(" ", text).strip()
-    if len(text) > max_len:
-        text = text[:max_len].rsplit(" ", 1)[0] + "…"
+    return _WS_RE.sub(" ", text).strip()
+
+
+_BYLINE_DATE_RE = re.compile(
+    r"^[.\s]*[A-Z][a-zA-Z'\-]+(?: [A-Z][a-zA-Z'\-]+){0,2}\s+"
+    r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s+\d{1,2}/\d{1,2}/\d{4}\s*-\s*\d{1,2}:\d{2}\s+"
+)
+
+
+def _strip_leading_title(text, title):
+    """Some feeds (e.g. Urbanize LA) prefix the body text with the title,
+    byline, and a publish timestamp again before the real content --
+    strip that duplicate lead-in instead of just discarding the whole
+    field, since real article text often follows it."""
+    if not text or not title:
+        return text
+    bare_title = title.rstrip(".")
+    if text.lower().startswith(bare_title.lower()):
+        text = text[len(bare_title):].strip()
+        text = _BYLINE_DATE_RE.sub("", text)
     return text
+
+
+def _truncate(text, max_len):
+    if len(text) <= max_len:
+        return text
+    return text[:max_len].rsplit(" ", 1)[0] + "…"
 
 
 def _parse_feed(source):
@@ -262,6 +286,7 @@ def _parse_feed(source):
         link_el = item.find("link")
         date_el = item.find("pubDate")
         desc_el = item.find("description")
+        content_el = item.find(CONTENT_ENCODED_TAG)
         title = (title_el.text or "").strip() if title_el is not None else ""
         link = (link_el.text or "").strip() if link_el is not None else ""
         if not title or not link:
@@ -270,20 +295,27 @@ def _parse_feed(source):
             published = parsedate_to_datetime(date_el.text) if date_el is not None and date_el.text else None
         except (TypeError, ValueError):
             published = None
-        excerpt = _clean_excerpt(desc_el.text if desc_el is not None else "")
-        # Some feeds (e.g. Urbanize LA) put the title itself -- sometimes
-        # plus just a byline -- in <description> rather than a real
-        # summary. Showing that back as an "excerpt" just duplicates the
-        # headline, so drop it when it's obviously not real body copy.
-        if excerpt and excerpt.lower().startswith(title.lower()[:40]):
-            excerpt = ""
+
+        # Prefer whichever field actually has more real text -- some feeds
+        # (LA Magazine, and Urbanize LA via <description> itself) publish
+        # the full article body for syndication; others (LA Times, Robb
+        # Report) only ever include a one-line teaser. Either way this is
+        # text the publisher chose to put in their own syndication feed,
+        # not scraped from their website -- shown here as a long preview,
+        # still capped well short of unlimited, with a real link back to
+        # the source for the complete piece.
+        desc_text = _strip_leading_title(_plain_text(desc_el.text if desc_el is not None else ""), title)
+        content_text = _strip_leading_title(_plain_text(content_el.text if content_el is not None else ""), title)
+        best_text = content_text if len(content_text) > len(desc_text) else desc_text
+
         items.append({
             "title": title,
             "link": link,
             "source": source["name"],
             "published": published,
             "date_label": published.strftime("%b %-d, %Y") if published else "",
-            "excerpt": excerpt,
+            "excerpt": _truncate(best_text, 170),
+            "modal_excerpt": _truncate(best_text, 1000),
         })
     return items
 
@@ -330,7 +362,7 @@ def build_news_html():
             "title": a["title"],
             "source": a["source"],
             "date": a["date_label"],
-            "excerpt": a["excerpt"],
+            "excerpt": a["modal_excerpt"],
             "link": a["link"],
         }
         for a in articles
