@@ -473,7 +473,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
         </button>
       </div>
       <div class="choice-bar-pair">
-        <button type="button" class="choice-bar choice-bar-half" onclick="showStage('stage-valuation-menu')">
+        <button type="button" class="choice-bar choice-bar-half" onclick="showStage('stage-valuation-form')">
           <div class="choice-bar-text">
             <div class="choice-bar-title">Home Valuation</div>
             <div class="choice-desc">Get a free, no-obligation estimate of your property's value.</div>
@@ -543,30 +543,9 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
       </div>
     </div>
 
-    <!-- STAGE: HOME VALUATION MENU -->
-    <div class="stage" id="stage-valuation-menu">
-      <button type="button" class="stage-back" onclick="showStage('stage-home')">← Back</button>
-      <div class="action-head">
-        <span class="label label-red">Home Valuation</span>
-        <h2 class="action-title">How Would You Like Your Estimate?</h2>
-      </div>
-      <div class="choice-grid choice-grid-2">
-        <button type="button" class="choice-btn" onclick="showStage('stage-valuation-form')">
-          <div class="choice-title">Accurate Home Valuation</div>
-          <div class="choice-desc">A personalized, no-obligation estimate from Simone based on your property's specifics and current market conditions.</div>
-          <span class="choice-arrow">Continue →</span>
-        </button>
-        <a href="https://value.marzullore.com/value-report.html" target="_blank" rel="noopener noreferrer" class="choice-btn">
-          <div class="choice-title">Instant Home Estimate</div>
-          <div class="choice-desc">An automated, algorithm-based estimate you can generate yourself in seconds — not a substitute for a professional analysis.</div>
-          <span class="choice-arrow">Continue →</span>
-        </a>
-      </div>
-    </div>
-
     <!-- STAGE: HOME VALUATION FORM -->
     <div class="stage" id="stage-valuation-form">
-      <button type="button" class="stage-back" onclick="showStage('stage-valuation-menu')">← Back</button>
+      <button type="button" class="stage-back" onclick="showStage('stage-home')">← Back</button>
       <div class="form-shell">
         <div class="form-card" id="val-card">
           <div class="step-dots"><div class="step-dot on" id="vd1"></div><div class="step-dot" id="vd2"></div><div class="step-dot" id="vd3"></div></div>
@@ -609,7 +588,8 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
           <div id="vsucc" class="success-msg">
             <div class="s-icon">✓</div>
             <div class="s-title">Request Received</div>
-            <div class="s-sub">Thank you for reaching out! I'll be in touch with you very shortly.</div>
+            <div class="s-sub">One of our team members will reach out shortly to provide your personalized home valuation. In the meantime, check your instant home estimate below.</div>
+            <a href="https://value.marzullore.com/value-report.html" target="_blank" rel="noopener noreferrer" class="btn-sub" style="display:inline-block;margin-top:20px;text-decoration:none">Check Your Instant Home Value</a>
           </div>
         </div>
       </div>
