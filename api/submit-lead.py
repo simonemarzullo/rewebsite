@@ -129,7 +129,13 @@ def clean(value):
 
 
 def digits_only(value):
-    return re.sub(r"\D", "", value or "")
+    # Every other field is funneled through clean(), which stringifies
+    # first -- phone skips that, so a non-string JSON value (a number,
+    # list, bool) would otherwise hit re.sub() directly and raise a
+    # TypeError instead of just producing an empty/garbage phone number.
+    if value is None:
+        return ""
+    return re.sub(r"\D", "", str(value))
 
 
 def resolve_form_meta(form_type, data):
@@ -355,7 +361,10 @@ class handler(BaseHTTPRequestHandler):
 
         try:
             data = json.loads(raw.decode("utf-8")) if raw else {}
-        except json.JSONDecodeError:
+        # A deeply nested array/object (e.g. thousands of "[") parses fine
+        # under MAX_BODY_BYTES but blows Python's recursion limit --
+        # RecursionError isn't a JSONDecodeError, so it needs its own catch.
+        except (json.JSONDecodeError, RecursionError):
             self._send_json(400, {"ok": False, "error": "Invalid JSON body"})
             return
         if not isinstance(data, dict):

@@ -36,6 +36,7 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 COOKIE_NAME = "offmarket_session"
 SESSION_HOURS = 24
 FUB_EVENTS_URL = "https://api.followupboss.com/v1/events"
+MAX_BODY_BYTES = 8 * 1024
 
 # Real, currently-available off-market opportunities. Empty until Simone
 # provides live listings -- add entries here (matching this shape) and
@@ -480,10 +481,16 @@ class handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", 0))
         except (TypeError, ValueError):
             length = 0
+        if length > MAX_BODY_BYTES:
+            self._send_json(413, {"ok": False, "error": "Payload too large"})
+            return
         raw = self.rfile.read(length) if length else b""
         try:
             data = json.loads(raw.decode("utf-8")) if raw else {}
-        except json.JSONDecodeError:
+        # A deeply nested array/object parses fine under MAX_BODY_BYTES but
+        # blows Python's recursion limit -- RecursionError isn't a
+        # JSONDecodeError, so it needs its own catch.
+        except (json.JSONDecodeError, RecursionError):
             self._send_json(400, {"ok": False, "error": "Invalid request."})
             return
         if not isinstance(data, dict):
