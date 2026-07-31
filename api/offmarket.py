@@ -422,10 +422,14 @@ def send_notification_email(subject, body):
     recipient = os.environ.get("NOTIFY_TO", "Simone@SimoneMarzullo.com")
 
     msg = EmailMessage()
-    msg["Subject"] = subject
-    msg["From"] = sender
-    msg["To"] = recipient
-    msg.set_content(body)
+    try:
+        msg["Subject"] = subject
+        msg["From"] = sender
+        msg["To"] = recipient
+        msg.set_content(body)
+    except ValueError as e:
+        print(f"offmarket: failed to build notification email: {e}")
+        return
 
     try:
         with smtplib.SMTP(host, port, timeout=10) as server:

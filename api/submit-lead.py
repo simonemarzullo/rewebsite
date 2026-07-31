@@ -3,6 +3,8 @@ import json
 import os
 import re
 import base64
+import hashlib
+import hmac
 import smtplib
 import urllib.request
 import urllib.error
@@ -166,14 +168,42 @@ def build_message(form_type, data, intent_desc=None):
     return "\n".join(parts)
 
 
+def _lead_id_secret():
+    return os.environ.get("FUB_API_KEY", "")
+
+
+def sign_lead_id(person_id):
+    """Signs a FollowUpBoss person id before handing it back to the client so
+    a later request can echo it back to update that same record. Without
+    this, a client-supplied leadId would be trusted as-is -- anyone could
+    send an arbitrary integer and have the server push attacker-controlled
+    name/email/phone/tags onto any existing contact in FollowUpBoss."""
+    secret = _lead_id_secret()
+    if not secret or person_id is None:
+        return None
+    payload = str(person_id)
+    sig = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return f"{payload}.{sig}"
+
+
 def get_lead_id(data):
-    """Extracts a previously-captured FollowUpBoss person id from the payload,
-    if present, so a later call can update that exact record instead of
-    creating a duplicate person."""
+    """Extracts a previously-captured FollowUpBoss person id from the
+    payload, verifying it was actually issued by sign_lead_id -- a leadId
+    that isn't validly signed (forged, guessed, or tampered with) is
+    treated as absent rather than trusted."""
     raw = data.get("leadId")
+    secret = _lead_id_secret()
+    if not raw or not secret:
+        return None
+    payload, _, sig = str(raw).partition(".")
+    if not sig:
+        return None
+    expected = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, sig):
+        return None
     try:
-        return int(raw) if raw else None
-    except (TypeError, ValueError):
+        return int(payload)
+    except ValueError:
         return None
 
 
@@ -276,10 +306,19 @@ def send_notification_email(subject, body):
     recipient = os.environ.get("NOTIFY_TO", "Simone@SimoneMarzullo.com")
 
     msg = EmailMessage()
-    msg["Subject"] = subject
-    msg["From"] = sender
-    msg["To"] = recipient
-    msg.set_content(body)
+    try:
+        # Subject is partly built from user-submitted fields (name, article
+        # title); a stray \r or \n in one of those raises here instead of
+        # silently injecting a header -- catch it so a visitor's odd input
+        # can't take down the whole request, same as every other best-effort
+        # step in this handler.
+        msg["Subject"] = subject
+        msg["From"] = sender
+        msg["To"] = recipient
+        msg.set_content(body)
+    except ValueError as e:
+        print(f"submit-lead: failed to build notification email: {e}")
+        return
 
     try:
         with smtplib.SMTP(host, port, timeout=10) as server:
@@ -351,7 +390,7 @@ class handler(BaseHTTPRequestHandler):
                 person_id=get_lead_id(data),
             )
             if result:
-                self._send_json(200, {"ok": True, "leadId": result.get("id")})
+                self._send_json(200, {"ok": True, "leadId": sign_lead_id(result.get("id"))})
             else:
                 self._send_json(502, {"ok": False, "error": "Failed to reach FollowUpBoss"})
             return
