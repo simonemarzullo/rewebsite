@@ -152,7 +152,61 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .om-status{display:inline-block;font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border:1px solid var(--g3);color:var(--g5);margin-left:8px;vertical-align:middle}
 .om-empty{text-align:center;color:var(--g5);font-size:.9rem;font-weight:300;max-width:480px;margin:0 auto}
 .om-hero-compact{min-height:36vh}
-.om-logout{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--g5);text-decoration:underline}
+.om-logout{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--g5);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;font-family:inherit}
+.om-grid-links .om-card{padding:26px;gap:8px}
+.om-card-link{margin-top:auto;padding-top:6px;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--g5);font-weight:500;transition:color .2s}
+
+/* CLIENT DASHBOARD -- listing stats, offers, feedback */
+.db-listing{background:var(--g1);border:1px solid var(--g3);padding:28px 26px;margin-bottom:20px}
+.db-listing-head{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.db-listing-address{font-family:var(--serif);font-size:1.15rem;font-weight:400;color:var(--white)}
+.db-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:1px;background:var(--g3);border:1px solid var(--g3);margin-bottom:24px}
+.db-stat{background:var(--black);padding:18px 14px;text-align:center}
+.db-stat-value{font-family:var(--serif);font-size:1.4rem;color:var(--red)}
+.db-stat-label{font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--g5);font-weight:500;margin-top:4px}
+.db-section{margin-top:22px}
+.db-section-title{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--g5);font-weight:500;margin-bottom:12px}
+.db-empty-note{font-size:.82rem;color:var(--g5);font-weight:300}
+.db-offer-row{padding:14px 0;border-top:1px solid var(--g3)}
+.db-offer-row:first-child{border-top:none}
+.db-offer-main{display:flex;align-items:center;gap:10px}
+.db-offer-price{font-family:var(--serif);color:var(--white);font-size:1.15rem}
+.db-offer-meta{font-size:.78rem;color:var(--g5);margin-top:4px}
+.db-offer-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.db-tag{font-size:.6rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border:1px solid var(--g3);color:var(--g6)}
+.db-tag-muted{color:var(--g5)}
+.db-note{padding:12px 0;border-top:1px solid var(--g3)}
+.db-note:first-child{border-top:none}
+.db-note-date{font-size:.6rem;color:var(--g5);margin-bottom:4px}
+.db-note-sub{margin-left:8px;color:var(--red)}
+.db-note-text{font-size:.85rem;line-height:1.6;color:var(--g6);font-weight:300}
+.db-checkbox-group{display:flex;flex-wrap:wrap;gap:14px;padding:8px 0;width:100%}
+.db-checkbox{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--g6);font-weight:300}
+
+/* ADMIN PANEL */
+.adm-notice{background:var(--g1);border:1px solid var(--red);color:var(--white);padding:14px 18px;font-size:.85rem;margin-bottom:24px}
+.adm-panel{background:var(--g1);border:1px solid var(--g3);padding:24px;margin-bottom:24px}
+.adm-inline-form{display:flex;flex-wrap:wrap;gap:10px;align-items:center;width:100%}
+.adm-inline-form .om-input{width:auto;flex:1 1 160px;padding:10px 14px}
+.adm-inline-form .om-field{flex:1 1 140px}
+.adm-btn-sm{padding:10px 20px;font-size:.72rem}
+.adm-clients{display:flex;flex-direction:column;gap:1px;margin-bottom:12px}
+.adm-client{background:var(--g1);border:1px solid var(--g3)}
+.adm-client summary{padding:16px 20px;cursor:pointer;display:flex;align-items:center;gap:12px;flex-wrap:wrap;list-style:none}
+.adm-client summary::-webkit-details-marker{display:none}
+.adm-client-email{color:var(--white);font-size:.9rem}
+.adm-client-name{color:var(--g5);font-size:.8rem}
+.adm-client-body{padding:0 20px 24px}
+.adm-listing{background:var(--black);border:1px solid var(--g3);padding:20px;margin-bottom:16px}
+.adm-listing-head{font-family:var(--serif);color:var(--white);font-size:1rem;margin-bottom:14px}
+.adm-subsection{margin-top:18px;padding-top:16px;border-top:1px solid var(--g3)}
+.adm-history{margin-top:8px;margin-bottom:8px}
+.adm-history summary{padding:12px 0;cursor:pointer;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--g5);list-style:none}
+.adm-history summary::-webkit-details-marker{display:none}
+.adm-list{display:flex;flex-direction:column;gap:1px;margin-bottom:12px}
+.adm-list-row{background:var(--g1);border:1px solid var(--g3);padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:space-between}
+.adm-tiles{display:flex;flex-direction:column;gap:12px;margin-bottom:12px}
+.adm-tiles .adm-inline-form{background:var(--g1);border:1px solid var(--g3);padding:16px 20px}
 
 /* NEWS -- RSS roundup cards */
 .news-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--g3);border:1px solid var(--g3)}

@@ -1,0 +1,2 @@
+# Used by api/dashboard.py, api/team.py, and api/admin.py to talk to Vercel Postgres.
+psycopg2-binary==2.9.9
