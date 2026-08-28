@@ -1,21 +1,33 @@
-"""Admin panel, served at /admin via a vercel.json rewrite to /api/admin
-(this file's real path). Self-contained, no cross-file imports, matching
-every other page in this project. Not linked from the public nav or
-sitemap.
+"""Client dashboard (/dashboard) and admin panel (/admin) that feeds it,
+combined into one Vercel Python function. Routed internally by a `section`
+query param (dashboard|admin) set in vercel.json's rewrite destinations --
+the same pattern api/areas.py already uses for its own multiple routes.
 
-Auth model: a single shared password (ADMIN_PASSWORD env var, same pattern
-as /off-market's OFFMARKET_PASSWORD) -- there's only one admin (Simone).
-From here she creates client and team-member accounts (email + a password
-she assigns), manages each client's listings/offers/feedback (shown on
-/dashboard), manages the shared Team Resource Hub tiles (shown on /team),
-and manages the admin-editable contingency-type list used on offers.
+Combined into a single file deliberately: Vercel's Hobby plan caps a
+deployment at 12 Serverless Functions, and this site already had 11 --
+two more self-contained files (one per route, matching every other page
+here) would have pushed it to 13 and failed to deploy
+(exceeded_serverless_functions_per_deployment). One file for both keeps
+the total at 12.
 
-"Cancel account" sets active=false rather than deleting -- their data
-stays intact and shows up in the History filter, never gone for good.
+Auth model: each client gets their own row in the `clients` table (email
++ a password Simone assigns via /admin) -- unlike the off-market page's
+single shared password. Admin uses a single shared ADMIN_PASSWORD, same
+pattern as OFFMARKET_PASSWORD. Session cookies are HMAC-signed and
+role-scoped (a client token can't be replayed as an admin token or
+someone else's client session).
 
-Requires the same tables as api/dashboard.py and api/team.py
-(db/schema.sql) and the same POSTGRES_URL/DATABASE_URL env var, plus
-ADMIN_PASSWORD and SESSION_SECRET.
+"Cancel account" sets active=false rather than deleting -- a client's
+data stays intact and shows up in admin's History filter, never gone for
+good.
+
+Requires the `clients`/`listings`/`feedback_notes`/`contingency_types`/
+`offers` tables from db/schema.sql, POSTGRES_URL (or DATABASE_URL),
+ADMIN_PASSWORD, and SESSION_SECRET.
+
+Team member / resource hub support was dropped from this build to fit
+the function-count limit -- may come back as its own file later if the
+site drops below 12 functions, or once this project is on a paid plan.
 """
 
 import hashlib
@@ -25,6 +37,7 @@ import json
 import os
 import re
 import time
+import urllib.parse
 from datetime import date
 from http.server import BaseHTTPRequestHandler
 
@@ -33,14 +46,19 @@ import psycopg2.errors
 import psycopg2.extras
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-COOKIE_NAME = "admin_session"
-SESSION_HOURS = 24
+CLIENT_COOKIE_NAME = "client_session"
+ADMIN_COOKIE_NAME = "admin_session"
+SESSION_HOURS = {"client": 24 * 30, "admin": 24}  # client: 30 days, admin: 24h
 MAX_BODY_BYTES = 16 * 1024
 MAX_FIELD_LEN = 500
 MIN_PASSWORD_LEN = 8
 
 LISTING_STATUSES = ["Active", "Under Contract", "Sold", "Expired", "Withdrawn"]
-FEEDBACK_CATEGORIES = {"showing": "Showing Feedback", "pricing_agent": "Pricing Feedback (Agent)", "pricing_buyer": "Pricing Feedback (Buyer)"}
+FEEDBACK_CATEGORIES = {
+    "showing": "Showing Feedback",
+    "pricing_agent": "Pricing Feedback (Agent)",
+    "pricing_buyer": "Pricing Feedback (Buyer)",
+}
 
 NAV_ITEMS = [
     ("START", "/home"),
@@ -65,7 +83,39 @@ THEME_INIT_SCRIPT = """<script>if ('scrollRestoration' in history) history.scrol
 </script>"""
 
 FOOTER_AND_SCRIPTS = """
+<div class="mcf" id="mcf">
+  <div class="mcf-menu" id="mcfMenu">
+    <a class="mcf-item" href="sms:+14243639227" aria-label="Text Simone Marzullo">
+      <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+      <span>Text</span>
+    </a>
+    <a class="mcf-item" href="tel:+14243639227" aria-label="Call Simone Marzullo">
+      <svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C10.61 21 3 13.39 3 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.25 1.01z"/></svg>
+      <span>Call</span>
+    </a>
+  </div>
+  <button type="button" class="mcf-toggle" id="mcfToggle" aria-haspopup="true" aria-expanded="false" aria-label="Call or text Simone">
+    <svg class="mcf-icon-phone" viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C10.61 21 3 13.39 3 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.25 1.01z"/></svg>
+    <svg class="mcf-icon-close" viewBox="0 0 24 24"><path d="M18.3 5.71L12 12.01l-6.3-6.3-1.41 1.42 6.29 6.29-6.29 6.29 1.41 1.42L12 14.84l6.3 6.29 1.41-1.42-6.29-6.29 6.29-6.29z"/></svg>
+  </button>
+</div>
 <script>
+(function () {
+  var fab = document.getElementById('mcf');
+  var toggle = document.getElementById('mcfToggle');
+  if (!fab || !toggle) return;
+  toggle.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = fab.classList.toggle('on');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  document.addEventListener('click', function (e) {
+    if (fab.classList.contains('on') && !fab.contains(e.target)) {
+      fab.classList.remove('on');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+})();
 function updateThemePickerUI(choice) {
   document.querySelectorAll('.theme-opt').forEach(function (btn) {
     btn.classList.toggle('active', btn.dataset.themeChoice === choice);
@@ -97,6 +147,10 @@ function toggleMobileNav() {
   const willOpen = !menu.classList.contains('on');
   menu.classList.toggle('on', willOpen);
   btn.setAttribute('aria-expanded', String(willOpen));
+}
+function closeMobileNav() {
+  document.getElementById('nav-mobile').classList.remove('on');
+  document.querySelector('.nav-toggle').setAttribute('aria-expanded', 'false');
 }
 </script>
 """
@@ -144,14 +198,37 @@ def _nav_html():
 </div>"""
 
 
-def render_page(body_html):
+def _footer_html():
+    return f"""<footer>
+  <div class="footer-inner">
+    <div>
+      <img src="/assets/agency-logo.png" alt="The Agency" style="height:28px;margin-bottom:8px" onerror="this.style.display='none';document.getElementById('f-agency-text').style.display='block'">
+      <div class="f-agency-name" id="f-agency-text" style="display:none">The Agency</div>
+      <div class="f-line">DRE# 01904054</div>
+      <div class="f-line">331 Foothill Rd. #100</div>
+      <div class="f-line">Beverly Hills, CA 90210</div>
+    </div>
+    <div class="f-legal">
+      <div class="f-eq">⌂</div>
+      <div class="f-copy">Equal Housing Opportunity<br>© 2026 Simone Marzullo. All rights reserved.<br>Information deemed reliable but not guaranteed.<br>CA DRE# 02174253</div>
+      <div class="f-copy" style="margin-top:10px"><a href="/privacy.html" style="color:var(--g5);text-decoration:underline">Privacy Policy</a></div>
+    </div>
+  </div>
+  <div class="f-disclaimer">Simone Marzullo | REALTOR® | DRE#02174253 is a real estate salesperson licensed by the state of California affiliated with The Agency. The Agency is a real estate broker licensed by the state of California and abides by equal housing opportunity laws. All material presented herein is intended for informational purposes only. Information is compiled from sources deemed reliable but is subject to errors, omissions, changes in price, condition, sale, or withdrawal without notice. No statement is made as to accuracy of any description. All measurements and square footages are approximate. This is not intended to solicit property already listed. Nothing herein shall be construed as legal, accounting or other professional advice outside the realm of real estate brokerage.</div>
+  <div class="theme-toggle-row">
+    {_theme_picker_html()}
+  </div>
+</footer>"""
+
+
+def render_page(body_html, title):
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 {THEME_INIT_SCRIPT}
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Admin | Simone Marzullo</title>
+<title>{html.escape(title)}</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
@@ -163,15 +240,15 @@ def render_page(body_html):
 <body>
 {_nav_html()}
 {body_html}
+{_footer_html()}
 {FOOTER_AND_SCRIPTS}
 </body>
 </html>"""
 
 
 # ---------------------------------------------------------------------------
-# Password hashing -- identical scheme to api/dashboard.py and api/team.py
-# (kept duplicated rather than imported, matching this project's
-# no-cross-file-imports rule).
+# Password hashing (PBKDF2-HMAC-SHA256, stdlib only). Format mirrors
+# Django's: "pbkdf2_sha256$<iters>$<salt>$<hash>".
 # ---------------------------------------------------------------------------
 PBKDF2_ITERATIONS = 600_000
 
@@ -182,38 +259,68 @@ def hash_password(password):
     return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${salt.hex()}${dk.hex()}"
 
 
+def verify_password(password, stored_hash):
+    try:
+        algo, iterations, salt_hex, hash_hex = stored_hash.split("$")
+        if algo != "pbkdf2_sha256":
+            return False
+        salt = bytes.fromhex(salt_hex)
+        expected = bytes.fromhex(hash_hex)
+    except (ValueError, AttributeError):
+        return False
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, int(iterations))
+    return hmac.compare_digest(dk, expected)
+
+
 def clean(value, max_len=MAX_FIELD_LEN):
     return str(value).strip()[:max_len] if value is not None else ""
 
 
+# ---------------------------------------------------------------------------
+# Signed session cookies. Role-scoped ("client" carries an id, "admin"
+# doesn't) and signed with a dedicated server-only secret (SESSION_SECRET)
+# -- never a client's own password or ADMIN_PASSWORD itself, so either can
+# be rotated independently of active sessions signed the other way.
+# ---------------------------------------------------------------------------
 def _session_secret():
     return os.environ.get("SESSION_SECRET", "")
 
 
-def make_admin_token():
+def make_session_token(role, entity_id=None):
     secret = _session_secret()
-    expiry = int(time.time()) + SESSION_HOURS * 3600
-    payload = f"admin:{expiry}"
+    expiry = int(time.time()) + SESSION_HOURS[role] * 3600
+    payload = f"{role}:{entity_id}:{expiry}" if entity_id is not None else f"{role}:{expiry}"
     sig = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
     return f"{payload}.{sig}"
 
 
-def verify_admin_token(token):
+def verify_session_token(token, expected_role):
+    """Returns True for a valid admin token, a client id (int) for a valid
+    client token, or None if missing/forged/expired/wrong role."""
     secret = _session_secret()
     if not token or not secret or "." not in token:
-        return False
+        return None
     payload, _, sig = token.rpartition(".")
-    expected = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(expected, sig):
-        return False
+    expected_sig = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected_sig, sig):
+        return None
     parts = payload.split(":")
-    if len(parts) != 2 or parts[0] != "admin":
-        return False
+    if not parts or parts[0] != expected_role:
+        return None
     try:
-        expiry = int(parts[1])
+        expiry = int(parts[-1])
     except ValueError:
-        return False
-    return time.time() < expiry
+        return None
+    if time.time() >= expiry:
+        return None
+    if expected_role == "admin":
+        return len(parts) == 2
+    if len(parts) != 3:
+        return None
+    try:
+        return int(parts[1])
+    except ValueError:
+        return None
 
 
 def get_cookie(cookie_header, name):
@@ -227,15 +334,54 @@ def get_cookie(cookie_header, name):
 
 
 # ---------------------------------------------------------------------------
-# Database access -- every query below is parameterized (%s placeholders,
-# values passed separately to execute()); user input is never formatted
-# directly into SQL text.
+# Database access -- every query is parameterized (%s placeholders); user
+# input is never formatted directly into SQL text.
 # ---------------------------------------------------------------------------
 def get_conn():
     dsn = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
     if not dsn:
         return None
     return psycopg2.connect(dsn, connect_timeout=5)
+
+
+def fetch_client_by_email(conn, email):
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute("SELECT id, email, password_hash, name, active FROM clients WHERE email = %s", (email,))
+        return cur.fetchone()
+
+
+def fetch_dashboard_data(conn, client_id):
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute("SELECT id, name FROM clients WHERE id = %s AND active = TRUE", (client_id,))
+        client = cur.fetchone()
+        if not client:
+            return None
+
+        cur.execute(
+            """SELECT id, address, status, showings_count, emails_sent_count,
+                      calls_made_count, texts_sent_count
+               FROM listings WHERE client_id = %s ORDER BY created_at DESC""",
+            (client_id,),
+        )
+        listings = cur.fetchall()
+
+        for listing in listings:
+            cur.execute(
+                """SELECT price, financing_type, close_of_escrow, contingencies, created_at
+                   FROM offers WHERE listing_id = %s ORDER BY created_at DESC""",
+                (listing["id"],),
+            )
+            listing["offers"] = cur.fetchall()
+
+            cur.execute(
+                "SELECT category, note, created_at FROM feedback_notes WHERE listing_id = %s ORDER BY created_at DESC",
+                (listing["id"],),
+            )
+            notes = cur.fetchall()
+            listing["showing_feedback"] = [n for n in notes if n["category"] == "showing"]
+            listing["pricing_feedback"] = [n for n in notes if n["category"] in ("pricing_agent", "pricing_buyer")]
+
+        return {"client": client, "listings": listings}
 
 
 def fetch_all_clients(conn):
@@ -263,18 +409,6 @@ def fetch_all_clients(conn):
                 listing["offers"] = cur.fetchall()
             client["listings"] = listings
         return clients
-
-
-def fetch_all_team_members(conn):
-    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        cur.execute("SELECT id, email, name, active, created_at FROM team_members ORDER BY created_at DESC")
-        return cur.fetchall()
-
-
-def fetch_all_resource_tiles(conn):
-    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        cur.execute("SELECT id, title, description, url, sort_order, active FROM resource_tiles ORDER BY sort_order, created_at")
-        return cur.fetchall()
 
 
 def fetch_all_contingency_types(conn):
@@ -335,47 +469,6 @@ def add_offer(conn, listing_id, price, financing_type, close_of_escrow, continge
     conn.commit()
 
 
-def create_team_member(conn, email, name, password):
-    with conn.cursor() as cur:
-        cur.execute(
-            "INSERT INTO team_members (email, name, password_hash) VALUES (%s, %s, %s) RETURNING id",
-            (email, name, hash_password(password)),
-        )
-        team_member_id = cur.fetchone()[0]
-    conn.commit()
-    return team_member_id
-
-
-def toggle_team_member_active(conn, team_member_id):
-    with conn.cursor() as cur:
-        cur.execute("UPDATE team_members SET active = NOT active WHERE id = %s", (team_member_id,))
-    conn.commit()
-
-
-def create_resource_tile(conn, title, description, url, sort_order):
-    with conn.cursor() as cur:
-        cur.execute(
-            "INSERT INTO resource_tiles (title, description, url, sort_order) VALUES (%s, %s, %s, %s)",
-            (title, description, url, sort_order),
-        )
-    conn.commit()
-
-
-def update_resource_tile(conn, tile_id, title, description, url, sort_order):
-    with conn.cursor() as cur:
-        cur.execute(
-            "UPDATE resource_tiles SET title = %s, description = %s, url = %s, sort_order = %s WHERE id = %s",
-            (title, description, url, sort_order, tile_id),
-        )
-    conn.commit()
-
-
-def toggle_resource_tile_active(conn, tile_id):
-    with conn.cursor() as cur:
-        cur.execute("UPDATE resource_tiles SET active = NOT active WHERE id = %s", (tile_id,))
-    conn.commit()
-
-
 def create_contingency_type(conn, name):
     with conn.cursor() as cur:
         cur.execute("INSERT INTO contingency_types (name) VALUES (%s) ON CONFLICT (name) DO NOTHING", (name,))
@@ -388,10 +481,199 @@ def toggle_contingency_type_active(conn, contingency_type_id):
     conn.commit()
 
 
+def build_error_html(message, title):
+    body = f"""
+<section class="section" style="text-align:center;padding-top:140px">
+  <div class="wrap"><p class="om-empty">{html.escape(message)}</p></div>
+</section>
+"""
+    return render_page(body, title)
+
+
 # ---------------------------------------------------------------------------
-# HTML rendering
+# Client dashboard rendering
 # ---------------------------------------------------------------------------
-def build_login_html(error=None):
+def build_client_login_html(error=None):
+    error_html = f'<div class="om-error" style="display:block">{html.escape(error)}</div>' if error else '<div class="om-error" id="dash-error"></div>'
+    body = f"""
+<section class="area-hero om-hero-compact">
+  <img class="area-hero-img" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk" loading="eager" style="object-position:50% 55%">
+  <div class="area-hero-scrim"></div>
+  <div class="area-hero-content">
+    <div class="area-eyebrow"><span class="area-eyebrow-line"></span><span class="area-eyebrow-text">Client Access</span></div>
+    <h1 class="area-h1">Your Listing Dashboard</h1>
+    <p class="area-tagline">Sign in with the email and password Simone gave you to check on your listing's progress.</p>
+  </div>
+</section>
+
+<section class="section" style="text-align:center">
+  <div class="wrap" style="max-width:440px">
+    <form id="dash-form" novalidate>
+      <div class="om-form">
+        <label class="om-field">
+          <span class="om-field-label">Email</span>
+          <input type="email" id="dash-email" class="om-input" required autocomplete="username">
+        </label>
+        <label class="om-field">
+          <span class="om-field-label">Password</span>
+          <input type="password" id="dash-password" class="om-input" required autocomplete="current-password">
+        </label>
+      </div>
+      {error_html}
+      <button type="submit" class="btn-primary" id="dash-submit" style="width:100%;justify-content:center;margin-top:22px">Sign In</button>
+    </form>
+    <p style="font-size:.75rem;color:var(--g5);margin-top:20px;line-height:1.7">Don't have login details? <a href="/contact" style="color:var(--white);text-decoration:underline">Contact Simone</a>.</p>
+  </div>
+</section>
+
+<script>
+document.getElementById('dash-form').addEventListener('submit', async function (e) {{
+  e.preventDefault();
+  const email = document.getElementById('dash-email').value.trim();
+  const password = document.getElementById('dash-password').value;
+  const errEl = document.getElementById('dash-error');
+  const btn = document.getElementById('dash-submit');
+  errEl.style.display = 'none';
+  btn.textContent = 'Signing in…';
+  try {{
+    const res = await fetch('/api/portal?section=dashboard', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{action: 'login', email, password}}),
+    }});
+    const data = await res.json();
+    if (res.ok && data.ok) {{
+      window.location.href = '/dashboard';
+    }} else {{
+      errEl.textContent = data.error || 'Something went wrong. Please try again.';
+      errEl.style.display = 'block';
+      btn.textContent = 'Sign In';
+    }}
+  }} catch (err) {{
+    errEl.textContent = 'Network error. Please try again.';
+    errEl.style.display = 'block';
+    btn.textContent = 'Sign In';
+  }}
+}});
+</script>
+"""
+    return render_page(body, "Client Dashboard | Simone Marzullo")
+
+
+def _stat_tile(label, value):
+    return f"""<div class="db-stat">
+      <div class="db-stat-value">{value}</div>
+      <div class="db-stat-label">{html.escape(label)}</div>
+    </div>"""
+
+
+FEEDBACK_CATEGORY_LABEL = {
+    "pricing_agent": "From an agent",
+    "pricing_buyer": "From a buyer",
+}
+
+
+def _offer_html(offer):
+    price = f"${offer['price']:,.0f}"
+    financing_label = "Cash" if offer["financing_type"] == "cash" else "Loan"
+    close_label = offer["close_of_escrow"].strftime("%b %-d, %Y") if offer["close_of_escrow"] else "Not specified"
+    tags = "".join(f'<span class="db-tag">{html.escape(c)}</span>' for c in (offer["contingencies"] or []))
+    if not tags:
+        tags = '<span class="db-tag db-tag-muted">No contingencies</span>'
+    return f"""<div class="db-offer-row">
+      <div class="db-offer-main">
+        <span class="db-offer-price">{price}</span>
+        <span class="om-status">{financing_label}</span>
+      </div>
+      <div class="db-offer-meta">Close of escrow: {close_label}</div>
+      <div class="db-offer-tags">{tags}</div>
+    </div>"""
+
+
+def _feedback_html(notes, empty_message):
+    if not notes:
+        return f'<p class="db-empty-note">{html.escape(empty_message)}</p>'
+    items = []
+    for n in notes:
+        sub = FEEDBACK_CATEGORY_LABEL.get(n["category"])
+        sub_html = f'<span class="db-note-sub">{sub}</span>' if sub else ""
+        items.append(f"""<div class="db-note">
+          <div class="db-note-date">{n["created_at"].strftime("%b %-d, %Y")}{sub_html}</div>
+          <div class="db-note-text">{html.escape(n["note"])}</div>
+        </div>""")
+    return "".join(items)
+
+
+def _listing_html(listing):
+    stats = "".join([
+        _stat_tile("Showings", listing["showings_count"]),
+        _stat_tile("Emails Sent", listing["emails_sent_count"]),
+        _stat_tile("Calls Made", listing["calls_made_count"]),
+        _stat_tile("Texts Sent", listing["texts_sent_count"]),
+        _stat_tile("Offers Received", len(listing["offers"])),
+    ])
+
+    offers_html = "".join(_offer_html(o) for o in listing["offers"]) or '<p class="db-empty-note">No offers received yet.</p>'
+    showing_feedback_html = _feedback_html(listing["showing_feedback"], "No showing feedback logged yet.")
+    pricing_feedback_html = _feedback_html(listing["pricing_feedback"], "No pricing feedback logged yet.")
+
+    return f"""
+    <div class="db-listing">
+      <div class="db-listing-head">
+        <div class="db-listing-address">{html.escape(listing["address"])}</div>
+        <span class="om-status">{html.escape(listing["status"])}</span>
+      </div>
+      <div class="db-stats">{stats}</div>
+      <div class="db-section">
+        <div class="db-section-title">Offers Received</div>
+        {offers_html}
+      </div>
+      <div class="db-section">
+        <div class="db-section-title">Showing Feedback</div>
+        {showing_feedback_html}
+      </div>
+      <div class="db-section">
+        <div class="db-section-title">Pricing Feedback</div>
+        {pricing_feedback_html}
+      </div>
+    </div>"""
+
+
+def build_client_dashboard_html(data):
+    client = data["client"]
+    listings = data["listings"]
+    name_html = f", {html.escape(client['name'])}" if client.get("name") else ""
+
+    if listings:
+        listings_html = "".join(_listing_html(l) for l in listings)
+    else:
+        listings_html = '<div class="om-empty">No listings on your account yet -- check back once Simone has one set up.</div>'
+
+    body = f"""
+<section class="area-hero om-hero-compact">
+  <img class="area-hero-img" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk" loading="eager" style="object-position:50% 55%">
+  <div class="area-hero-scrim"></div>
+  <div class="area-hero-content">
+    <div class="area-eyebrow"><span class="area-eyebrow-line"></span><span class="area-eyebrow-text">Client Access</span></div>
+    <h1 class="area-h1">Welcome{name_html}</h1>
+    <p class="area-tagline">Here's the latest on your listing.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    {listings_html}
+    <div style="text-align:center;margin-top:36px"><a href="/dashboard?logout=1" class="om-logout">Log out</a></div>
+  </div>
+</section>
+"""
+    return render_page(body, "Client Dashboard | Simone Marzullo")
+
+
+# ---------------------------------------------------------------------------
+# Admin rendering
+# ---------------------------------------------------------------------------
+def build_admin_login_html(error=None):
     error_html = f'<div class="om-error" style="display:block">{html.escape(error)}</div>' if error else '<div class="om-error" id="adm-error"></div>'
     body = f"""
 <section class="section" style="text-align:center;padding-top:140px">
@@ -416,7 +698,7 @@ document.getElementById('adm-login-form').addEventListener('submit', async funct
   const errEl = document.getElementById('adm-error');
   errEl.style.display = 'none';
   try {{
-    const res = await fetch('/api/admin', {{
+    const res = await fetch('/api/portal?section=admin', {{
       method: 'POST',
       headers: {{'Content-Type': 'application/json'}},
       body: JSON.stringify({{action: 'login', password}}),
@@ -435,7 +717,7 @@ document.getElementById('adm-login-form').addEventListener('submit', async funct
 }});
 </script>
 """
-    return render_page(body)
+    return render_page(body, "Admin | Simone Marzullo")
 
 
 def _fmt_date(d):
@@ -551,33 +833,6 @@ def _client_admin_html(client, contingency_types):
   </details>"""
 
 
-def _team_member_admin_html(tm):
-    status_label = "Active" if tm["active"] else "Deactivated"
-    return f"""
-  <div class="adm-list-row">
-    <div>
-      <span class="adm-client-email">{html.escape(tm["email"])}</span>
-      {f'<span class="adm-client-name">{html.escape(tm["name"])}</span>' if tm["name"] else ''}
-    </div>
-    <span class="om-status">{status_label}</span>
-    <button type="button" class="om-logout adm-toggle-active" data-action="toggle_team_member_active" data-id="{tm["id"]}">{"Deactivate" if tm["active"] else "Reactivate"}</button>
-  </div>"""
-
-
-def _resource_tile_admin_html(t):
-    status_label = "Active" if t["active"] else "Hidden"
-    return f"""
-  <form class="adm-inline-form" data-action="update_resource_tile" data-id="{t["id"]}">
-    <input type="text" name="title" class="om-input" value="{html.escape(t['title'])}" placeholder="Title" required>
-    <input type="text" name="description" class="om-input" value="{html.escape(t['description'])}" placeholder="Description">
-    <input type="url" name="url" class="om-input" value="{html.escape(t['url'])}" placeholder="https://..." required>
-    <input type="number" name="sort_order" class="om-input" value="{t['sort_order']}" style="max-width:80px" title="Sort order">
-    <button type="submit" class="btn-primary adm-btn-sm">Save</button>
-    <span class="om-status">{status_label}</span>
-    <button type="button" class="om-logout adm-toggle-active" data-action="toggle_resource_tile_active" data-id="{t["id"]}">{"Hide" if t["active"] else "Show"}</button>
-  </form>"""
-
-
 def _contingency_type_admin_html(c):
     status_label = "Active" if c["active"] else "Hidden"
     return f"""
@@ -588,24 +843,19 @@ def _contingency_type_admin_html(c):
   </div>"""
 
 
-def build_admin_html(clients, team_members, resource_tiles, contingency_types):
+def build_admin_html(clients, contingency_types):
     active_clients = [c for c in clients if c["active"]]
     history_clients = [c for c in clients if not c["active"]]
-    active_team = [t for t in team_members if t["active"]]
-    history_team = [t for t in team_members if not t["active"]]
 
     clients_html = "".join(_client_admin_html(c, contingency_types) for c in active_clients) or '<div class="om-empty">No active clients -- add one above.</div>'
     history_clients_html = "".join(_client_admin_html(c, contingency_types) for c in history_clients) or '<div class="om-empty">No deactivated clients.</div>'
-    team_html = "".join(_team_member_admin_html(t) for t in active_team) or '<div class="om-empty">No active team members -- add one above.</div>'
-    history_team_html = "".join(_team_member_admin_html(t) for t in history_team) or '<div class="om-empty">No deactivated team members.</div>'
-    tiles_html = "".join(_resource_tile_admin_html(t) for t in resource_tiles) or '<p class="db-empty-note">No resource tiles yet.</p>'
     contingency_html = "".join(_contingency_type_admin_html(c) for c in contingency_types) or '<p class="db-empty-note">No contingency types yet.</p>'
 
     body = f"""
 <section class="section" style="padding-top:120px">
   <div class="wrap">
     <h1 class="area-h1" style="margin-bottom:8px">Admin</h1>
-    <p class="area-tagline" style="margin-bottom:32px">Manage clients, team members, and resources.</p>
+    <p class="area-tagline" style="margin-bottom:32px">Manage clients and their dashboards.</p>
     <div id="adm-notice" class="adm-notice" style="display:none"></div>
 
     <h2 class="db-section-title" style="font-size:.9rem;margin-bottom:16px">Clients</h2>
@@ -626,36 +876,6 @@ def build_admin_html(clients, team_members, resource_tiles, contingency_types):
       <div class="adm-clients">{history_clients_html}</div>
     </details>
 
-    <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Team Members</h2>
-    <div class="adm-panel">
-      <div class="db-section-title">Create New Team Member</div>
-      <form id="adm-create-team-form" class="adm-inline-form">
-        <input type="email" name="email" class="om-input" placeholder="Email" required>
-        <input type="text" name="name" class="om-input" placeholder="Name">
-        <input type="text" name="password" class="om-input" placeholder="Password to assign" required minlength="{MIN_PASSWORD_LEN}">
-        <button type="submit" class="btn-primary adm-btn-sm">Create Team Member</button>
-      </form>
-      <div class="om-error" id="adm-create-team-error"></div>
-    </div>
-    <div class="adm-list">{team_html}</div>
-
-    <details class="adm-history">
-      <summary>History (deactivated team members)</summary>
-      <div class="adm-list">{history_team_html}</div>
-    </details>
-
-    <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Team Resource Hub Tiles</h2>
-    <div class="adm-panel">
-      <form id="adm-create-tile-form" class="adm-inline-form">
-        <input type="text" name="title" class="om-input" placeholder="Title" required>
-        <input type="text" name="description" class="om-input" placeholder="Description">
-        <input type="url" name="url" class="om-input" placeholder="https://..." required>
-        <input type="number" name="sort_order" class="om-input" placeholder="Sort order" value="0" style="max-width:100px">
-        <button type="submit" class="btn-primary adm-btn-sm">Add Tile</button>
-      </form>
-    </div>
-    <div class="adm-tiles">{tiles_html}</div>
-
     <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Contingency Types</h2>
     <div class="adm-panel">
       <form id="adm-create-contingency-form" class="adm-inline-form">
@@ -671,7 +891,7 @@ def build_admin_html(clients, team_members, resource_tiles, contingency_types):
 
 <script>
 async function adminPost(payload) {{
-  const res = await fetch('/api/admin', {{
+  const res = await fetch('/api/portal?section=admin', {{
     method: 'POST',
     headers: {{'Content-Type': 'application/json'}},
     body: JSON.stringify(payload),
@@ -707,36 +927,6 @@ document.getElementById('adm-create-client-form').addEventListener('submit', asy
   }} catch (err) {{
     errEl.textContent = err.message;
     errEl.style.display = 'block';
-  }}
-}});
-
-document.getElementById('adm-create-team-form').addEventListener('submit', async function (e) {{
-  e.preventDefault();
-  const form = e.target;
-  const email = form.email.value.trim();
-  const password = form.password.value;
-  const errEl = document.getElementById('adm-create-team-error');
-  errEl.style.display = 'none';
-  try {{
-    await adminPost({{action: 'create_team_member', email, name: form.name.value.trim(), password}});
-    showNotice(`Team member created — send them: ${{email}} / ${{password}}`);
-    window.location.reload();
-  }} catch (err) {{
-    errEl.textContent = err.message;
-    errEl.style.display = 'block';
-  }}
-}});
-
-document.getElementById('adm-create-tile-form').addEventListener('submit', async function (e) {{
-  e.preventDefault();
-  const form = e.target;
-  const payload = {{action: 'create_resource_tile'}};
-  new FormData(form).forEach(function (v, k) {{ payload[k] = v; }});
-  try {{
-    await adminPost(payload);
-    window.location.reload();
-  }} catch (err) {{
-    alert(err.message);
   }}
 }});
 
@@ -785,16 +975,7 @@ document.querySelectorAll('.adm-toggle-active[data-action]').forEach(function (b
 }});
 </script>
 """
-    return render_page(body)
-
-
-def build_error_html(message):
-    body = f"""
-<section class="section" style="text-align:center;padding-top:140px">
-  <div class="wrap"><p class="om-empty">{html.escape(message)}</p></div>
-</section>
-"""
-    return render_page(body)
+    return render_page(body, "Admin | Simone Marzullo")
 
 
 # ---------------------------------------------------------------------------
@@ -821,42 +1002,75 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _require_admin(self):
-        token = get_cookie(self.headers.get("Cookie", ""), COOKIE_NAME)
-        return verify_admin_token(token)
+    def _section(self):
+        query = urllib.parse.urlparse(self.path).query
+        params = urllib.parse.parse_qs(query)
+        return params.get("section", [None])[0], query
 
     def do_GET(self):
-        query = self.path.partition("?")[2]
-        if "logout=1" in query:
-            expired = f"{COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            self._send_html(200, build_login_html(), set_cookie=expired)
+        section, query = self._section()
+        is_logout = "logout=1" in query
+
+        if section == "admin":
+            if is_logout:
+                expired = f"{ADMIN_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+                self._send_html(200, build_admin_login_html(), set_cookie=expired)
+                return
+            token = get_cookie(self.headers.get("Cookie", ""), ADMIN_COOKIE_NAME)
+            if not verify_session_token(token, "admin"):
+                self._send_html(200, build_admin_login_html())
+                return
+            conn = None
+            try:
+                conn = get_conn()
+                if conn is None:
+                    self._send_html(503, build_error_html("The admin panel isn't set up yet -- POSTGRES_URL is missing.", "Admin | Simone Marzullo"))
+                    return
+                clients = fetch_all_clients(conn)
+                contingency_types = fetch_all_contingency_types(conn)
+            except Exception as e:
+                print(f"portal(admin): failed to load data: {e}")
+                self._send_html(503, build_error_html("Something went wrong loading the admin panel.", "Admin | Simone Marzullo"))
+                return
+            finally:
+                if conn:
+                    conn.close()
+            self._send_html(200, build_admin_html(clients, contingency_types))
             return
 
-        if not self._require_admin():
-            self._send_html(200, build_login_html())
+        # Default: client dashboard (section == "dashboard" or unset)
+        if is_logout:
+            expired = f"{CLIENT_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            self._send_html(200, build_client_login_html(), set_cookie=expired)
             return
-
+        token = get_cookie(self.headers.get("Cookie", ""), CLIENT_COOKIE_NAME)
+        client_id = verify_session_token(token, "client")
+        if not client_id:
+            self._send_html(200, build_client_login_html())
+            return
         conn = None
         try:
             conn = get_conn()
             if conn is None:
-                self._send_html(503, build_error_html("The admin panel isn't set up yet -- POSTGRES_URL is missing."))
+                self._send_html(503, build_error_html("The dashboard isn't set up yet -- please contact Simone directly.", "Client Dashboard | Simone Marzullo"))
                 return
-            clients = fetch_all_clients(conn)
-            team_members = fetch_all_team_members(conn)
-            resource_tiles = fetch_all_resource_tiles(conn)
-            contingency_types = fetch_all_contingency_types(conn)
+            data = fetch_dashboard_data(conn, client_id)
         except Exception as e:
-            print(f"admin: failed to load data: {e}")
-            self._send_html(503, build_error_html("Something went wrong loading the admin panel."))
+            print(f"portal(dashboard): failed to load data: {e}")
+            self._send_html(503, build_error_html("Something went wrong loading your dashboard. Please try again shortly.", "Client Dashboard | Simone Marzullo"))
             return
         finally:
             if conn:
                 conn.close()
-
-        self._send_html(200, build_admin_html(clients, team_members, resource_tiles, contingency_types))
+        if not data:
+            expired = f"{CLIENT_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            self._send_html(200, build_client_login_html(), set_cookie=expired)
+            return
+        self._send_html(200, build_client_dashboard_html(data))
 
     def do_POST(self):
+        section, _ = self._section()
+
         try:
             length = int(self.headers.get("Content-Length", 0))
         except (TypeError, ValueError):
@@ -874,6 +1088,43 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(400, {"ok": False, "error": "Invalid request."})
             return
 
+        if section == "admin":
+            self._handle_admin_post(data)
+            return
+
+        # Default: client dashboard login
+        email = str(data.get("email", "")).strip().lower()
+        password = str(data.get("password", ""))
+        if not email or not EMAIL_RE.match(email):
+            self._send_json(400, {"ok": False, "error": "Enter a valid email address."})
+            return
+        if not password:
+            self._send_json(400, {"ok": False, "error": "Enter your password."})
+            return
+
+        conn = None
+        try:
+            conn = get_conn()
+            if conn is None:
+                self._send_json(503, {"ok": False, "error": "The dashboard isn't set up yet -- please contact Simone directly."})
+                return
+            client = fetch_client_by_email(conn, email)
+        except Exception as e:
+            print(f"portal(dashboard): login lookup failed: {e}")
+            self._send_json(503, {"ok": False, "error": "Something went wrong. Please try again shortly."})
+            return
+        finally:
+            if conn:
+                conn.close()
+
+        if not client or not client["active"] or not verify_password(password, client["password_hash"]):
+            self._send_json(401, {"ok": False, "error": "Incorrect email or password."})
+            return
+
+        cookie = f"{CLIENT_COOKIE_NAME}={make_session_token('client', client['id'])}; Path=/; Max-Age={SESSION_HOURS['client'] * 3600}; HttpOnly; Secure; SameSite=Lax"
+        self._send_json(200, {"ok": True}, set_cookie=cookie)
+
+    def _handle_admin_post(self, data):
         action = clean(data.get("action"), 40)
 
         if action == "login":
@@ -885,11 +1136,12 @@ class handler(BaseHTTPRequestHandler):
             if not hmac.compare_digest(password.encode("utf-8"), expected.encode("utf-8")):
                 self._send_json(401, {"ok": False, "error": "Incorrect password."})
                 return
-            cookie = f"{COOKIE_NAME}={make_admin_token()}; Path=/; Max-Age={SESSION_HOURS * 3600}; HttpOnly; Secure; SameSite=Lax"
+            cookie = f"{ADMIN_COOKIE_NAME}={make_session_token('admin')}; Path=/; Max-Age={SESSION_HOURS['admin'] * 3600}; HttpOnly; Secure; SameSite=Lax"
             self._send_json(200, {"ok": True}, set_cookie=cookie)
             return
 
-        if not self._require_admin():
+        token = get_cookie(self.headers.get("Cookie", ""), ADMIN_COOKIE_NAME)
+        if not verify_session_token(token, "admin"):
             self._send_json(401, {"ok": False, "error": "Not signed in."})
             return
 
@@ -981,60 +1233,6 @@ class handler(BaseHTTPRequestHandler):
                 self._send_json(200, {"ok": True})
                 return
 
-            if action == "create_team_member":
-                email = clean(data.get("email")).lower()
-                name = clean(data.get("name"))
-                password = str(data.get("password", ""))
-                if not email or not EMAIL_RE.match(email):
-                    self._send_json(400, {"ok": False, "error": "Enter a valid email address."})
-                    return
-                if len(password) < MIN_PASSWORD_LEN:
-                    self._send_json(400, {"ok": False, "error": f"Password must be at least {MIN_PASSWORD_LEN} characters."})
-                    return
-                try:
-                    create_team_member(conn, email, name, password)
-                except psycopg2.errors.UniqueViolation:
-                    conn.rollback()
-                    self._send_json(400, {"ok": False, "error": "A team member with that email already exists."})
-                    return
-                self._send_json(200, {"ok": True})
-                return
-
-            if action == "toggle_team_member_active":
-                toggle_team_member_active(conn, int(data.get("id")))
-                self._send_json(200, {"ok": True})
-                return
-
-            if action == "create_resource_tile":
-                title = clean(data.get("title"))
-                description = clean(data.get("description"), 2000)
-                url = clean(data.get("url"), 2000)
-                sort_order = int(data.get("sort_order") or 0)
-                if not title or not url:
-                    self._send_json(400, {"ok": False, "error": "Title and URL are required."})
-                    return
-                create_resource_tile(conn, title, description, url, sort_order)
-                self._send_json(200, {"ok": True})
-                return
-
-            if action == "update_resource_tile":
-                tile_id = int(data.get("id"))
-                title = clean(data.get("title"))
-                description = clean(data.get("description"), 2000)
-                url = clean(data.get("url"), 2000)
-                sort_order = int(data.get("sort_order") or 0)
-                if not title or not url:
-                    self._send_json(400, {"ok": False, "error": "Title and URL are required."})
-                    return
-                update_resource_tile(conn, tile_id, title, description, url, sort_order)
-                self._send_json(200, {"ok": True})
-                return
-
-            if action == "toggle_resource_tile_active":
-                toggle_resource_tile_active(conn, int(data.get("id")))
-                self._send_json(200, {"ok": True})
-                return
-
             if action == "create_contingency_type":
                 name = clean(data.get("name"), 200)
                 if not name:
@@ -1053,7 +1251,7 @@ class handler(BaseHTTPRequestHandler):
         except (TypeError, ValueError):
             self._send_json(400, {"ok": False, "error": "Invalid request data."})
         except Exception as e:
-            print(f"admin: action '{action}' failed: {e}")
+            print(f"portal(admin): action '{action}' failed: {e}")
             self._send_json(500, {"ok": False, "error": "Something went wrong."})
         finally:
             if conn:

@@ -1,6 +1,6 @@
 -- Run this once against the Vercel Postgres database (Vercel dashboard ->
 -- Storage -> your database -> Query, or any Postgres client using
--- POSTGRES_URL) before using /admin, /dashboard, or /team. Safe to re-run --
+-- POSTGRES_URL) before using /admin or /dashboard. Safe to re-run --
 -- every statement is idempotent.
 
 CREATE TABLE IF NOT EXISTS clients (
@@ -65,24 +65,7 @@ CREATE TABLE IF NOT EXISTS offers (
 );
 CREATE INDEX IF NOT EXISTS idx_offers_listing_id ON offers(listing_id);
 
-CREATE TABLE IF NOT EXISTS team_members (
-    id            SERIAL PRIMARY KEY,
-    email         TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    name          TEXT NOT NULL DEFAULT '',
-    active        BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- One shared hub every team member sees -- links only (Google Drive PDFs,
--- other tools), managed from /admin.
-CREATE TABLE IF NOT EXISTS resource_tiles (
-    id          SERIAL PRIMARY KEY,
-    title       TEXT NOT NULL,
-    description TEXT NOT NULL DEFAULT '',
-    url         TEXT NOT NULL,
-    sort_order  INTEGER NOT NULL DEFAULT 0,
-    active      BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_resource_tiles_sort_order ON resource_tiles(sort_order);
+-- team_members / resource_tiles (for a team resource hub) were designed
+-- alongside this but held back for a later phase -- see README's
+-- "Client dashboard and admin panel" section. Add them back here when
+-- that feature is actually built.

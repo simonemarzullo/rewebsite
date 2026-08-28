@@ -167,24 +167,29 @@ listings with select buyers/investors before they hit the open market.
 - **Not in the sitemap**, and the page sends `noindex` — it won't show up
   in Google.
 
-## Client dashboard, team resource hub, and admin panel
+## Client dashboard and admin panel
 
-Three private, password-gated sections, all reachable only via direct
-link (not in the nav, footer, or sitemap):
+Two private, password-gated sections (`api/portal.py`), reachable only via
+direct link (not in the nav, footer, or sitemap):
 
 - **`/dashboard`** — a per-client login where a seller can check on a
   listing's progress: showings, emails sent, calls made, texts sent, offers
   received (price, cash/loan, contingencies, close of escrow), and feedback
   (split into showing feedback and pricing feedback from agents/buyers).
-- **`/team`** — a shared resource hub for team members (starting with
-  Monica Der): a grid of links you manage from `/admin` (Google Drive
-  script PDFs, other tools).
-- **`/admin`** — your own dashboard to run all of it: create client and
-  team-member accounts (email + a password you choose — tell them what it
-  is, there's no "forgot password" flow yet), add listings to a client and
-  update their numbers, add offers and feedback, manage the `/team`
-  resource tiles, and manage the list of contingency types offers can be
-  tagged with (add new ones anytime, e.g. "Sale of Buyer's Property").
+- **`/admin`** — your own dashboard to run it: create client accounts
+  (email + a password you choose — tell them what it is, there's no
+  "forgot password" flow yet), add listings to a client and update their
+  numbers, add offers and feedback, and manage the list of contingency
+  types offers can be tagged with (add new ones anytime, e.g. "Sale of
+  Buyer's Property").
+
+Both live in one Vercel function (`api/portal.py`) rather than the usual
+one-file-per-page pattern — Vercel's Hobby plan caps a deployment at 12
+Serverless Functions, and this site was already at 11, so a combined file
+keeps the total at 12 instead of going over. A team-member resource hub
+was designed alongside this but held back for a later phase (would need
+either a paid Vercel plan for more functions, or folding into this same
+file too).
 
 This is the first feature on this site backed by a real database, since it
 needs to remember data between visits (everything else is either static or
@@ -201,10 +206,9 @@ computed on the fly). One-time setup:
    generate one with `openssl rand -hex 32`) in Vercel's Environment
    Variables, then redeploy.
 
-**Cancelling an account**: deactivating a client or team member from
-`/admin` blocks their login immediately, but keeps all their data — it
-moves into a "History" section in `/admin` instead of being deleted, and
-can be reactivated later.
+**Cancelling an account**: deactivating a client from `/admin` blocks their
+login immediately, but keeps all their data — it moves into a "History"
+section in `/admin` instead of being deleted, and can be reactivated later.
 
 ## Known gaps / things to add later
 
