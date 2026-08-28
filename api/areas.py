@@ -500,7 +500,6 @@ PAGE_DATA = {
 }
 
 NAV_ITEMS = [
-    ("START", "/home"),
     ("AREAS", "/areas"),
     ("OFF-MARKET", "/off-market"),
     ("NEWS", "/news"),
@@ -508,6 +507,7 @@ NAV_ITEMS = [
     ("THE AGENCY", "/#the-agency"),
     ("CALCULATOR", "/flipcalculator"),
     ("CONTACT", "/contact"),
+    ("LOG IN", "/dashboard"),
 ]
 
 THEME_INIT_SCRIPT = """<script>if ('scrollRestoration' in history) history.scrollRestoration = 'manual';</script>
