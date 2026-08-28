@@ -155,6 +155,7 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .om-logout{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--g5);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;font-family:inherit}
 
 /* CLIENT DASHBOARD -- listing stats, offers, feedback */
+.dash-hero{min-height:46vh}
 .db-listing{background:var(--g1);border:1px solid var(--g3);padding:28px 26px;margin-bottom:20px}
 .db-listing-head{display:flex;align-items:center;gap:10px;margin-bottom:18px}
 .db-listing-address{font-family:var(--serif);font-size:1.15rem;font-weight:400;color:var(--white)}

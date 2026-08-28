@@ -496,8 +496,8 @@ def build_error_html(message, title):
 def build_client_login_html(error=None):
     error_html = f'<div class="om-error" style="display:block">{html.escape(error)}</div>' if error else '<div class="om-error" id="dash-error"></div>'
     body = f"""
-<section class="area-hero om-hero-compact">
-  <img class="area-hero-img" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk" loading="eager" style="object-position:50% 55%">
+<section class="area-hero dash-hero">
+  <img class="area-hero-img" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk" loading="eager" style="object-position:50% 50%">
   <div class="area-hero-scrim"></div>
   <div class="area-hero-content">
     <div class="area-eyebrow"><span class="area-eyebrow-line"></span><span class="area-eyebrow-text">Client Access</span></div>
@@ -650,8 +650,8 @@ def build_client_dashboard_html(data):
         listings_html = '<div class="om-empty">No listings on your account yet -- check back once Simone has one set up.</div>'
 
     body = f"""
-<section class="area-hero om-hero-compact">
-  <img class="area-hero-img" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk" loading="eager" style="object-position:50% 55%">
+<section class="area-hero dash-hero">
+  <img class="area-hero-img" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk" loading="eager" style="object-position:50% 50%">
   <div class="area-hero-scrim"></div>
   <div class="area-hero-content">
     <div class="area-eyebrow"><span class="area-eyebrow-line"></span><span class="area-eyebrow-text">Client Access</span></div>
