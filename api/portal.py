@@ -1079,7 +1079,7 @@ def build_admin_html(clients, metric_types, toolbox_links):
     </details>
 
     <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Marketing Metrics</h2>
-    <p class="adm-tagline" style="margin-bottom:16px">Define any metric you want tracked per listing (e.g. "Online Reactions", "Zillow Saves", "Ad Impressions") -- each shows up as a field under a listing's Marketing section once added here.</p>
+    <p class="adm-tagline" style="margin-bottom:16px">Define any metric you want tracked per listing (e.g. "Online Reactions", "Zillow Saves", "Ad Impressions") -- each shows up as a field under a listing's Marketing tab once added here.</p>
     <div class="adm-panel">
       <form id="adm-create-metric-form" class="adm-inline-form">
         <input type="text" name="name" class="om-input" placeholder="New metric name" required>
@@ -1125,7 +1125,7 @@ document.getElementById('adm-create-client-form').addEventListener('submit', asy
   errEl.style.display = 'none';
   try {{
     await adminPost({{action: 'create_client', email, name: form.name.value.trim(), password}});
-    showNotice(`Client created — send them: ${{email}} / ${{password}}`);
+    showNotice(`Seller created — send them: ${{email}} / ${{password}}`);
     window.location.reload();
   }} catch (err) {{
     errEl.textContent = err.message;
@@ -1387,7 +1387,7 @@ class handler(BaseHTTPRequestHandler):
                     create_client(conn, email, name, password)
                 except psycopg2.errors.UniqueViolation:
                     conn.rollback()
-                    self._send_json(400, {"ok": False, "error": "A client with that email already exists."})
+                    self._send_json(400, {"ok": False, "error": "A seller with that email already exists."})
                     return
                 self._send_json(200, {"ok": True})
                 return
