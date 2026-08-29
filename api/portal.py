@@ -1388,10 +1388,15 @@ def _offmarket_listing_admin_html(listing):
     toggle_label = "Hide" if listing["active"] else "Show"
     photo_urls_text = "\n".join(listing.get("photo_urls") or [])
     flyer_path = f"/flyer/{listing['id']}"
+    display_address = "Address Available Upon Request" if listing.get("hide_address") else listing["address"]
     return f"""
-    <div class="adm-listing">
+  <details class="adm-client">
+    <summary>
+      <span class="adm-client-email">{html.escape(display_address)}</span>
+      <span class="om-status">{status_label}</span>
+    </summary>
+    <div class="adm-client-body">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
-        <span class="om-status">{status_label}</span>
         <a href="{flyer_path}" target="_blank" rel="noopener noreferrer" class="om-logout">View Flyer</a>
         <button type="button" class="om-logout adm-copy-link-btn" data-path="{flyer_path}">Copy Flyer Link</button>
         <button type="button" class="om-logout adm-toggle-active" data-action="toggle_offmarket_listing_active" data-id="{listing["id"]}">{toggle_label}</button>
@@ -1428,7 +1433,8 @@ def _offmarket_listing_admin_html(listing):
         </label>
         <button type="submit" class="btn-primary adm-btn-sm">Save Listing</button>
       </form>
-    </div>"""
+    </div>
+  </details>"""
 
 
 def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listings):
