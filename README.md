@@ -172,18 +172,20 @@ listings with select buyers/investors before they hit the open market.
 Two private, password-gated sections (`api/portal.py`):
 
 - **`/clientaccess`** — a per-client login where a seller can check on a
-  listing's progress: showings, emails sent, calls made, texts sent, offers
-  received (price, cash/loan, contingencies, close of escrow), and feedback
-  (split into showing feedback and pricing feedback from agents/buyers).
-  Linked from the nav as "Log In" so clients can find their way back in
-  without needing the raw URL.
-- **`/admin`** — your own dashboard to run it: create client accounts
-  (email + a password you choose — tell them what it is, there's no
-  "forgot password" flow yet), add listings to a client and update their
-  numbers, add offers and feedback, and manage the list of contingency
-  types offers can be tagged with (add new ones anytime, e.g. "Sale of
-  Buyer's Property"). Deliberately **not** linked anywhere on the site
-  (not in the nav, footer, or sitemap) — bookmark it directly.
+  listing's progress across four tabs: Marketing (emails sent, calls made,
+  texts sent, plus any custom metrics you've added), Number of Offers
+  (price, cash/loan, close of escrow), Open Houses & Showings (a dated log
+  of each one, with groups through and notes), and Buyer Feedback (every
+  feedback note logged against the listing, labeled by type). Linked from
+  the nav as "Log In" so clients can find their way back in without
+  needing the raw URL.
+- **`/admin`** — your own dashboard to run it: create seller accounts
+  (email + a password you choose — tell them what it is; use "Reset
+  Password" if they forget it), add listings to a seller and update the
+  same four tabs above, plus an Access Toolbox of your own shortcut links
+  and a Marketing Metrics list (add whatever custom metric you want
+  tracked, e.g. "Zillow Saves"). Deliberately **not** linked anywhere on
+  the site (not in the nav, footer, or sitemap) — bookmark it directly.
 
 Both live in one Vercel function (`api/portal.py`) rather than the usual
 one-file-per-page pattern — Vercel's Hobby plan caps a deployment at 12

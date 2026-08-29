@@ -171,16 +171,14 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .db-offer-main{display:flex;align-items:center;gap:10px}
 .db-offer-price{font-family:var(--serif);color:var(--white);font-size:1.15rem}
 .db-offer-meta{font-size:.78rem;color:var(--g5);margin-top:4px}
-.db-offer-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.db-tag{font-size:.6rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border:1px solid var(--g3);color:var(--g6)}
-.db-tag-muted{color:var(--g5)}
 .db-note{padding:12px 0;border-top:1px solid var(--g3)}
 .db-note:first-child{border-top:none}
 .db-note-date{font-size:.6rem;color:var(--g5);margin-bottom:4px}
 .db-note-sub{margin-left:8px;color:var(--red)}
 .db-note-text{font-size:.85rem;line-height:1.6;color:var(--g6);font-weight:300}
-.db-checkbox-group{display:flex;flex-wrap:wrap;gap:14px;padding:8px 0;width:100%}
-.db-checkbox{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--g6);font-weight:300}
+.db-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 18px}
+.db-tab{background:transparent;border:1px solid var(--g3);color:var(--g5);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;font-weight:500;padding:10px 16px;cursor:pointer;transition:background .2s,border-color .2s,color .2s}
+.db-tab.active{background:var(--red);border-color:var(--red);color:#fff}
 
 /* ADMIN PANEL */
 .adm-notice{background:var(--g1);border:1px solid var(--red);color:var(--white);padding:14px 18px;font-size:.85rem;margin-bottom:24px}
@@ -201,7 +199,7 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .adm-client-body{padding:0 20px 24px}
 .adm-listing{background:var(--black);border:1px solid var(--g3);padding:20px;margin-bottom:16px}
 .adm-listing-head{font-family:var(--serif);color:var(--white);font-size:1rem;margin-bottom:14px}
-.adm-subsection{margin-top:18px;padding-top:16px;border-top:1px solid var(--g3)}
+.adm-listing-body{margin-top:18px;padding-top:4px;border-top:1px solid var(--g3)}
 .adm-history{margin-top:8px;margin-bottom:8px}
 .adm-history summary{padding:12px 0;cursor:pointer;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--g5);list-style:none}
 .adm-history summary::-webkit-details-marker{display:none}
@@ -355,6 +353,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   .news-modal-close:hover{color:var(--white)}
   .adm-modal-close:hover{color:var(--white)}
   .adm-toolbox-add-btn:hover{background:var(--red-h)}
+  .db-tab:not(.active):hover{border-color:var(--g5);color:var(--white)}
   .breadcrumb a:hover{color:#fff}
   .btn-primary:hover{background:var(--red-h);transform:translateY(-1px)}
   .btn-hero-outline:hover{border-color:#fff;background:rgba(255,255,255,.1)}

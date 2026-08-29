@@ -45,8 +45,10 @@ ALTER TABLE feedback_notes DROP CONSTRAINT IF EXISTS feedback_notes_category_che
 ALTER TABLE feedback_notes ADD CONSTRAINT feedback_notes_category_check
     CHECK (category IN ('showing', 'pricing_agent', 'pricing_buyer', 'buyer_feedback'));
 
--- Admin-managed master list of contingency types, so Simone can add new
--- ones (e.g. "Sale of Buyer's Property") without a code change.
+-- contingency_types existed for an "add contingencies to an offer" feature
+-- that was dropped from the UI -- the table (and offers.contingencies below)
+-- are kept only so nothing breaks for anyone still on an older deployment;
+-- neither is written to or read by the app anymore.
 CREATE TABLE IF NOT EXISTS contingency_types (
     id     SERIAL PRIMARY KEY,
     name   TEXT NOT NULL UNIQUE,
@@ -56,10 +58,7 @@ INSERT INTO contingency_types (name) VALUES
     ('Inspection'), ('Appraisal'), ('Loan/Financing'), ('Sale of Buyer''s Property')
 ON CONFLICT (name) DO NOTHING;
 
--- Offers received on a listing. `contingencies` stores the selected
--- contingency-type names at the time the offer was entered (denormalized on
--- purpose -- an offer keeps its terms even if a contingency type is later
--- renamed or deactivated).
+-- Offers received on a listing.
 CREATE TABLE IF NOT EXISTS offers (
     id               SERIAL PRIMARY KEY,
     listing_id       INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
@@ -70,6 +69,18 @@ CREATE TABLE IF NOT EXISTS offers (
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_offers_listing_id ON offers(listing_id);
+
+-- One row per open house / showing event logged against a listing -- a
+-- dated log (not a running counter like showings_count used to be).
+CREATE TABLE IF NOT EXISTS open_houses (
+    id           SERIAL PRIMARY KEY,
+    listing_id   INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+    event_date   DATE NOT NULL,
+    groups_count INTEGER NOT NULL DEFAULT 0,
+    notes        TEXT NOT NULL DEFAULT '',
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_open_houses_listing_id ON open_houses(listing_id);
 
 -- Admin-defined marketing metric names (e.g. "Online Reactions", "Zillow
 -- Saves") -- same pattern as contingency_types, so Simone can add whatever

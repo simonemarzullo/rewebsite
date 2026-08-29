@@ -23,9 +23,9 @@ someone else's client session).
 data stays intact and shows up in admin's History filter, never gone for
 good.
 
-Requires the `clients`/`listings`/`feedback_notes`/`contingency_types`/
-`offers` tables from db/schema.sql, POSTGRES_URL (or DATABASE_URL),
-ADMIN_PASSWORD, and SESSION_SECRET.
+Requires the `clients`/`listings`/`feedback_notes`/`offers`/`open_houses`
+tables from db/schema.sql, POSTGRES_URL (or DATABASE_URL), ADMIN_PASSWORD,
+and SESSION_SECRET.
 
 Team member / resource hub support was dropped from this build to fit
 the function-count limit -- may come back as its own file later if the
@@ -62,6 +62,23 @@ FEEDBACK_CATEGORIES = {
     "pricing_buyer": "Pricing Feedback (Buyer)",
     "buyer_feedback": "Buyer Feedback",
 }
+
+# Shared tab-toggle script for the 4-tab layout on each listing (Marketing /
+# Number of Offers / Open Houses & Showings / Buyer Feedback) -- used on both
+# the client dashboard and the admin panel, each listing scoped independently
+# via the nearest [data-tabscope] ancestor.
+DB_TABS_SCRIPT = """
+document.querySelectorAll('[data-tabscope]').forEach(function (scope) {
+  var tabs = scope.querySelectorAll(':scope > .db-tabs > .db-tab');
+  var panels = scope.querySelectorAll(':scope > .db-tab-panel');
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      tabs.forEach(function (t) { t.classList.toggle('active', t === tab); });
+      panels.forEach(function (p) { p.style.display = (p.dataset.tabPanel === tab.dataset.tab) ? '' : 'none'; });
+    });
+  });
+});
+"""
 
 NAV_ITEMS = [
     ("AREAS", "/areas"),
@@ -377,7 +394,7 @@ def fetch_dashboard_data(conn, client_id):
             return None
 
         cur.execute(
-            """SELECT id, address, status, showings_count, emails_sent_count,
+            """SELECT id, address, status, emails_sent_count,
                       calls_made_count, texts_sent_count
                FROM listings WHERE client_id = %s ORDER BY created_at DESC""",
             (client_id,),
@@ -389,20 +406,23 @@ def fetch_dashboard_data(conn, client_id):
 
         for listing in listings:
             cur.execute(
-                """SELECT price, financing_type, close_of_escrow, contingencies, created_at
+                """SELECT price, financing_type, close_of_escrow, created_at
                    FROM offers WHERE listing_id = %s ORDER BY created_at ASC""",
                 (listing["id"],),
             )
             listing["offers"] = cur.fetchall()
 
             cur.execute(
+                "SELECT event_date, groups_count, notes FROM open_houses WHERE listing_id = %s ORDER BY event_date DESC, created_at DESC",
+                (listing["id"],),
+            )
+            listing["open_houses"] = cur.fetchall()
+
+            cur.execute(
                 "SELECT category, note, created_at FROM feedback_notes WHERE listing_id = %s ORDER BY created_at DESC",
                 (listing["id"],),
             )
-            notes = cur.fetchall()
-            listing["showing_feedback"] = [n for n in notes if n["category"] == "showing"]
-            listing["pricing_feedback"] = [n for n in notes if n["category"] in ("pricing_agent", "pricing_buyer")]
-            listing["buyer_feedback"] = [n for n in notes if n["category"] == "buyer_feedback"]
+            listing["feedback"] = cur.fetchall()
 
             cur.execute("SELECT metric_type_id, value FROM listing_metrics WHERE listing_id = %s", (listing["id"],))
             values_by_type = {row["metric_type_id"]: row["value"] for row in cur.fetchall()}
@@ -423,7 +443,7 @@ def fetch_all_clients(conn):
 
         for client in clients:
             cur.execute(
-                """SELECT id, address, status, showings_count, emails_sent_count,
+                """SELECT id, address, status, emails_sent_count,
                           calls_made_count, texts_sent_count
                    FROM listings WHERE client_id = %s ORDER BY created_at DESC""",
                 (client["id"],),
@@ -434,27 +454,25 @@ def fetch_all_clients(conn):
                     "SELECT id, category, note, created_at FROM feedback_notes WHERE listing_id = %s ORDER BY created_at DESC",
                     (listing["id"],),
                 )
-                notes = cur.fetchall()
-                listing["feedback"] = [n for n in notes if n["category"] != "buyer_feedback"]
-                listing["buyer_feedback"] = [n for n in notes if n["category"] == "buyer_feedback"]
+                listing["feedback"] = cur.fetchall()
 
                 cur.execute(
-                    "SELECT id, price, financing_type, close_of_escrow, contingencies, created_at FROM offers WHERE listing_id = %s ORDER BY created_at ASC",
+                    "SELECT id, price, financing_type, close_of_escrow, created_at FROM offers WHERE listing_id = %s ORDER BY created_at ASC",
                     (listing["id"],),
                 )
                 listing["offers"] = cur.fetchall()
+
+                cur.execute(
+                    "SELECT id, event_date, groups_count, notes FROM open_houses WHERE listing_id = %s ORDER BY event_date DESC, created_at DESC",
+                    (listing["id"],),
+                )
+                listing["open_houses"] = cur.fetchall()
 
                 cur.execute("SELECT metric_type_id, value FROM listing_metrics WHERE listing_id = %s", (listing["id"],))
                 values_by_type = {row["metric_type_id"]: row["value"] for row in cur.fetchall()}
                 listing["metric_values"] = {mt["id"]: values_by_type.get(mt["id"], 0) for mt in metric_types}
             client["listings"] = listings
         return clients, metric_types
-
-
-def fetch_all_contingency_types(conn):
-    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        cur.execute("SELECT id, name, active FROM contingency_types ORDER BY name")
-        return cur.fetchall()
 
 
 def create_client(conn, email, name, password):
@@ -492,12 +510,21 @@ def update_listing_status(conn, listing_id, status):
     conn.commit()
 
 
-def update_marketing(conn, listing_id, showings, emails, calls, texts):
+def update_marketing(conn, listing_id, emails, calls, texts):
     with conn.cursor() as cur:
         cur.execute(
-            """UPDATE listings SET showings_count = %s, emails_sent_count = %s,
+            """UPDATE listings SET emails_sent_count = %s,
                calls_made_count = %s, texts_sent_count = %s, updated_at = now() WHERE id = %s""",
-            (showings, emails, calls, texts, listing_id),
+            (emails, calls, texts, listing_id),
+        )
+    conn.commit()
+
+
+def create_open_house(conn, listing_id, event_date, groups_count, notes):
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO open_houses (listing_id, event_date, groups_count, notes) VALUES (%s, %s, %s, %s)",
+            (listing_id, event_date, groups_count, notes),
         )
     conn.commit()
 
@@ -511,25 +538,13 @@ def add_feedback(conn, listing_id, category, note):
     conn.commit()
 
 
-def add_offer(conn, listing_id, price, financing_type, close_of_escrow, contingencies):
+def add_offer(conn, listing_id, price, financing_type, close_of_escrow):
     with conn.cursor() as cur:
         cur.execute(
-            """INSERT INTO offers (listing_id, price, financing_type, close_of_escrow, contingencies)
-               VALUES (%s, %s, %s, %s, %s)""",
-            (listing_id, price, financing_type, close_of_escrow, contingencies),
+            """INSERT INTO offers (listing_id, price, financing_type, close_of_escrow)
+               VALUES (%s, %s, %s, %s)""",
+            (listing_id, price, financing_type, close_of_escrow),
         )
-    conn.commit()
-
-
-def create_contingency_type(conn, name):
-    with conn.cursor() as cur:
-        cur.execute("INSERT INTO contingency_types (name) VALUES (%s) ON CONFLICT (name) DO NOTHING", (name,))
-    conn.commit()
-
-
-def toggle_contingency_type_active(conn, contingency_type_id):
-    with conn.cursor() as cur:
-        cur.execute("UPDATE contingency_types SET active = NOT active WHERE id = %s", (contingency_type_id,))
     conn.commit()
 
 
@@ -673,19 +688,10 @@ def _stat_tile(label, value):
     </div>"""
 
 
-FEEDBACK_CATEGORY_LABEL = {
-    "pricing_agent": "From an agent",
-    "pricing_buyer": "From a buyer",
-}
-
-
 def _offer_html(offer, number):
     price = f"${offer['price']:,.0f}"
     financing_label = "Cash" if offer["financing_type"] == "cash" else "Loan"
     close_label = offer["close_of_escrow"].strftime("%b %-d, %Y") if offer["close_of_escrow"] else "Not specified"
-    tags = "".join(f'<span class="db-tag">{html.escape(c)}</span>' for c in (offer["contingencies"] or []))
-    if not tags:
-        tags = '<span class="db-tag db-tag-muted">No contingencies</span>'
     return f"""<div class="db-offer-row">
       <div class="db-offer-main">
         <span class="db-offer-number">Offer #{number}</span>
@@ -693,7 +699,17 @@ def _offer_html(offer, number):
         <span class="om-status">{financing_label}</span>
       </div>
       <div class="db-offer-meta">Close of escrow: {close_label}</div>
-      <div class="db-offer-tags">{tags}</div>
+    </div>"""
+
+
+def _open_house_html(oh):
+    date_label = oh["event_date"].strftime("%b %-d, %Y") if oh["event_date"] else ""
+    groups = oh["groups_count"] or 0
+    groups_label = f"{groups} group{'s' if groups != 1 else ''} through"
+    note_html = f'<div class="db-note-text">{html.escape(oh["notes"])}</div>' if oh.get("notes") else ""
+    return f"""<div class="db-note">
+      <div class="db-note-date">{date_label}<span class="db-note-sub">{groups_label}</span></div>
+      {note_html}
     </div>"""
 
 
@@ -702,10 +718,9 @@ def _feedback_html(notes, empty_message):
         return f'<p class="db-empty-note">{html.escape(empty_message)}</p>'
     items = []
     for n in notes:
-        sub = FEEDBACK_CATEGORY_LABEL.get(n["category"])
-        sub_html = f'<span class="db-note-sub">{sub}</span>' if sub else ""
+        sub = FEEDBACK_CATEGORIES.get(n["category"], n["category"])
         items.append(f"""<div class="db-note">
-          <div class="db-note-date">{n["created_at"].strftime("%b %-d, %Y")}{sub_html}</div>
+          <div class="db-note-date">{n["created_at"].strftime("%b %-d, %Y")}<span class="db-note-sub">{html.escape(sub)}</span></div>
           <div class="db-note-text">{html.escape(n["note"])}</div>
         </div>""")
     return "".join(items)
@@ -713,40 +728,38 @@ def _feedback_html(notes, empty_message):
 
 def _listing_html(listing):
     marketing_stats = "".join([
-        _stat_tile("Showings", listing["showings_count"]),
         _stat_tile("Emails Sent", listing["emails_sent_count"]),
         _stat_tile("Calls Made", listing["calls_made_count"]),
         _stat_tile("Texts Sent", listing["texts_sent_count"]),
     ] + [_stat_tile(m["name"], m["value"]) for m in listing["metrics"]])
 
     offers_html = "".join(_offer_html(o, i + 1) for i, o in enumerate(listing["offers"])) or '<p class="db-empty-note">No offers received yet.</p>'
-    showing_feedback_html = _feedback_html(listing["showing_feedback"], "No showing feedback logged yet.")
-    pricing_feedback_html = _feedback_html(listing["pricing_feedback"], "No pricing feedback logged yet.")
-    buyer_feedback_html = _feedback_html(listing["buyer_feedback"], "No buyer feedback logged yet.")
+    open_houses_html = "".join(_open_house_html(oh) for oh in listing["open_houses"]) or '<p class="db-empty-note">No open houses logged yet.</p>'
+    feedback_html = _feedback_html(listing["feedback"], "No feedback logged yet.")
 
     return f"""
-    <div class="db-listing">
+    <div class="db-listing" data-tabscope>
       <div class="db-listing-head">
         <div class="db-listing-address">{html.escape(listing["address"])}</div>
         <span class="om-status">{html.escape(listing["status"])}</span>
       </div>
-      <div class="db-section">
-        <div class="db-section-title">Offers Received</div>
+      <div class="db-tabs">
+        <button type="button" class="db-tab active" data-tab="marketing">Marketing</button>
+        <button type="button" class="db-tab" data-tab="offers">Number of Offers</button>
+        <button type="button" class="db-tab" data-tab="openhouses">Open Houses &amp; Showings</button>
+        <button type="button" class="db-tab" data-tab="feedback">Buyer Feedback</button>
+      </div>
+      <div class="db-tab-panel" data-tab-panel="marketing">
+        <div class="db-stats">{marketing_stats}</div>
+      </div>
+      <div class="db-tab-panel" data-tab-panel="offers" style="display:none">
         {offers_html}
       </div>
-      <div class="db-section">
-        <div class="db-section-title">Marketing</div>
-        <div class="db-stats">{marketing_stats}</div>
-        <div class="db-subsection-title">Buyer Feedback</div>
-        {buyer_feedback_html}
+      <div class="db-tab-panel" data-tab-panel="openhouses" style="display:none">
+        {open_houses_html}
       </div>
-      <div class="db-section">
-        <div class="db-section-title">Showing Feedback</div>
-        {showing_feedback_html}
-      </div>
-      <div class="db-section">
-        <div class="db-section-title">Pricing Feedback</div>
-        {pricing_feedback_html}
+      <div class="db-tab-panel" data-tab-panel="feedback" style="display:none">
+        {feedback_html}
       </div>
     </div>"""
 
@@ -778,6 +791,7 @@ def build_client_dashboard_html(data):
     <div style="text-align:center;margin-top:36px"><a href="/clientaccess?logout=1" class="om-logout">Log out</a></div>
   </div>
 </section>
+<script>{DB_TABS_SCRIPT}</script>
 """
     return render_page(body, "Client Dashboard | Simone Marzullo")
 
@@ -842,29 +856,18 @@ def _status_options(current):
 
 
 
-def _contingency_checkboxes(contingency_types, listing_id):
-    boxes = []
-    for c in contingency_types:
-        if not c["active"]:
-            continue
-        cid = f"cont-{listing_id}-{c['id']}"
-        boxes.append(f'<label class="db-checkbox"><input type="checkbox" name="contingencies" value="{html.escape(c["name"])}" id="{cid}"> {html.escape(c["name"])}</label>')
-    return "".join(boxes) or '<span class="db-empty-note">No contingency types yet -- add one below.</span>'
-
-
 def _offer_admin_html(offer, number):
     price = f"${offer['price']:,.0f}"
     financing_label = "Cash" if offer["financing_type"] == "cash" else "Loan"
     close_label = offer["close_of_escrow"].strftime("%b %-d, %Y") if offer["close_of_escrow"] else "Not specified"
-    tags = ", ".join(offer["contingencies"]) or "None"
     return f"""<details class="adm-offer">
       <summary>Offer #{number} &mdash; {price}</summary>
-      <div class="db-offer-meta">Financing: {financing_label} &middot; Close: {close_label} &middot; Contingencies: {html.escape(tags)}</div>
+      <div class="db-offer-meta">Financing: {financing_label} &middot; Close: {close_label}</div>
     </details>"""
 
 
-def _category_options_for(exclude=()):
-    return "".join(f'<option value="{k}">{v}</option>' for k, v in FEEDBACK_CATEGORIES.items() if k not in exclude)
+def _category_options():
+    return "".join(f'<option value="{k}">{v}</option>' for k, v in FEEDBACK_CATEGORIES.items())
 
 
 def _metric_inputs_html(metric_types, metric_values):
@@ -879,18 +882,13 @@ def _metric_inputs_html(metric_types, metric_values):
     return "".join(inputs)
 
 
-def _listing_admin_html(listing, contingency_types, metric_types):
+def _listing_admin_html(listing, metric_types):
     offers_html = "".join(_offer_admin_html(o, i + 1) for i, o in enumerate(listing["offers"])) or '<p class="db-empty-note">No offers yet.</p>'
-
+    open_houses_html = "".join(_open_house_html(oh) for oh in listing["open_houses"]) or '<p class="db-empty-note">No open houses logged yet.</p>'
     feedback_html = "".join(
-        f"""<div class="db-note"><div class="db-note-date">{f["created_at"].strftime("%b %-d, %Y")} &middot; {FEEDBACK_CATEGORIES.get(f["category"], f["category"])}</div><div class="db-note-text">{html.escape(f["note"])}</div></div>"""
+        f"""<div class="db-note"><div class="db-note-date">{f["created_at"].strftime("%b %-d, %Y")}<span class="db-note-sub">{html.escape(FEEDBACK_CATEGORIES.get(f["category"], f["category"]))}</span></div><div class="db-note-text">{html.escape(f["note"])}</div></div>"""
         for f in listing["feedback"]
     ) or '<p class="db-empty-note">No feedback yet.</p>'
-
-    buyer_feedback_html = "".join(
-        f"""<div class="db-note"><div class="db-note-date">{f["created_at"].strftime("%b %-d, %Y")}</div><div class="db-note-text">{html.escape(f["note"])}</div></div>"""
-        for f in listing["buyer_feedback"]
-    ) or '<p class="db-empty-note">No buyer feedback yet.</p>'
 
     return f"""
     <div class="adm-listing">
@@ -902,66 +900,74 @@ def _listing_admin_html(listing, contingency_types, metric_types):
         <button type="submit" class="btn-primary adm-btn-sm">Save</button>
       </form>
 
-      <div class="adm-subsection">
-        <div class="db-section-title">Offers Received</div>
-        {offers_html}
-        <form class="adm-inline-form" data-action="add_offer" data-listing-id="{listing["id"]}">
-          <input type="number" name="price" class="om-input" placeholder="Price" min="0" step="1" required>
-          <label class="om-field"><span class="om-field-label">Financing</span>
-            <select name="financing_type" class="om-input"><option value="cash">Cash</option><option value="loan">Loan</option></select>
-          </label>
-          <label class="om-field"><span class="om-field-label">Close of Escrow</span>
-            <input type="date" name="close_of_escrow" class="om-input">
-          </label>
-          <div class="db-checkbox-group">{_contingency_checkboxes(contingency_types, listing["id"])}</div>
-          <button type="submit" class="btn-primary adm-btn-sm">+ Add Offer</button>
-        </form>
-      </div>
+      <div class="adm-listing-body" data-tabscope>
+        <div class="db-tabs">
+          <button type="button" class="db-tab active" data-tab="marketing">Marketing</button>
+          <button type="button" class="db-tab" data-tab="offers">Number of Offers</button>
+          <button type="button" class="db-tab" data-tab="openhouses">Open Houses &amp; Showings</button>
+          <button type="button" class="db-tab" data-tab="feedback">Buyer Feedback</button>
+        </div>
 
-      <div class="adm-subsection">
-        <div class="db-section-title">Marketing</div>
-        <form class="adm-inline-form" data-action="update_marketing" data-listing-id="{listing["id"]}">
-          <label class="om-field"><span class="om-field-label">Showings</span>
-            <input type="number" min="0" name="showings_count" class="om-input" value="{listing["showings_count"]}">
-          </label>
-          <label class="om-field"><span class="om-field-label">Emails Sent</span>
-            <input type="number" min="0" name="emails_sent_count" class="om-input" value="{listing["emails_sent_count"]}">
-          </label>
-          <label class="om-field"><span class="om-field-label">Calls Made</span>
-            <input type="number" min="0" name="calls_made_count" class="om-input" value="{listing["calls_made_count"]}">
-          </label>
-          <label class="om-field"><span class="om-field-label">Texts Sent</span>
-            <input type="number" min="0" name="texts_sent_count" class="om-input" value="{listing["texts_sent_count"]}">
-          </label>
-          {_metric_inputs_html(metric_types, listing["metric_values"])}
-          <button type="submit" class="btn-primary adm-btn-sm">Save</button>
-        </form>
+        <div class="db-tab-panel" data-tab-panel="marketing">
+          <form class="adm-inline-form" data-action="update_marketing" data-listing-id="{listing["id"]}">
+            <label class="om-field"><span class="om-field-label">Emails Sent</span>
+              <input type="number" min="0" name="emails_sent_count" class="om-input" value="{listing["emails_sent_count"]}">
+            </label>
+            <label class="om-field"><span class="om-field-label">Calls Made</span>
+              <input type="number" min="0" name="calls_made_count" class="om-input" value="{listing["calls_made_count"]}">
+            </label>
+            <label class="om-field"><span class="om-field-label">Texts Sent</span>
+              <input type="number" min="0" name="texts_sent_count" class="om-input" value="{listing["texts_sent_count"]}">
+            </label>
+            {_metric_inputs_html(metric_types, listing["metric_values"])}
+            <button type="submit" class="btn-primary adm-btn-sm">Save</button>
+          </form>
+        </div>
 
-        <div class="db-subsection-title">Buyer Feedback</div>
-        {buyer_feedback_html}
-        <form class="adm-inline-form" data-action="add_feedback" data-listing-id="{listing["id"]}">
-          <input type="hidden" name="category" value="buyer_feedback">
-          <input type="text" name="note" class="om-input" placeholder="Buyer feedback…" maxlength="2000" required>
-          <button type="submit" class="btn-primary adm-btn-sm">Add</button>
-        </form>
-      </div>
+        <div class="db-tab-panel" data-tab-panel="offers" style="display:none">
+          {offers_html}
+          <form class="adm-inline-form" data-action="add_offer" data-listing-id="{listing["id"]}">
+            <input type="number" name="price" class="om-input" placeholder="Price" min="0" step="1" required>
+            <label class="om-field"><span class="om-field-label">Financing</span>
+              <select name="financing_type" class="om-input"><option value="cash">Cash</option><option value="loan">Loan</option></select>
+            </label>
+            <label class="om-field"><span class="om-field-label">Close of Escrow</span>
+              <input type="date" name="close_of_escrow" class="om-input">
+            </label>
+            <button type="submit" class="btn-primary adm-btn-sm">+ Add Offer</button>
+          </form>
+        </div>
 
-      <div class="adm-subsection">
-        <div class="db-section-title">Feedback</div>
-        {feedback_html}
-        <form class="adm-inline-form" data-action="add_feedback" data-listing-id="{listing["id"]}">
-          <label class="om-field"><span class="om-field-label">Type</span>
-            <select name="category" class="om-input">{_category_options_for(exclude=("buyer_feedback",))}</select>
-          </label>
-          <input type="text" name="note" class="om-input" placeholder="Feedback note…" maxlength="2000" required>
-          <button type="submit" class="btn-primary adm-btn-sm">Add</button>
-        </form>
+        <div class="db-tab-panel" data-tab-panel="openhouses" style="display:none">
+          {open_houses_html}
+          <form class="adm-inline-form" data-action="add_open_house" data-listing-id="{listing["id"]}">
+            <label class="om-field"><span class="om-field-label">Date</span>
+              <input type="date" name="event_date" class="om-input" required>
+            </label>
+            <label class="om-field"><span class="om-field-label">Groups Through</span>
+              <input type="number" min="0" name="groups_count" class="om-input" value="0">
+            </label>
+            <input type="text" name="notes" class="om-input" placeholder="Notes (optional)" maxlength="2000">
+            <button type="submit" class="btn-primary adm-btn-sm">+ Log Open House</button>
+          </form>
+        </div>
+
+        <div class="db-tab-panel" data-tab-panel="feedback" style="display:none">
+          {feedback_html}
+          <form class="adm-inline-form" data-action="add_feedback" data-listing-id="{listing["id"]}">
+            <label class="om-field"><span class="om-field-label">Type</span>
+              <select name="category" class="om-input">{_category_options()}</select>
+            </label>
+            <input type="text" name="note" class="om-input" placeholder="Feedback note…" maxlength="2000" required>
+            <button type="submit" class="btn-primary adm-btn-sm">Add</button>
+          </form>
+        </div>
       </div>
     </div>"""
 
 
-def _client_admin_html(client, contingency_types, metric_types):
-    listings_html = "".join(_listing_admin_html(l, contingency_types, metric_types) for l in client["listings"]) or '<p class="db-empty-note">No listings yet.</p>'
+def _client_admin_html(client, metric_types):
+    listings_html = "".join(_listing_admin_html(l, metric_types) for l in client["listings"]) or '<p class="db-empty-note">No listings yet.</p>'
     status_label = "Active" if client["active"] else "Deactivated"
     return f"""
   <details class="adm-client">
@@ -983,18 +989,6 @@ def _client_admin_html(client, contingency_types, metric_types):
       <button type="button" class="om-logout adm-toggle-active" data-action="toggle_client_active" data-id="{client["id"]}" style="margin-top:14px">{"Deactivate" if client["active"] else "Reactivate"} this seller</button>
     </div>
   </details>"""
-
-
-def _contingency_type_admin_html(c):
-    status_label = "Active" if c["active"] else "Hidden"
-    return f"""
-  <div class="adm-list-row">
-    <span class="adm-client-email">{html.escape(c["name"])}</span>
-    <div class="adm-list-row-actions">
-      <span class="om-status">{status_label}</span>
-      <button type="button" class="om-logout adm-toggle-active" data-action="toggle_contingency_type_active" data-id="{c["id"]}">{"Hide" if c["active"] else "Show"}</button>
-    </div>
-  </div>"""
 
 
 def _metric_type_admin_html(m):
@@ -1022,13 +1016,12 @@ def _toolbox_link_admin_html(link):
   </form>"""
 
 
-def build_admin_html(clients, contingency_types, metric_types, toolbox_links):
+def build_admin_html(clients, metric_types, toolbox_links):
     active_clients = [c for c in clients if c["active"]]
     history_clients = [c for c in clients if not c["active"]]
 
-    clients_html = "".join(_client_admin_html(c, contingency_types, metric_types) for c in active_clients) or '<div class="om-empty">No active sellers -- add one above.</div>'
-    history_clients_html = "".join(_client_admin_html(c, contingency_types, metric_types) for c in history_clients) or '<div class="om-empty">No deactivated sellers.</div>'
-    contingency_html = "".join(_contingency_type_admin_html(c) for c in contingency_types) or '<p class="db-empty-note">No contingency types yet.</p>'
+    clients_html = "".join(_client_admin_html(c, metric_types) for c in active_clients) or '<div class="om-empty">No active sellers -- add one above.</div>'
+    history_clients_html = "".join(_client_admin_html(c, metric_types) for c in history_clients) or '<div class="om-empty">No deactivated sellers.</div>'
     metric_html = "".join(_metric_type_admin_html(m) for m in metric_types) or '<p class="db-empty-note">No marketing metrics yet -- add one below (e.g. "Online Reactions", "Zillow Saves").</p>'
 
     active_toolbox_links = [t for t in toolbox_links if t["active"]]
@@ -1085,15 +1078,6 @@ def build_admin_html(clients, contingency_types, metric_types, toolbox_links):
       <div class="adm-clients">{history_clients_html}</div>
     </details>
 
-    <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Contingency Types</h2>
-    <div class="adm-panel">
-      <form id="adm-create-contingency-form" class="adm-inline-form">
-        <input type="text" name="name" class="om-input" placeholder="New contingency type" required>
-        <button type="submit" class="btn-primary adm-btn-sm">Add</button>
-      </form>
-    </div>
-    <div class="adm-list">{contingency_html}</div>
-
     <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Marketing Metrics</h2>
     <p class="adm-tagline" style="margin-bottom:16px">Define any metric you want tracked per listing (e.g. "Online Reactions", "Zillow Saves", "Ad Impressions") -- each shows up as a field under a listing's Marketing section once added here.</p>
     <div class="adm-panel">
@@ -1149,17 +1133,6 @@ document.getElementById('adm-create-client-form').addEventListener('submit', asy
   }}
 }});
 
-document.getElementById('adm-create-contingency-form').addEventListener('submit', async function (e) {{
-  e.preventDefault();
-  const form = e.target;
-  try {{
-    await adminPost({{action: 'create_contingency_type', name: form.name.value.trim()}});
-    window.location.reload();
-  }} catch (err) {{
-    alert(err.message);
-  }}
-}});
-
 document.getElementById('adm-create-metric-form').addEventListener('submit', async function (e) {{
   e.preventDefault();
   const form = e.target;
@@ -1197,10 +1170,7 @@ document.querySelectorAll('form[data-action]').forEach(function (form) {{
     if (form.dataset.clientId) payload.clientId = form.dataset.clientId;
     if (form.dataset.id) payload.id = form.dataset.id;
     const fd = new FormData(form);
-    if (action === 'add_offer') {{
-      payload.contingencies = fd.getAll('contingencies');
-    }}
-    fd.forEach(function (value, key) {{ if (key !== 'contingencies') payload[key] = value; }});
+    fd.forEach(function (value, key) {{ payload[key] = value; }});
     try {{
       await adminPost(payload);
       if (action === 'reset_client_password') {{
@@ -1224,6 +1194,7 @@ document.querySelectorAll('.adm-toggle-active[data-action]').forEach(function (b
   }});
 }});
 </script>
+<script>{DB_TABS_SCRIPT}</script>
 """
     return render_page(body, "Admin | Simone Marzullo")
 
@@ -1277,7 +1248,6 @@ class handler(BaseHTTPRequestHandler):
                     self._send_html(503, build_error_html("The admin panel isn't set up yet -- POSTGRES_URL is missing.", "Admin | Simone Marzullo"))
                     return
                 clients, metric_types = fetch_all_clients(conn)
-                contingency_types = fetch_all_contingency_types(conn)
                 toolbox_links = fetch_all_toolbox_links(conn)
             except Exception as e:
                 print(f"portal(admin): failed to load data: {e}")
@@ -1286,7 +1256,7 @@ class handler(BaseHTTPRequestHandler):
             finally:
                 if conn:
                     conn.close()
-            self._send_html(200, build_admin_html(clients, contingency_types, metric_types, toolbox_links))
+            self._send_html(200, build_admin_html(clients, metric_types, toolbox_links))
             return
 
         # Default: client dashboard (section == "dashboard" or unset)
@@ -1458,11 +1428,10 @@ class handler(BaseHTTPRequestHandler):
 
             if action == "update_marketing":
                 listing_id = int(data.get("listingId"))
-                showings = max(0, int(data.get("showings_count") or 0))
                 emails = max(0, int(data.get("emails_sent_count") or 0))
                 calls = max(0, int(data.get("calls_made_count") or 0))
                 texts = max(0, int(data.get("texts_sent_count") or 0))
-                update_marketing(conn, listing_id, showings, emails, calls, texts)
+                update_marketing(conn, listing_id, emails, calls, texts)
                 for key, value in data.items():
                     if not key.startswith("metric_"):
                         continue
@@ -1501,25 +1470,24 @@ class handler(BaseHTTPRequestHandler):
                     return
                 close_raw = clean(data.get("close_of_escrow"), 20)
                 close_of_escrow = date.fromisoformat(close_raw) if close_raw else None
-                raw_contingencies = data.get("contingencies") or []
-                if not isinstance(raw_contingencies, list):
-                    raw_contingencies = []
-                contingencies = [clean(c, 200) for c in raw_contingencies[:20] if clean(c, 200)]
-                add_offer(conn, listing_id, price, financing_type, close_of_escrow, contingencies)
+                add_offer(conn, listing_id, price, financing_type, close_of_escrow)
                 self._send_json(200, {"ok": True})
                 return
 
-            if action == "create_contingency_type":
-                name = clean(data.get("name"), 200)
-                if not name:
-                    self._send_json(400, {"ok": False, "error": "Name can't be empty."})
+            if action == "add_open_house":
+                listing_id = int(data.get("listingId"))
+                event_raw = clean(data.get("event_date"), 20)
+                if not event_raw:
+                    self._send_json(400, {"ok": False, "error": "Date is required."})
                     return
-                create_contingency_type(conn, name)
-                self._send_json(200, {"ok": True})
-                return
-
-            if action == "toggle_contingency_type_active":
-                toggle_contingency_type_active(conn, int(data.get("id")))
+                try:
+                    event_date = date.fromisoformat(event_raw)
+                except ValueError:
+                    self._send_json(400, {"ok": False, "error": "Invalid date."})
+                    return
+                groups_count = max(0, int(data.get("groups_count") or 0))
+                notes = clean(data.get("notes"), 2000)
+                create_open_house(conn, listing_id, event_date, groups_count, notes)
                 self._send_json(200, {"ok": True})
                 return
 
