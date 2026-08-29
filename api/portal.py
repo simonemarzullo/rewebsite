@@ -768,31 +768,32 @@ def update_offmarket_buyer_email(conn, buyer_id, email):
 def fetch_all_offmarket_listings(conn):
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(
-            """SELECT id, address, area, status, price, beds, baths, sqft, description,
-                      photo_urls, photo_alt, active, created_at
+            """SELECT id, address, area, status, price, beds, baths, sqft, lot_size, description,
+                      photo_urls, photo_alt, hide_address, media_link, active, created_at
                FROM offmarket_listings ORDER BY created_at DESC"""
         )
         return cur.fetchall()
 
 
-def create_offmarket_listing(conn, address, area, status, price, beds, baths, sqft, description, photo_urls, photo_alt):
+def create_offmarket_listing(conn, address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt, hide_address, media_link):
     with conn.cursor() as cur:
         cur.execute(
             """INSERT INTO offmarket_listings
-               (address, area, status, price, beds, baths, sqft, description, photo_urls, photo_alt)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-            (address, area, status, price, beds, baths, sqft, description, photo_urls, photo_alt),
+               (address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt, hide_address, media_link)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            (address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt, hide_address, media_link),
         )
     conn.commit()
 
 
-def update_offmarket_listing(conn, listing_id, address, area, status, price, beds, baths, sqft, description, photo_urls, photo_alt):
+def update_offmarket_listing(conn, listing_id, address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt, hide_address, media_link):
     with conn.cursor() as cur:
         cur.execute(
             """UPDATE offmarket_listings SET address = %s, area = %s, status = %s, price = %s, beds = %s,
-               baths = %s, sqft = %s, description = %s, photo_urls = %s, photo_alt = %s, updated_at = now()
+               baths = %s, sqft = %s, lot_size = %s, description = %s, photo_urls = %s, photo_alt = %s,
+               hide_address = %s, media_link = %s, updated_at = now()
                WHERE id = %s""",
-            (address, area, status, price, beds, baths, sqft, description, photo_urls, photo_alt, listing_id),
+            (address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt, hide_address, media_link, listing_id),
         )
     conn.commit()
 
@@ -1295,6 +1296,10 @@ def _offmarket_listing_admin_html(listing):
       </div>
       <form class="adm-inline-form" data-action="update_offmarket_listing" data-id="{listing["id"]}">
         <input type="text" name="address" class="om-input" value="{html.escape(listing['address'])}" placeholder="Address" required style="flex-basis:100%">
+        <label class="db-checkbox" style="flex-basis:100%">
+          <input type="checkbox" name="hide_address" value="on" {"checked" if listing.get('hide_address') else ""}>
+          Hide address from buyers (shows the area instead until you're ready to reveal it)
+        </label>
         <input type="text" name="area" class="om-input" value="{html.escape(listing.get('area') or '')}" placeholder="Area / neighborhood">
         <label class="om-field"><span class="om-field-label">Status</span>
           <select name="status" class="om-input">{_offmarket_status_options(listing['status'])}</select>
@@ -1303,11 +1308,15 @@ def _offmarket_listing_admin_html(listing):
         <input type="text" name="beds" class="om-input" value="{html.escape(listing.get('beds') or '')}" placeholder="Beds" style="max-width:100px">
         <input type="text" name="baths" class="om-input" value="{html.escape(listing.get('baths') or '')}" placeholder="Baths" style="max-width:100px">
         <input type="text" name="sqft" class="om-input" value="{html.escape(listing.get('sqft') or '')}" placeholder="Sqft" style="max-width:120px">
-        <input type="text" name="description" class="om-input" value="{html.escape(listing.get('description') or '')}" placeholder="One-line description" style="flex-basis:100%">
+        <input type="text" name="lot_size" class="om-input" value="{html.escape(listing.get('lot_size') or '')}" placeholder="Lot Size" style="max-width:120px">
+        <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Description (max 1000 characters)</span>
+          <textarea name="description" class="om-input adm-autogrow" maxlength="1000" rows="1" style="width:100%;font-family:inherit;resize:none;overflow:hidden">{html.escape(listing.get('description') or '')}</textarea>
+        </label>
         <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Photo URLs (one per line -- first is the main photo)</span>
           <textarea name="photo_urls" class="om-input" rows="3" style="width:100%;font-family:inherit;resize:vertical">{html.escape(photo_urls_text)}</textarea>
         </label>
         <input type="text" name="photo_alt" class="om-input" value="{html.escape(listing.get('photo_alt') or '')}" placeholder="Photo description (for accessibility)" style="flex-basis:100%">
+        <input type="url" name="media_link" class="om-input" value="{html.escape(listing.get('media_link') or '')}" placeholder="Link to more photos/video (optional, e.g. a Drive folder)" style="flex-basis:100%">
         <button type="submit" class="btn-primary adm-btn-sm">Save Listing</button>
       </form>
     </div>"""
@@ -1404,6 +1413,10 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
       <div class="db-section-title">Add New Listing</div>
       <form id="adm-create-offmarket-listing-form" class="adm-inline-form" data-action="create_offmarket_listing">
         <input type="text" name="address" class="om-input" placeholder="Address" required style="flex-basis:100%">
+        <label class="db-checkbox" style="flex-basis:100%">
+          <input type="checkbox" name="hide_address" value="on">
+          Hide address from buyers (shows the area instead until you're ready to reveal it)
+        </label>
         <input type="text" name="area" class="om-input" placeholder="Area / neighborhood">
         <label class="om-field"><span class="om-field-label">Status</span>
           <select name="status" class="om-input">{_offmarket_status_options('Available')}</select>
@@ -1412,11 +1425,15 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
         <input type="text" name="beds" class="om-input" placeholder="Beds" style="max-width:100px">
         <input type="text" name="baths" class="om-input" placeholder="Baths" style="max-width:100px">
         <input type="text" name="sqft" class="om-input" placeholder="Sqft" style="max-width:120px">
-        <input type="text" name="description" class="om-input" placeholder="One-line description" style="flex-basis:100%">
+        <input type="text" name="lot_size" class="om-input" placeholder="Lot Size" style="max-width:120px">
+        <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Description (max 1000 characters)</span>
+          <textarea name="description" class="om-input adm-autogrow" maxlength="1000" rows="1" style="width:100%;font-family:inherit;resize:none;overflow:hidden"></textarea>
+        </label>
         <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Photo URLs (one per line -- first is the main photo)</span>
           <textarea name="photo_urls" class="om-input" rows="3" style="width:100%;font-family:inherit;resize:vertical"></textarea>
         </label>
         <input type="text" name="photo_alt" class="om-input" placeholder="Photo description (for accessibility)" style="flex-basis:100%">
+        <input type="url" name="media_link" class="om-input" placeholder="Link to more photos/video (optional, e.g. a Drive folder)" style="flex-basis:100%">
         <button type="submit" class="btn-primary adm-btn-sm">Add Listing</button>
       </form>
     </div>
@@ -1558,6 +1575,15 @@ document.querySelectorAll('.adm-copy-link-btn[data-path]').forEach(function (btn
     }}
     setTimeout(function () {{ btn.textContent = original; }}, 1500);
   }});
+}});
+
+function admAutoGrow(el) {{
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}}
+document.querySelectorAll('textarea.adm-autogrow').forEach(function (ta) {{
+  admAutoGrow(ta);
+  ta.addEventListener('input', function () {{ admAutoGrow(ta); }});
 }});
 </script>
 <script>{DB_TABS_SCRIPT}</script>
@@ -2001,8 +2027,9 @@ class handler(BaseHTTPRequestHandler):
                 create_offmarket_listing(
                     conn, address, clean(data.get("area")), status,
                     _normalize_price(clean(data.get("price"), 40)), clean(data.get("beds"), 20), clean(data.get("baths"), 20),
-                    clean(data.get("sqft"), 20), clean(data.get("description"), 2000),
+                    clean(data.get("sqft"), 20), clean(data.get("lot_size"), 20), clean(data.get("description"), 1000),
                     _parse_photo_urls(data.get("photo_urls")), clean(data.get("photo_alt"), 300),
+                    bool(data.get("hide_address")), clean(data.get("media_link"), 2000),
                 )
                 self._send_json(200, {"ok": True})
                 return
@@ -2019,8 +2046,9 @@ class handler(BaseHTTPRequestHandler):
                 update_offmarket_listing(
                     conn, listing_id, address, clean(data.get("area")), status,
                     _normalize_price(clean(data.get("price"), 40)), clean(data.get("beds"), 20), clean(data.get("baths"), 20),
-                    clean(data.get("sqft"), 20), clean(data.get("description"), 2000),
+                    clean(data.get("sqft"), 20), clean(data.get("lot_size"), 20), clean(data.get("description"), 1000),
                     _parse_photo_urls(data.get("photo_urls")), clean(data.get("photo_alt"), 300),
+                    bool(data.get("hide_address")), clean(data.get("media_link"), 2000),
                 )
                 self._send_json(200, {"ok": True})
                 return

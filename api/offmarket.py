@@ -338,7 +338,8 @@ def fetch_offmarket_buyer_by_email(conn, email):
 def fetch_active_offmarket_listings(conn):
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(
-            """SELECT id, address, area, status, price, beds, baths, sqft, description, photo_urls, photo_alt
+            """SELECT id, address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt,
+                      hide_address, media_link
                FROM offmarket_listings WHERE active = TRUE ORDER BY created_at DESC"""
         )
         return cur.fetchall()
@@ -347,7 +348,8 @@ def fetch_active_offmarket_listings(conn):
 def fetch_offmarket_listing_by_id(conn, listing_id):
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(
-            """SELECT id, address, area, status, price, beds, baths, sqft, description, photo_urls, photo_alt
+            """SELECT id, address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt,
+                      hide_address, media_link
                FROM offmarket_listings WHERE id = %s""",
             (listing_id,),
         )
@@ -506,13 +508,15 @@ def _listing_card_html(l):
         f"{l['beds']} bd" if l.get("beds") else "",
         f"{l['baths']} ba" if l.get("baths") else "",
         f"{l['sqft']} sqft" if l.get("sqft") else "",
+        f"{l['lot_size']} lot" if l.get("lot_size") else "",
     ] if s)
+    title = "Address Available Upon Request" if l.get("hide_address") else l["address"]
     return f"""
       <a class="om-card" href="/flyer/{l['id']}">
         {img_html}
         <div class="om-card-body">
           <div class="om-card-kicker">{html.escape(l.get('area') or '')}<span class="om-status">{html.escape(l.get('status') or 'Available')}</span></div>
-          <div class="om-card-title">{html.escape(l['address'])}</div>
+          <div class="om-card-title">{html.escape(title)}</div>
           <div class="om-card-price">{html.escape(l.get('price') or '')}</div>
           <div class="om-card-specs">{specs}</div>
           {f'<p class="om-card-desc">{html.escape(l["description"])}</p>' if l.get('description') else ''}
@@ -550,10 +554,15 @@ def build_listings_html(buyer, listings):
 
 
 def build_flyer_html(listing):
+    hide_address = bool(listing.get("hide_address"))
+    display_address = "Address Available Upon Request" if hide_address else listing["address"]
+    photo_alt_fallback = listing.get("area") or "Off-market listing photo"
+    photo_alt = listing.get("photo_alt") or (photo_alt_fallback if hide_address else listing["address"])
+
     photos = listing.get("photo_urls") or []
     if photos:
         hero_photo = photos[0]
-        gallery = "".join(f'<img class="flyer-gallery-img" src="{html.escape(p)}" alt="{html.escape(listing.get("photo_alt") or listing["address"])}" loading="lazy">' for p in photos[1:])
+        gallery = "".join(f'<img class="flyer-gallery-img" src="{html.escape(p)}" alt="{html.escape(photo_alt)}" loading="lazy">' for p in photos[1:])
         gallery_html = f'<div class="flyer-gallery">{gallery}</div>' if gallery else ""
     else:
         hero_photo = None
@@ -563,9 +572,13 @@ def build_flyer_html(listing):
         f"{listing['beds']} bd" if listing.get("beds") else "",
         f"{listing['baths']} ba" if listing.get("baths") else "",
         f"{listing['sqft']} sqft" if listing.get("sqft") else "",
+        f"{listing['lot_size']} lot" if listing.get("lot_size") else "",
     ] if s)
 
-    hero_img_html = f'<img class="area-hero-img" src="{html.escape(hero_photo)}" alt="{html.escape(listing.get("photo_alt") or listing["address"])}" loading="eager">' if hero_photo else '<img class="area-hero-img" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk" loading="eager">'
+    hero_img_html = f'<img class="area-hero-img" src="{html.escape(hero_photo)}" alt="{html.escape(photo_alt)}" loading="eager">' if hero_photo else '<img class="area-hero-img" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk" loading="eager">'
+
+    media_link = listing.get("media_link") or ""
+    media_link_html = f'<a href="{html.escape(media_link)}" target="_blank" rel="noopener noreferrer" class="btn-hero-outline" style="border-color:var(--g3);color:var(--white)">View More Photos &amp; Video</a>' if media_link else ""
 
     body = f"""
 <section class="area-hero" style="min-height:56vh">
@@ -573,7 +586,7 @@ def build_flyer_html(listing):
   <div class="area-hero-scrim"></div>
   <div class="area-hero-content">
     <div class="area-eyebrow"><span class="area-eyebrow-line"></span><span class="area-eyebrow-text">Off-Market Opportunity</span><span class="om-status" style="margin-left:10px">{html.escape(listing.get('status') or 'Available')}</span></div>
-    <h1 class="area-h1">{html.escape(listing['address'])}</h1>
+    <h1 class="area-h1">{html.escape(display_address)}</h1>
     <p class="area-tagline">{html.escape(listing.get('area') or '')}</p>
   </div>
 </section>
@@ -585,14 +598,13 @@ def build_flyer_html(listing):
     {f'<p class="flyer-desc">{html.escape(listing["description"])}</p>' if listing.get('description') else ''}
     {gallery_html}
     <div style="margin-top:32px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
-      <a href="tel:+14243639227" class="btn-primary">Call Simone</a>
-      <a href="sms:+14243639227" class="btn-hero-outline" style="border-color:var(--g3);color:var(--white)">Text Simone</a>
-      <a href="/contact" class="btn-hero-outline" style="border-color:var(--g3);color:var(--white)">Ask a Question</a>
+      <a href="/contact" class="btn-primary">Ask a Question</a>
+      {media_link_html}
     </div>
   </div>
 </section>
 """
-    title = f"{listing['address']} | Off-Market | Simone Marzullo"
+    title = f"{display_address} | Off-Market | Simone Marzullo"
     return render_page(body, title=title)
 
 

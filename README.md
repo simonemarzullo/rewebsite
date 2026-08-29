@@ -162,11 +162,19 @@ no code change or redeploy needed to add either one.
   know who's checking in. A cookie keeps them signed in for 24 hours
   before they need to sign in again.
 - **Adding listings**: from `/admin`, fill in address, area, status,
-  price, beds/baths/sqft, a description, and paste photo URLs (one per
-  line, first one is the main photo) — you host the photos somewhere
-  yourself (Dropbox, Google Photos, etc. with a shareable link) and paste
-  the link in; there's no file upload here. "Hide" pulls a listing off
-  `/off-market` without deleting it.
+  price, beds/baths/sqft/lot size, a description (up to 1000 characters,
+  the box grows as you type), and paste photo URLs (one per line, first
+  one is the main photo) — you host the photos somewhere yourself
+  (Dropbox, Google Drive, etc. with a shareable link) and paste the link
+  in; there's no file upload here. Pasted Google Drive/Dropbox "share"
+  links are automatically rewritten into the direct-image format that
+  actually displays. "Hide" pulls a listing off `/off-market` without
+  deleting it. There's also an optional "link to more photos/video" field
+  (e.g. a Drive folder or a video) shown as its own button on the flyer.
+- **Hiding the address**: check "Hide address from buyers" on a listing
+  to keep the exact street address private — the listing card and flyer
+  page both show "Address Available Upon Request" instead (the area/
+  neighborhood still shows), until you're ready to reveal it.
 - **Sharing a "flyer"**: every listing gets its own shareable page at
   `/flyer/<id>` — a clean, single-listing page with the photos, price,
   and details, no login required to view it. Click "View Flyer" or "Copy

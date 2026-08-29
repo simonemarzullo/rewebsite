@@ -135,6 +135,7 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .om-card-specs{font-size:.78rem;color:var(--g5);font-weight:300}
 .om-card-desc{font-size:.8rem;line-height:1.7;color:var(--g6);font-weight:300}
 .om-status{display:inline-block;font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border:1px solid var(--g3);color:var(--g5);margin-left:8px;vertical-align:middle}
+.db-checkbox{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--g6);font-weight:300}
 .om-empty{text-align:center;color:var(--g5);font-size:.9rem;font-weight:300;max-width:480px;margin:0 auto}
 .flyer-price{font-family:var(--serif);font-size:2.2rem;color:var(--red);font-weight:400}
 .flyer-specs{font-size:.9rem;color:var(--g5);font-weight:300;margin-top:8px}
