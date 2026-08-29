@@ -330,9 +330,45 @@ def clean(value, max_len=MAX_FIELD_LEN):
     return str(value).strip()[:max_len] if value is not None else ""
 
 
+_GDRIVE_FILE_ID_RE = re.compile(r"drive\.google\.com/file/d/([a-zA-Z0-9_-]+)")
+_GDRIVE_ID_PARAM_RE = re.compile(r"[?&]id=([a-zA-Z0-9_-]+)")
+_PRICE_NUMERIC_RE = re.compile(r"^\$?[\d,]+(\.\d+)?$")
+
+
+def _normalize_photo_url(url):
+    """Rewrites a pasted Google Drive or Dropbox "share" link (a viewer
+    page, not an image) into the direct-file-content URL that actually
+    works in an <img src>. Anything else is left untouched -- this only
+    ever tries to fix these two specific, common paste mistakes."""
+    if "drive.google.com" in url and "/uc?" not in url:
+        m = _GDRIVE_FILE_ID_RE.search(url) or _GDRIVE_ID_PARAM_RE.search(url)
+        if m:
+            return f"https://drive.google.com/uc?export=view&id={m.group(1)}"
+    if "dropbox.com" in url:
+        if "dl=0" in url:
+            return url.replace("dl=0", "dl=1")
+        if "dl=1" not in url:
+            return url + ("&dl=1" if "?" in url else "?dl=1")
+    return url
+
+
 def _parse_photo_urls(raw):
     urls = [clean(u, 2000) for u in str(raw or "").splitlines()]
-    return [u for u in urls if u][:MAX_PHOTO_URLS]
+    return [_normalize_photo_url(u) for u in urls if u][:MAX_PHOTO_URLS]
+
+
+def _normalize_price(raw):
+    """Reformats a plain number (with or without $/commas) to "$1,234,567"
+    so it always comes out the same way no matter how it was typed in.
+    Anything that isn't a plain number -- "Price upon request", a range,
+    etc. -- is left exactly as typed."""
+    raw = raw.strip()
+    if raw and _PRICE_NUMERIC_RE.match(raw):
+        try:
+            return f"${float(raw.replace('$', '').replace(',', '')):,.0f}"
+        except ValueError:
+            pass
+    return raw
 
 
 # ---------------------------------------------------------------------------
@@ -1964,7 +2000,7 @@ class handler(BaseHTTPRequestHandler):
                     status = "Available"
                 create_offmarket_listing(
                     conn, address, clean(data.get("area")), status,
-                    clean(data.get("price"), 40), clean(data.get("beds"), 20), clean(data.get("baths"), 20),
+                    _normalize_price(clean(data.get("price"), 40)), clean(data.get("beds"), 20), clean(data.get("baths"), 20),
                     clean(data.get("sqft"), 20), clean(data.get("description"), 2000),
                     _parse_photo_urls(data.get("photo_urls")), clean(data.get("photo_alt"), 300),
                 )
@@ -1982,7 +2018,7 @@ class handler(BaseHTTPRequestHandler):
                     status = "Available"
                 update_offmarket_listing(
                     conn, listing_id, address, clean(data.get("area")), status,
-                    clean(data.get("price"), 40), clean(data.get("beds"), 20), clean(data.get("baths"), 20),
+                    _normalize_price(clean(data.get("price"), 40)), clean(data.get("beds"), 20), clean(data.get("baths"), 20),
                     clean(data.get("sqft"), 20), clean(data.get("description"), 2000),
                     _parse_photo_urls(data.get("photo_urls")), clean(data.get("photo_alt"), 300),
                 )
