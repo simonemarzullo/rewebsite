@@ -810,9 +810,9 @@ def _feedback_html(notes, empty_message):
 def _listing_html(listing):
     groups_total = sum(oh["groups_count"] or 0 for oh in listing["open_houses"])
     marketing_stats = "".join([
-        _stat_tile("Agents Reached", listing["agents_reached_count"]),
         _stat_tile("Showings", len(listing["open_houses"])),
-        _stat_tile("Groups at Open Houses", groups_total),
+        _stat_tile("Open House Groups", groups_total),
+        _stat_tile("Agents Reached", listing["agents_reached_count"]),
         _stat_tile("Offers Received", len(listing["offers"])),
     ] + [_stat_tile(m["name"], m["value"]) for m in listing["metrics"]])
 
@@ -984,7 +984,8 @@ def _listing_admin_html(listing, metric_types):
     groups_total = sum(oh["groups_count"] or 0 for oh in listing["open_houses"])
     summary_stats_html = "".join([
         _stat_tile("Showings", len(listing["open_houses"])),
-        _stat_tile("Groups at Open Houses", groups_total),
+        _stat_tile("Open House Groups", groups_total),
+        _stat_tile("Agents Reached", listing["agents_reached_count"]),
         _stat_tile("Offers Received", len(listing["offers"])),
     ])
     feedback_html = "".join(_feedback_admin_html(f) for f in listing["feedback"]) or '<p class="db-empty-note">No feedback yet.</p>'
