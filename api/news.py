@@ -13,6 +13,12 @@ telling Vercel's edge network to serve a cached copy for up to an hour
 (and up to a day past that while quietly refetching in the background)
 -- so almost every real visitor gets an instant cached response, and the
 feeds only actually get hit roughly once an hour.
+
+The "See the Q2 2026 market numbers" teaser near the bottom links to
+/market-report (served by api/areas.py, which owns the real MARKET_REPORT
+data). The quarter label here is a plain hardcoded string, not read from
+that file (no cross-file imports) -- update it by hand each quarter
+alongside MARKET_REPORT['quarter'] in api/areas.py.
 """
 
 import html
@@ -398,6 +404,15 @@ def build_news_html():
 <section class="section">
   <div class="wrap">
     {news_html}
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="wrap" style="text-align:center;max-width:640px">
+    <span class="label label-red">Data-Backed</span>
+    <h2 class="action-title" style="margin-top:14px">See the Q2 2026 market numbers</h2>
+    <p style="font-size:.88rem;color:var(--g5);font-weight:300;line-height:1.8;margin-top:16px">Median prices, sales volume, and neighborhood-level trends, sourced from THE MLS™/CLAW and updated every quarter.</p>
+    <div style="margin-top:28px"><a href="/market-report" class="btn-primary">View the Market Report</a></div>
   </div>
 </section>
 
