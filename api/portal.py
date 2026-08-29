@@ -444,8 +444,7 @@ def fetch_dashboard_data(conn, client_id):
             return None
 
         cur.execute(
-            """SELECT id, address, status, emails_sent_count,
-                      calls_made_count, texts_sent_count
+            """SELECT id, address, status, agents_reached_count
                FROM listings WHERE client_id = %s ORDER BY created_at DESC""",
             (client_id,),
         )
@@ -493,8 +492,7 @@ def fetch_all_clients(conn):
 
         for client in clients:
             cur.execute(
-                """SELECT id, address, status, emails_sent_count,
-                          calls_made_count, texts_sent_count
+                """SELECT id, address, status, agents_reached_count
                    FROM listings WHERE client_id = %s ORDER BY created_at DESC""",
                 (client["id"],),
             )
@@ -560,12 +558,11 @@ def update_listing_status(conn, listing_id, status):
     conn.commit()
 
 
-def update_marketing(conn, listing_id, emails, calls, texts):
+def update_marketing(conn, listing_id, agents_reached):
     with conn.cursor() as cur:
         cur.execute(
-            """UPDATE listings SET emails_sent_count = %s,
-               calls_made_count = %s, texts_sent_count = %s, updated_at = now() WHERE id = %s""",
-            (emails, calls, texts, listing_id),
+            "UPDATE listings SET agents_reached_count = %s, updated_at = now() WHERE id = %s",
+            (agents_reached, listing_id),
         )
     conn.commit()
 
@@ -777,10 +774,12 @@ def _feedback_html(notes, empty_message):
 
 
 def _listing_html(listing):
+    groups_total = sum(oh["groups_count"] or 0 for oh in listing["open_houses"])
     marketing_stats = "".join([
-        _stat_tile("Emails Sent", listing["emails_sent_count"]),
-        _stat_tile("Calls Made", listing["calls_made_count"]),
-        _stat_tile("Texts Sent", listing["texts_sent_count"]),
+        _stat_tile("Agents Reached", listing["agents_reached_count"]),
+        _stat_tile("Showings", len(listing["open_houses"])),
+        _stat_tile("Groups at Open Houses", groups_total),
+        _stat_tile("Offers Received", len(listing["offers"])),
     ] + [_stat_tile(m["name"], m["value"]) for m in listing["metrics"]])
 
     offers_html = "".join(_offer_html(o, i + 1) for i, o in enumerate(listing["offers"])) or '<p class="db-empty-note">No offers received yet.</p>'
@@ -935,6 +934,12 @@ def _metric_inputs_html(metric_types, metric_values):
 def _listing_admin_html(listing, metric_types):
     offers_html = "".join(_offer_admin_html(o, i + 1) for i, o in enumerate(listing["offers"])) or '<p class="db-empty-note">No offers yet.</p>'
     open_houses_html = "".join(_open_house_html(oh) for oh in listing["open_houses"]) or '<p class="db-empty-note">No open houses logged yet.</p>'
+    groups_total = sum(oh["groups_count"] or 0 for oh in listing["open_houses"])
+    summary_stats_html = "".join([
+        _stat_tile("Showings", len(listing["open_houses"])),
+        _stat_tile("Groups at Open Houses", groups_total),
+        _stat_tile("Offers Received", len(listing["offers"])),
+    ])
     feedback_html = "".join(
         f"""<div class="db-note"><div class="db-note-date">{f["created_at"].strftime("%b %-d, %Y")}<span class="db-note-sub">{html.escape(FEEDBACK_CATEGORIES.get(f["category"], f["category"]))}</span></div><div class="db-note-text">{html.escape(f["note"])}</div></div>"""
         for f in listing["feedback"]
@@ -959,15 +964,11 @@ def _listing_admin_html(listing, metric_types):
         </div>
 
         <div class="db-tab-panel" data-tab-panel="marketing">
+          <div class="db-stats" style="margin-bottom:18px">{summary_stats_html}</div>
+          <p class="db-empty-note" style="margin-bottom:14px">Showings, groups, and offers come from the Open Houses &amp; Showings and Number of Offers tabs -- log them there and these update automatically.</p>
           <form class="adm-inline-form" data-action="update_marketing" data-listing-id="{listing["id"]}">
-            <label class="om-field"><span class="om-field-label">Emails Sent</span>
-              <input type="number" min="0" name="emails_sent_count" class="om-input" value="{listing["emails_sent_count"]}">
-            </label>
-            <label class="om-field"><span class="om-field-label">Calls Made</span>
-              <input type="number" min="0" name="calls_made_count" class="om-input" value="{listing["calls_made_count"]}">
-            </label>
-            <label class="om-field"><span class="om-field-label">Texts Sent</span>
-              <input type="number" min="0" name="texts_sent_count" class="om-input" value="{listing["texts_sent_count"]}">
+            <label class="om-field"><span class="om-field-label">Agents Reached</span>
+              <input type="number" min="0" name="agents_reached_count" class="om-input" value="{listing["agents_reached_count"]}">
             </label>
             {_metric_inputs_html(metric_types, listing["metric_values"])}
             <button type="submit" class="btn-primary adm-btn-sm">Save</button>
@@ -1479,10 +1480,8 @@ class handler(BaseHTTPRequestHandler):
 
             if action == "update_marketing":
                 listing_id = int(data.get("listingId"))
-                emails = max(0, int(data.get("emails_sent_count") or 0))
-                calls = max(0, int(data.get("calls_made_count") or 0))
-                texts = max(0, int(data.get("texts_sent_count") or 0))
-                update_marketing(conn, listing_id, emails, calls, texts)
+                agents_reached = max(0, int(data.get("agents_reached_count") or 0))
+                update_marketing(conn, listing_id, agents_reached)
                 for key, value in data.items():
                     if not key.startswith("metric_"):
                         continue

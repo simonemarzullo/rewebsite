@@ -172,11 +172,13 @@ listings with select buyers/investors before they hit the open market.
 Two private, password-gated sections (`api/portal.py`):
 
 - **`/clientaccess`** — a per-client login where a seller can check on a
-  listing's progress across four tabs: Marketing (emails sent, calls made,
-  texts sent, plus any custom metrics you've added), Number of Offers
-  (price, cash/loan, close of escrow), Open Houses & Showings (a dated log
-  of each one, with groups through and notes), and Buyer Feedback (every
-  feedback note logged against the listing, labeled by type). Linked from
+  listing's progress across four tabs: Marketing (Agents Reached, plus
+  Showings/Groups at Open Houses/Offers Received computed automatically
+  from the other tabs below, and any custom metrics you've added), Number
+  of Offers (price, cash/loan, close of escrow), Open Houses & Showings (a
+  dated log of each one, with groups through and notes), and Buyer
+  Feedback (every feedback note logged against the listing, labeled by
+  type). Linked from
   the nav as "Log In" so clients can find their way back in without
   needing the raw URL. Sessions (both seller and admin) last 24 hours, so
   sellers re-enter their password daily -- each login also pushes a

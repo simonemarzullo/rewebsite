@@ -14,18 +14,25 @@ CREATE TABLE IF NOT EXISTS clients (
 
 -- One row per property a client is selling. A client can have more than one
 -- listing at a time.
+-- showings_count/emails_sent_count/calls_made_count/texts_sent_count are
+-- unused leftovers from earlier iterations of the Marketing tab (showings
+-- moved to the open_houses log below; emails/calls/texts were replaced by
+-- the single agents_reached_count) -- kept, never read or written, so
+-- nothing breaks for anyone still on an older deployment.
 CREATE TABLE IF NOT EXISTS listings (
-    id                 SERIAL PRIMARY KEY,
-    client_id          INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    address            TEXT NOT NULL,
-    status             TEXT NOT NULL DEFAULT 'Active',
-    showings_count     INTEGER NOT NULL DEFAULT 0,
-    emails_sent_count  INTEGER NOT NULL DEFAULT 0,
-    calls_made_count   INTEGER NOT NULL DEFAULT 0,
-    texts_sent_count   INTEGER NOT NULL DEFAULT 0,
-    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+    id                  SERIAL PRIMARY KEY,
+    client_id           INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    address             TEXT NOT NULL,
+    status              TEXT NOT NULL DEFAULT 'Active',
+    showings_count      INTEGER NOT NULL DEFAULT 0,
+    emails_sent_count   INTEGER NOT NULL DEFAULT 0,
+    calls_made_count    INTEGER NOT NULL DEFAULT 0,
+    texts_sent_count    INTEGER NOT NULL DEFAULT 0,
+    agents_reached_count INTEGER NOT NULL DEFAULT 0,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS agents_reached_count INTEGER NOT NULL DEFAULT 0;
 CREATE INDEX IF NOT EXISTS idx_listings_client_id ON listings(client_id);
 
 -- Showing feedback, pricing feedback (from agents or buyers), and general
