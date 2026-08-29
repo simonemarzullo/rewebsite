@@ -200,6 +200,9 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .adm-listing{background:var(--black);border:1px solid var(--g3);padding:20px;margin-bottom:16px}
 .adm-listing-head{font-family:var(--serif);color:var(--white);font-size:1rem;margin-bottom:14px}
 .adm-listing-body{margin-top:18px;padding-top:4px;border-top:1px solid var(--g3)}
+.adm-feedback-entry{padding:14px 0;border-top:1px solid var(--g3)}
+.adm-feedback-entry:first-child{border-top:none;padding-top:0}
+.adm-feedback-entry .db-note-date{margin-bottom:10px}
 .adm-history{margin-top:8px;margin-bottom:8px}
 .adm-history summary{padding:12px 0;cursor:pointer;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--g5);list-style:none}
 .adm-history summary::-webkit-details-marker{display:none}
@@ -339,6 +342,10 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   .om-grid{grid-template-columns:1fr}
   .om-input{font-size:16px}
   .news-grid{grid-template-columns:1fr}
+  .db-tabs{display:grid;grid-template-columns:1fr 1fr}
+  .db-tab{width:100%;text-align:center}
+  .adm-inline-form .om-field{flex-basis:100%}
+  .adm-inline-form > .om-input{flex-basis:100%}
 }
 @media(prefers-reduced-motion:reduce){*{transition-duration:0ms!important}}
 @media(hover:hover){

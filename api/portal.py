@@ -967,15 +967,17 @@ def _metric_inputs_html(metric_types, metric_values):
 
 def _feedback_admin_html(f):
     return f"""
-    <form class="adm-inline-form" data-action="update_feedback" data-id="{f["id"]}">
-      <label class="om-field"><span class="om-field-label">Type</span>
-        <select name="category" class="om-input">{_category_options(selected=f["category"])}</select>
-      </label>
-      <input type="text" name="note" class="om-input" value="{html.escape(f["note"])}" maxlength="2000" required>
-      <button type="submit" class="btn-primary adm-btn-sm">Save</button>
-      <button type="button" class="om-logout adm-delete-btn" data-action="delete_feedback" data-id="{f["id"]}">Delete</button>
-    </form>
-    <div class="db-note-date" style="margin:-6px 0 12px">{f["created_at"].strftime("%b %-d, %Y")}</div>"""
+    <div class="adm-feedback-entry">
+      <div class="db-note-date">{f["created_at"].strftime("%b %-d, %Y")}</div>
+      <form class="adm-inline-form" data-action="update_feedback" data-id="{f["id"]}">
+        <label class="om-field"><span class="om-field-label">Type</span>
+          <select name="category" class="om-input">{_category_options(selected=f["category"])}</select>
+        </label>
+        <input type="text" name="note" class="om-input" value="{html.escape(f["note"])}" maxlength="2000" required>
+        <button type="submit" class="btn-primary adm-btn-sm">Save</button>
+        <button type="button" class="om-logout adm-delete-btn" data-action="delete_feedback" data-id="{f["id"]}">Delete</button>
+      </form>
+    </div>"""
 
 
 def _listing_admin_html(listing, metric_types):
