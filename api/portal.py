@@ -546,6 +546,12 @@ def reset_client_password(conn, client_id, password):
     conn.commit()
 
 
+def update_client_email(conn, client_id, email):
+    with conn.cursor() as cur:
+        cur.execute("UPDATE clients SET email = %s WHERE id = %s", (email, client_id))
+    conn.commit()
+
+
 def create_listing(conn, client_id, address):
     with conn.cursor() as cur:
         cur.execute("INSERT INTO listings (client_id, address) VALUES (%s, %s)", (client_id, address))
@@ -555,6 +561,12 @@ def create_listing(conn, client_id, address):
 def update_listing_status(conn, listing_id, status):
     with conn.cursor() as cur:
         cur.execute("UPDATE listings SET status = %s, updated_at = now() WHERE id = %s", (status, listing_id))
+    conn.commit()
+
+
+def update_listing_address(conn, listing_id, address):
+    with conn.cursor() as cur:
+        cur.execute("UPDATE listings SET address = %s, updated_at = now() WHERE id = %s", (address, listing_id))
     conn.commit()
 
 
@@ -582,6 +594,21 @@ def add_feedback(conn, listing_id, category, note):
             "INSERT INTO feedback_notes (listing_id, category, note) VALUES (%s, %s, %s)",
             (listing_id, category, note),
         )
+    conn.commit()
+
+
+def update_feedback(conn, feedback_id, category, note):
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE feedback_notes SET category = %s, note = %s WHERE id = %s",
+            (category, note, feedback_id),
+        )
+    conn.commit()
+
+
+def delete_feedback(conn, feedback_id):
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM feedback_notes WHERE id = %s", (feedback_id,))
     conn.commit()
 
 
@@ -915,8 +942,8 @@ def _offer_admin_html(offer, number):
     </details>"""
 
 
-def _category_options():
-    return "".join(f'<option value="{k}">{v}</option>' for k, v in FEEDBACK_CATEGORIES.items())
+def _category_options(selected=None):
+    return "".join(f'<option value="{k}"{" selected" if k == selected else ""}>{v}</option>' for k, v in FEEDBACK_CATEGORIES.items())
 
 
 def _metric_inputs_html(metric_types, metric_values):
@@ -931,6 +958,19 @@ def _metric_inputs_html(metric_types, metric_values):
     return "".join(inputs)
 
 
+def _feedback_admin_html(f):
+    return f"""
+    <form class="adm-inline-form" data-action="update_feedback" data-id="{f["id"]}">
+      <label class="om-field"><span class="om-field-label">Type</span>
+        <select name="category" class="om-input">{_category_options(selected=f["category"])}</select>
+      </label>
+      <input type="text" name="note" class="om-input" value="{html.escape(f["note"])}" maxlength="2000" required>
+      <button type="submit" class="btn-primary adm-btn-sm">Save</button>
+      <button type="button" class="om-logout adm-delete-btn" data-action="delete_feedback" data-id="{f["id"]}">Delete</button>
+    </form>
+    <div class="db-note-date" style="margin:-6px 0 12px">{f["created_at"].strftime("%b %-d, %Y")}</div>"""
+
+
 def _listing_admin_html(listing, metric_types):
     offers_html = "".join(_offer_admin_html(o, i + 1) for i, o in enumerate(listing["offers"])) or '<p class="db-empty-note">No offers yet.</p>'
     open_houses_html = "".join(_open_house_html(oh) for oh in listing["open_houses"]) or '<p class="db-empty-note">No open houses logged yet.</p>'
@@ -940,14 +980,14 @@ def _listing_admin_html(listing, metric_types):
         _stat_tile("Groups at Open Houses", groups_total),
         _stat_tile("Offers Received", len(listing["offers"])),
     ])
-    feedback_html = "".join(
-        f"""<div class="db-note"><div class="db-note-date">{f["created_at"].strftime("%b %-d, %Y")}<span class="db-note-sub">{html.escape(FEEDBACK_CATEGORIES.get(f["category"], f["category"]))}</span></div><div class="db-note-text">{html.escape(f["note"])}</div></div>"""
-        for f in listing["feedback"]
-    ) or '<p class="db-empty-note">No feedback yet.</p>'
+    feedback_html = "".join(_feedback_admin_html(f) for f in listing["feedback"]) or '<p class="db-empty-note">No feedback yet.</p>'
 
     return f"""
     <div class="adm-listing">
-      <div class="adm-listing-head">{html.escape(listing["address"])}</div>
+      <form class="adm-inline-form" data-action="update_listing_address" data-listing-id="{listing["id"]}" style="margin-bottom:14px">
+        <input type="text" name="address" class="om-input" value="{html.escape(listing["address"])}" maxlength="{MAX_FIELD_LEN}" required style="flex:1 1 300px">
+        <button type="submit" class="btn-primary adm-btn-sm">Save Address</button>
+      </form>
       <form class="adm-inline-form" data-action="update_listing_status" data-listing-id="{listing["id"]}">
         <label class="om-field"><span class="om-field-label">Status</span>
           <select name="status" class="om-input">{_status_options(listing["status"])}</select>
@@ -1028,6 +1068,12 @@ def _client_admin_html(client, metric_types):
       <span class="om-status">{status_label}</span>
     </summary>
     <div class="adm-client-body">
+      <form class="adm-inline-form" data-action="update_client_email" data-id="{client["id"]}" style="margin-bottom:20px">
+        <label class="om-field"><span class="om-field-label">Seller Email</span>
+          <input type="email" name="email" class="om-input" value="{html.escape(client["email"])}" required>
+        </label>
+        <button type="submit" class="btn-primary adm-btn-sm">Save Email</button>
+      </form>
       {listings_html}
       <form class="adm-inline-form" data-action="create_listing" data-client-id="{client["id"]}">
         <input type="text" name="address" class="om-input" placeholder="New listing address" maxlength="{MAX_FIELD_LEN}" required>
@@ -1236,6 +1282,18 @@ document.querySelectorAll('form[data-action]').forEach(function (form) {{
 
 document.querySelectorAll('.adm-toggle-active[data-action]').forEach(function (btn) {{
   btn.addEventListener('click', async function () {{
+    try {{
+      await adminPost({{action: btn.dataset.action, id: btn.dataset.id}});
+      window.location.reload();
+    }} catch (err) {{
+      alert(err.message);
+    }}
+  }});
+}});
+
+document.querySelectorAll('.adm-delete-btn[data-action]').forEach(function (btn) {{
+  btn.addEventListener('click', async function () {{
+    if (!confirm('Delete this? This can\\'t be undone.')) return;
     try {{
       await adminPost({{action: btn.dataset.action, id: btn.dataset.id}});
       window.location.reload();
@@ -1459,6 +1517,21 @@ class handler(BaseHTTPRequestHandler):
                 self._send_json(200, {"ok": True})
                 return
 
+            if action == "update_client_email":
+                client_id = int(data.get("id"))
+                email = clean(data.get("email")).lower()
+                if not email or not EMAIL_RE.match(email):
+                    self._send_json(400, {"ok": False, "error": "Enter a valid email address."})
+                    return
+                try:
+                    update_client_email(conn, client_id, email)
+                except psycopg2.errors.UniqueViolation:
+                    conn.rollback()
+                    self._send_json(400, {"ok": False, "error": "A seller with that email already exists."})
+                    return
+                self._send_json(200, {"ok": True})
+                return
+
             if action == "create_listing":
                 client_id = int(data.get("clientId"))
                 address = clean(data.get("address"))
@@ -1475,6 +1548,16 @@ class handler(BaseHTTPRequestHandler):
                 if status not in LISTING_STATUSES:
                     status = "Active"
                 update_listing_status(conn, listing_id, status)
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "update_listing_address":
+                listing_id = int(data.get("listingId"))
+                address = clean(data.get("address"))
+                if not address:
+                    self._send_json(400, {"ok": False, "error": "Address is required."})
+                    return
+                update_listing_address(conn, listing_id, address)
                 self._send_json(200, {"ok": True})
                 return
 
@@ -1505,6 +1588,25 @@ class handler(BaseHTTPRequestHandler):
                     self._send_json(400, {"ok": False, "error": "Note can't be empty."})
                     return
                 add_feedback(conn, listing_id, category, note)
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "update_feedback":
+                feedback_id = int(data.get("id"))
+                category = clean(data.get("category"), 40)
+                if category not in FEEDBACK_CATEGORIES:
+                    self._send_json(400, {"ok": False, "error": "Invalid feedback category."})
+                    return
+                note = clean(data.get("note"), 2000)
+                if not note:
+                    self._send_json(400, {"ok": False, "error": "Note can't be empty."})
+                    return
+                update_feedback(conn, feedback_id, category, note)
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "delete_feedback":
+                delete_feedback(conn, int(data.get("id")))
                 self._send_json(200, {"ok": True})
                 return
 
