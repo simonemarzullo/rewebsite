@@ -172,7 +172,7 @@ listings with select buyers/investors before they hit the open market.
 Two private, password-gated sections (`api/portal.py`):
 
 - **`/clientaccess`** — a per-client login where a seller can check on a
-  listing's progress across four tabs: Marketing (Agents Reached, plus
+  listing's progress across four tabs: Activity (Agents Reached, plus
   Showings/Groups at Open Houses/Offers Received computed automatically
   from the other tabs below, and any custom metrics you've added), Number
   of Offers (price, cash/loan, close of escrow), Open Houses & Showings (a

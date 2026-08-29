@@ -86,7 +86,7 @@ LEGACY_FEEDBACK_LABELS = {"pricing_buyer": "Buyer's Feedback"}
 def feedback_category_label(category):
     return FEEDBACK_CATEGORIES.get(category) or LEGACY_FEEDBACK_LABELS.get(category) or category
 
-# Shared tab-toggle script for the 4-tab layout on each listing (Marketing /
+# Shared tab-toggle script for the 4-tab layout on each listing (Activity /
 # Number of Offers / Open Houses & Showings / Feedbacks) -- used on both
 # the client dashboard and the admin panel, each listing scoped independently
 # via the nearest [data-tabscope] ancestor.
@@ -867,7 +867,7 @@ def _listing_html(listing):
         <span class="om-status">{html.escape(listing["status"])}</span>
       </div>
       <div class="db-tabs">
-        <button type="button" class="db-tab active" data-tab="marketing">Marketing</button>
+        <button type="button" class="db-tab active" data-tab="marketing">Activity</button>
         <button type="button" class="db-tab" data-tab="offers">Number of Offers</button>
         <button type="button" class="db-tab" data-tab="openhouses">Open Houses &amp; Showings</button>
         <button type="button" class="db-tab" data-tab="feedback">Feedbacks</button>
@@ -1058,7 +1058,7 @@ def _listing_admin_html(listing, metric_types):
 
       <div class="adm-listing-body" data-tabscope>
         <div class="db-tabs">
-          <button type="button" class="db-tab active" data-tab="marketing">Marketing</button>
+          <button type="button" class="db-tab active" data-tab="marketing">Activity</button>
           <button type="button" class="db-tab" data-tab="offers">Number of Offers</button>
           <button type="button" class="db-tab" data-tab="openhouses">Open Houses &amp; Showings</button>
           <button type="button" class="db-tab" data-tab="feedback">Feedbacks</button>
@@ -1247,7 +1247,7 @@ def build_admin_html(clients, metric_types, toolbox_links):
     </details>
 
     <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Marketing Metrics</h2>
-    <p class="adm-tagline" style="margin-bottom:16px">Define any metric you want tracked per listing (e.g. "Online Reactions", "Zillow Saves", "Ad Impressions") -- each shows up as a field under a listing's Marketing tab once added here.</p>
+    <p class="adm-tagline" style="margin-bottom:16px">Define any metric you want tracked per listing (e.g. "Online Reactions", "Zillow Saves", "Ad Impressions") -- each shows up as a field under a listing's Activity tab once added here.</p>
     <div class="adm-panel">
       <form id="adm-create-metric-form" class="adm-inline-form">
         <input type="text" name="name" class="om-input" placeholder="New metric name" required>
