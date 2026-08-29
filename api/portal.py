@@ -474,6 +474,12 @@ def toggle_client_active(conn, client_id):
     conn.commit()
 
 
+def reset_client_password(conn, client_id, password):
+    with conn.cursor() as cur:
+        cur.execute("UPDATE clients SET password_hash = %s WHERE id = %s", (hash_password(password), client_id))
+    conn.commit()
+
+
 def create_listing(conn, client_id, address):
     with conn.cursor() as cur:
         cur.execute("INSERT INTO listings (client_id, address) VALUES (%s, %s)", (client_id, address))
@@ -970,7 +976,11 @@ def _client_admin_html(client, contingency_types, metric_types):
         <input type="text" name="address" class="om-input" placeholder="New listing address" maxlength="{MAX_FIELD_LEN}" required>
         <button type="submit" class="btn-primary adm-btn-sm">Add Listing</button>
       </form>
-      <button type="button" class="om-logout adm-toggle-active" data-action="toggle_client_active" data-id="{client["id"]}" style="margin-top:14px">{"Deactivate" if client["active"] else "Reactivate"} this client</button>
+      <form class="adm-inline-form" data-action="reset_client_password" data-id="{client["id"]}" style="margin-top:14px">
+        <input type="text" name="password" class="om-input" placeholder="New password for this seller" required minlength="{MIN_PASSWORD_LEN}">
+        <button type="submit" class="btn-primary adm-btn-sm">Reset Password</button>
+      </form>
+      <button type="button" class="om-logout adm-toggle-active" data-action="toggle_client_active" data-id="{client["id"]}" style="margin-top:14px">{"Deactivate" if client["active"] else "Reactivate"} this seller</button>
     </div>
   </details>"""
 
@@ -1179,6 +1189,9 @@ document.querySelectorAll('form[data-action]').forEach(function (form) {{
     fd.forEach(function (value, key) {{ if (key !== 'contingencies') payload[key] = value; }});
     try {{
       await adminPost(payload);
+      if (action === 'reset_client_password') {{
+        showNotice(`Password reset — send them: ${{payload.password}}`);
+      }}
       window.location.reload();
     }} catch (err) {{
       alert(err.message);
@@ -1397,6 +1410,16 @@ class handler(BaseHTTPRequestHandler):
 
             if action == "toggle_client_active":
                 toggle_client_active(conn, int(data.get("id")))
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "reset_client_password":
+                client_id = int(data.get("id"))
+                password = str(data.get("password", ""))
+                if len(password) < MIN_PASSWORD_LEN:
+                    self._send_json(400, {"ok": False, "error": f"Password must be at least {MIN_PASSWORD_LEN} characters."})
+                    return
+                reset_client_password(conn, client_id, password)
                 self._send_json(200, {"ok": True})
                 return
 
