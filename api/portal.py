@@ -461,9 +461,6 @@ def fetch_dashboard_data(conn, client_id):
         )
         listings = cur.fetchall()
 
-        cur.execute("SELECT id, name FROM metric_types WHERE active = TRUE ORDER BY name")
-        metric_types = cur.fetchall()
-
         for listing in listings:
             cur.execute(
                 """SELECT price, financing_type, close_of_escrow, created_at
@@ -484,12 +481,6 @@ def fetch_dashboard_data(conn, client_id):
             )
             listing["feedback"] = cur.fetchall()
 
-            cur.execute("SELECT metric_type_id, value FROM listing_metrics WHERE listing_id = %s", (listing["id"],))
-            values_by_type = {row["metric_type_id"]: row["value"] for row in cur.fetchall()}
-            listing["metrics"] = [
-                {"name": mt["name"], "value": values_by_type.get(mt["id"], 0)} for mt in metric_types
-            ]
-
         return {"client": client, "listings": listings}
 
 
@@ -497,9 +488,6 @@ def fetch_all_clients(conn):
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("SELECT id, email, name, active, created_at FROM clients ORDER BY created_at DESC")
         clients = cur.fetchall()
-
-        cur.execute("SELECT id, name, active FROM metric_types ORDER BY name")
-        metric_types = cur.fetchall()
 
         for client in clients:
             cur.execute(
@@ -526,12 +514,8 @@ def fetch_all_clients(conn):
                     (listing["id"],),
                 )
                 listing["open_houses"] = cur.fetchall()
-
-                cur.execute("SELECT metric_type_id, value FROM listing_metrics WHERE listing_id = %s", (listing["id"],))
-                values_by_type = {row["metric_type_id"]: row["value"] for row in cur.fetchall()}
-                listing["metric_values"] = {mt["id"]: values_by_type.get(mt["id"], 0) for mt in metric_types}
             client["listings"] = listings
-        return clients, metric_types
+        return clients
 
 
 def create_client(conn, email, name, password):
@@ -648,30 +632,6 @@ def add_offer(conn, listing_id, price, financing_type, close_of_escrow):
 def toggle_offer_active(conn, offer_id):
     with conn.cursor() as cur:
         cur.execute("UPDATE offers SET active = NOT active WHERE id = %s", (offer_id,))
-    conn.commit()
-
-
-def create_metric_type(conn, name):
-    with conn.cursor() as cur:
-        cur.execute("INSERT INTO metric_types (name) VALUES (%s) ON CONFLICT (name) DO NOTHING", (name,))
-    conn.commit()
-
-
-def toggle_metric_type_active(conn, metric_type_id):
-    with conn.cursor() as cur:
-        cur.execute("UPDATE metric_types SET active = NOT active WHERE id = %s", (metric_type_id,))
-    conn.commit()
-
-
-def upsert_listing_metric(conn, listing_id, metric_type_id, value):
-    with conn.cursor() as cur:
-        cur.execute(
-            """INSERT INTO listing_metrics (listing_id, metric_type_id, value)
-               VALUES (%s, %s, %s)
-               ON CONFLICT (listing_id, metric_type_id)
-               DO UPDATE SET value = EXCLUDED.value, updated_at = now()""",
-            (listing_id, metric_type_id, value),
-        )
     conn.commit()
 
 
@@ -854,7 +814,7 @@ def _listing_html(listing):
         _stat_tile("Open House Groups", groups_total),
         _stat_tile("Agents Reached", listing["agents_reached_count"]),
         _stat_tile("Offers Received", len(listing["offers"])),
-    ] + [_stat_tile(m["name"], m["value"]) for m in listing["metrics"]])
+    ])
 
     offers_html = "".join(_offer_html(o, i + 1) for i, o in enumerate(listing["offers"])) or '<p class="db-empty-note">No offers received yet.</p>'
     open_houses_html = "".join(_open_house_html(oh) for oh in listing["open_houses"]) or '<p class="db-empty-note">No open houses logged yet.</p>'
@@ -996,18 +956,6 @@ def _category_options(selected=None):
     return "".join(f'<option value="{k}"{" selected" if k == selected else ""}>{v}</option>' for k, v in FEEDBACK_CATEGORIES.items())
 
 
-def _metric_inputs_html(metric_types, metric_values):
-    inputs = []
-    for mt in metric_types:
-        if not mt["active"]:
-            continue
-        value = metric_values.get(mt["id"], 0)
-        inputs.append(f"""<label class="om-field"><span class="om-field-label">{html.escape(mt["name"])}</span>
-          <input type="number" min="0" name="metric_{mt["id"]}" class="om-input" value="{value}">
-        </label>""")
-    return "".join(inputs)
-
-
 def _feedback_admin_html(f):
     return f"""
     <div class="adm-feedback-entry">
@@ -1023,7 +971,7 @@ def _feedback_admin_html(f):
     </div>"""
 
 
-def _listing_admin_html(listing, metric_types):
+def _listing_admin_html(listing):
     active_offers = [o for o in listing["offers"] if o["active"]]
     active_open_houses = [oh for oh in listing["open_houses"] if oh["active"]]
     offers_html = "".join(_offer_admin_html(o, i + 1) for i, o in enumerate(listing["offers"])) or '<p class="db-empty-note">No offers yet.</p>'
@@ -1071,7 +1019,6 @@ def _listing_admin_html(listing, metric_types):
             <label class="om-field"><span class="om-field-label">Agents Reached</span>
               <input type="number" min="0" name="agents_reached_count" class="om-input" value="{listing["agents_reached_count"]}">
             </label>
-            {_metric_inputs_html(metric_types, listing["metric_values"])}
             <button type="submit" class="btn-primary adm-btn-sm">Save</button>
           </form>
         </div>
@@ -1118,11 +1065,11 @@ def _listing_admin_html(listing, metric_types):
     </div>"""
 
 
-def _client_admin_html(client, metric_types):
+def _client_admin_html(client):
     active_listings = [l for l in client["listings"] if l["active"]]
     canceled_listings = [l for l in client["listings"] if not l["active"]]
-    listings_html = "".join(_listing_admin_html(l, metric_types) for l in active_listings) or '<p class="db-empty-note">No listings yet.</p>'
-    canceled_listings_html = "".join(_listing_admin_html(l, metric_types) for l in canceled_listings)
+    listings_html = "".join(_listing_admin_html(l) for l in active_listings) or '<p class="db-empty-note">No listings yet.</p>'
+    canceled_listings_html = "".join(_listing_admin_html(l) for l in canceled_listings)
     history_html = f"""
       <details class="adm-history">
         <summary>History (canceled listings)</summary>
@@ -1158,18 +1105,6 @@ def _client_admin_html(client, metric_types):
   </details>"""
 
 
-def _metric_type_admin_html(m):
-    status_label = "Active" if m["active"] else "Hidden"
-    return f"""
-  <div class="adm-list-row">
-    <span class="adm-client-email">{html.escape(m["name"])}</span>
-    <div class="adm-list-row-actions">
-      <span class="om-status">{status_label}</span>
-      <button type="button" class="om-logout adm-toggle-active" data-action="toggle_metric_type_active" data-id="{m["id"]}">{"Hide" if m["active"] else "Show"}</button>
-    </div>
-  </div>"""
-
-
 def _toolbox_link_admin_html(link):
     status_label = "Active" if link["active"] else "Hidden"
     return f"""
@@ -1184,13 +1119,12 @@ def _toolbox_link_admin_html(link):
   </form>"""
 
 
-def build_admin_html(clients, metric_types, toolbox_links):
+def build_admin_html(clients, toolbox_links):
     active_clients = [c for c in clients if c["active"]]
     history_clients = [c for c in clients if not c["active"]]
 
-    clients_html = "".join(_client_admin_html(c, metric_types) for c in active_clients) or '<div class="om-empty">No active sellers -- add one above.</div>'
-    history_clients_html = "".join(_client_admin_html(c, metric_types) for c in history_clients) or '<div class="om-empty">No deactivated sellers.</div>'
-    metric_html = "".join(_metric_type_admin_html(m) for m in metric_types) or '<p class="db-empty-note">No marketing metrics yet -- add one below (e.g. "Online Reactions", "Zillow Saves").</p>'
+    clients_html = "".join(_client_admin_html(c) for c in active_clients) or '<div class="om-empty">No active sellers -- add one above.</div>'
+    history_clients_html = "".join(_client_admin_html(c) for c in history_clients) or '<div class="om-empty">No deactivated sellers.</div>'
 
     active_toolbox_links = [t for t in toolbox_links if t["active"]]
     toolbox_buttons_html = "".join(
@@ -1246,16 +1180,6 @@ def build_admin_html(clients, metric_types, toolbox_links):
       <div class="adm-clients">{history_clients_html}</div>
     </details>
 
-    <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Marketing Metrics</h2>
-    <p class="adm-tagline" style="margin-bottom:16px">Define any metric you want tracked per listing (e.g. "Online Reactions", "Zillow Saves", "Ad Impressions") -- each shows up as a field under a listing's Activity tab once added here.</p>
-    <div class="adm-panel">
-      <form id="adm-create-metric-form" class="adm-inline-form">
-        <input type="text" name="name" class="om-input" placeholder="New metric name" required>
-        <button type="submit" class="btn-primary adm-btn-sm">Add</button>
-      </form>
-    </div>
-    <div class="adm-list">{metric_html}</div>
-
     <div style="text-align:center;margin-top:36px"><a href="/admin?logout=1" class="om-logout">Log out</a></div>
   </div>
 </section>
@@ -1298,17 +1222,6 @@ document.getElementById('adm-create-client-form').addEventListener('submit', asy
   }} catch (err) {{
     errEl.textContent = err.message;
     errEl.style.display = 'block';
-  }}
-}});
-
-document.getElementById('adm-create-metric-form').addEventListener('submit', async function (e) {{
-  e.preventDefault();
-  const form = e.target;
-  try {{
-    await adminPost({{action: 'create_metric_type', name: form.name.value.trim()}});
-    window.location.reload();
-  }} catch (err) {{
-    alert(err.message);
   }}
 }});
 
@@ -1427,7 +1340,7 @@ class handler(BaseHTTPRequestHandler):
                 if conn is None:
                     self._send_html(503, build_error_html("The admin panel isn't set up yet -- POSTGRES_URL is missing.", "Admin | Simone Marzullo"))
                     return
-                clients, metric_types = fetch_all_clients(conn)
+                clients = fetch_all_clients(conn)
                 toolbox_links = fetch_all_toolbox_links(conn)
             except Exception as e:
                 print(f"portal(admin): failed to load data: {e}")
@@ -1436,7 +1349,7 @@ class handler(BaseHTTPRequestHandler):
             finally:
                 if conn:
                     conn.close()
-            self._send_html(200, build_admin_html(clients, metric_types, toolbox_links))
+            self._send_html(200, build_admin_html(clients, toolbox_links))
             return
 
         # Default: client dashboard (section == "dashboard" or unset)
@@ -1641,15 +1554,6 @@ class handler(BaseHTTPRequestHandler):
                 listing_id = int(data.get("listingId"))
                 agents_reached = max(0, int(data.get("agents_reached_count") or 0))
                 update_marketing(conn, listing_id, agents_reached)
-                for key, value in data.items():
-                    if not key.startswith("metric_"):
-                        continue
-                    try:
-                        metric_type_id = int(key[len("metric_"):])
-                        metric_value = max(0, int(value or 0))
-                    except (ValueError, TypeError):
-                        continue
-                    upsert_listing_metric(conn, listing_id, metric_type_id, metric_value)
                 self._send_json(200, {"ok": True})
                 return
 
@@ -1726,20 +1630,6 @@ class handler(BaseHTTPRequestHandler):
 
             if action == "toggle_open_house_active":
                 toggle_open_house_active(conn, int(data.get("id")))
-                self._send_json(200, {"ok": True})
-                return
-
-            if action == "create_metric_type":
-                name = clean(data.get("name"), 200)
-                if not name:
-                    self._send_json(400, {"ok": False, "error": "Name can't be empty."})
-                    return
-                create_metric_type(conn, name)
-                self._send_json(200, {"ok": True})
-                return
-
-            if action == "toggle_metric_type_active":
-                toggle_metric_type_active(conn, int(data.get("id")))
                 self._send_json(200, {"ok": True})
                 return
 

@@ -97,17 +97,17 @@ CREATE TABLE IF NOT EXISTS open_houses (
 ALTER TABLE open_houses ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
 CREATE INDEX IF NOT EXISTS idx_open_houses_listing_id ON open_houses(listing_id);
 
--- Admin-defined marketing metric names (e.g. "Online Reactions", "Zillow
--- Saves") -- same pattern as contingency_types, so Simone can add whatever
--- metric she wants tracked without a code change.
+-- metric_types/listing_metrics were the custom "Marketing Metrics" feature
+-- (admin-defined per-listing counters like "Online Reactions") -- removed
+-- from the UI as unnecessary, same treatment as contingency_types above:
+-- kept here, untouched, so no existing data is lost and nothing breaks for
+-- anyone still on an older deployment; neither is read or written anymore.
 CREATE TABLE IF NOT EXISTS metric_types (
     id     SERIAL PRIMARY KEY,
     name   TEXT NOT NULL UNIQUE,
     active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
--- One current value per metric type per listing (updated in place, like
--- showings_count etc. -- not a timestamped log).
 CREATE TABLE IF NOT EXISTS listing_metrics (
     id             SERIAL PRIMARY KEY,
     listing_id     INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,

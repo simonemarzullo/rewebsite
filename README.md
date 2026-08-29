@@ -174,7 +174,7 @@ Two private, password-gated sections (`api/portal.py`):
 - **`/clientaccess`** — a per-client login where a seller can check on a
   listing's progress across four tabs: Activity (Agents Reached, plus
   Showings/Groups at Open Houses/Offers Received computed automatically
-  from the other tabs below, and any custom metrics you've added), Number
+  from the other tabs below), Number
   of Offers (price, cash/loan, close of escrow), Open Houses & Showings (a
   dated log of each one, with groups through and notes), and Feedbacks
   (Showing Feedback, Buyer's Agent Feedback, and Buyer's Feedback -- every
@@ -187,9 +187,8 @@ Two private, password-gated sections (`api/portal.py`):
 - **`/admin`** — your own dashboard to run it: create seller accounts
   (email + a password you choose — tell them what it is; use "Reset
   Password" if they forget it), add listings to a seller and update the
-  same four tabs above, plus an Access Toolbox of your own shortcut links
-  and a Marketing Metrics list (add whatever custom metric you want
-  tracked, e.g. "Zillow Saves"). Deliberately **not** linked anywhere on
+  same four tabs above, plus a Toolbox of your own shortcut links.
+  Deliberately **not** linked anywhere on
   the site (not in the nav, footer, or sitemap) — bookmark it directly.
 
 Both live in one Vercel function (`api/portal.py`) rather than the usual
