@@ -804,6 +804,12 @@ def toggle_offmarket_listing_active(conn, listing_id):
     conn.commit()
 
 
+def delete_offmarket_listing(conn, listing_id):
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM offmarket_listings WHERE id = %s", (listing_id,))
+    conn.commit()
+
+
 def build_error_html(message, title):
     body = f"""
 <section class="section" style="text-align:center;padding-top:140px">
@@ -1293,6 +1299,7 @@ def _offmarket_listing_admin_html(listing):
         <a href="{flyer_path}" target="_blank" rel="noopener noreferrer" class="om-logout">View Flyer</a>
         <button type="button" class="om-logout adm-copy-link-btn" data-path="{flyer_path}">Copy Flyer Link</button>
         <button type="button" class="om-logout adm-toggle-active" data-action="toggle_offmarket_listing_active" data-id="{listing["id"]}">{toggle_label}</button>
+        <button type="button" class="om-logout adm-delete-btn" data-action="delete_offmarket_listing" data-id="{listing["id"]}">Delete</button>
       </div>
       <form class="adm-inline-form" data-action="update_offmarket_listing" data-id="{listing["id"]}">
         <input type="text" name="address" class="om-input" value="{html.escape(listing['address'])}" placeholder="Address" required style="flex-basis:100%">
@@ -2055,6 +2062,11 @@ class handler(BaseHTTPRequestHandler):
 
             if action == "toggle_offmarket_listing_active":
                 toggle_offmarket_listing_active(conn, int(data.get("id")))
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "delete_offmarket_listing":
+                delete_offmarket_listing(conn, int(data.get("id")))
                 self._send_json(200, {"ok": True})
                 return
 
