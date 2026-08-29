@@ -339,7 +339,7 @@ def fetch_active_offmarket_listings(conn):
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(
             """SELECT id, address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt,
-                      hide_address, media_link
+                      hide_address, media_link, hide_media_link
                FROM offmarket_listings WHERE active = TRUE ORDER BY created_at DESC"""
         )
         return cur.fetchall()
@@ -349,7 +349,7 @@ def fetch_offmarket_listing_by_id(conn, listing_id):
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(
             """SELECT id, address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt,
-                      hide_address, media_link
+                      hide_address, media_link, hide_media_link
                FROM offmarket_listings WHERE id = %s""",
             (listing_id,),
         )
@@ -578,7 +578,7 @@ def build_flyer_html(listing):
     hero_img_html = f'<img class="area-hero-img" src="{html.escape(hero_photo)}" alt="{html.escape(photo_alt)}" loading="eager">' if hero_photo else '<img class="area-hero-img" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk" loading="eager">'
 
     media_link = listing.get("media_link") or ""
-    media_link_html = f'<a href="{html.escape(media_link)}" target="_blank" rel="noopener noreferrer" class="btn-hero-outline" style="border-color:var(--g3);color:var(--white)">View More Photos &amp; Video</a>' if media_link else ""
+    media_link_html = f'<a href="{html.escape(media_link)}" target="_blank" rel="noopener noreferrer" class="btn-hero-outline" style="border-color:var(--g3);color:var(--white)">View More Photos &amp; Video</a>' if media_link and not listing.get("hide_media_link") else ""
 
     body = f"""
 <section class="area-hero" style="min-height:56vh">
@@ -598,8 +598,8 @@ def build_flyer_html(listing):
     {f'<p class="flyer-desc">{html.escape(listing["description"])}</p>' if listing.get('description') else ''}
     {gallery_html}
     <div style="margin-top:32px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
-      <a href="/contact" class="btn-primary">Ask a Question</a>
       {media_link_html}
+      <a href="/contact" class="btn-primary">Ask a Question</a>
     </div>
   </div>
 </section>

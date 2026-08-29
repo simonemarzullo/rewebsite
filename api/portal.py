@@ -769,31 +769,31 @@ def fetch_all_offmarket_listings(conn):
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(
             """SELECT id, address, area, status, price, beds, baths, sqft, lot_size, description,
-                      photo_urls, photo_alt, hide_address, media_link, active, created_at
+                      photo_urls, photo_alt, hide_address, media_link, hide_media_link, active, created_at
                FROM offmarket_listings ORDER BY created_at DESC"""
         )
         return cur.fetchall()
 
 
-def create_offmarket_listing(conn, address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt, hide_address, media_link):
+def create_offmarket_listing(conn, address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt, hide_address, media_link, hide_media_link):
     with conn.cursor() as cur:
         cur.execute(
             """INSERT INTO offmarket_listings
-               (address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt, hide_address, media_link)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-            (address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt, hide_address, media_link),
+               (address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt, hide_address, media_link, hide_media_link)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            (address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt, hide_address, media_link, hide_media_link),
         )
     conn.commit()
 
 
-def update_offmarket_listing(conn, listing_id, address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt, hide_address, media_link):
+def update_offmarket_listing(conn, listing_id, address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt, hide_address, media_link, hide_media_link):
     with conn.cursor() as cur:
         cur.execute(
             """UPDATE offmarket_listings SET address = %s, area = %s, status = %s, price = %s, beds = %s,
                baths = %s, sqft = %s, lot_size = %s, description = %s, photo_urls = %s, photo_alt = %s,
-               hide_address = %s, media_link = %s, updated_at = now()
+               hide_address = %s, media_link = %s, hide_media_link = %s, updated_at = now()
                WHERE id = %s""",
-            (address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt, hide_address, media_link, listing_id),
+            (address, area, status, price, beds, baths, sqft, lot_size, description, photo_urls, photo_alt, hide_address, media_link, hide_media_link, listing_id),
         )
     conn.commit()
 
@@ -1324,6 +1324,10 @@ def _offmarket_listing_admin_html(listing):
         </label>
         <input type="text" name="photo_alt" class="om-input" value="{html.escape(listing.get('photo_alt') or '')}" placeholder="Photo description (for accessibility)" style="flex-basis:100%">
         <input type="url" name="media_link" class="om-input" value="{html.escape(listing.get('media_link') or '')}" placeholder="Link to more photos/video (optional, e.g. a Drive folder)" style="flex-basis:100%">
+        <label class="db-checkbox" style="flex-basis:100%">
+          <input type="checkbox" name="hide_media_link" value="on" {"checked" if listing.get('hide_media_link') else ""}>
+          Hide the "View More Photos &amp; Video" button (keeps the link saved above, just doesn't show it yet)
+        </label>
         <button type="submit" class="btn-primary adm-btn-sm">Save Listing</button>
       </form>
     </div>"""
@@ -1441,6 +1445,10 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
         </label>
         <input type="text" name="photo_alt" class="om-input" placeholder="Photo description (for accessibility)" style="flex-basis:100%">
         <input type="url" name="media_link" class="om-input" placeholder="Link to more photos/video (optional, e.g. a Drive folder)" style="flex-basis:100%">
+        <label class="db-checkbox" style="flex-basis:100%">
+          <input type="checkbox" name="hide_media_link" value="on">
+          Hide the "View More Photos &amp; Video" button (keeps the link saved above, just doesn't show it yet)
+        </label>
         <button type="submit" class="btn-primary adm-btn-sm">Add Listing</button>
       </form>
     </div>
@@ -2036,7 +2044,7 @@ class handler(BaseHTTPRequestHandler):
                     _normalize_price(clean(data.get("price"), 40)), clean(data.get("beds"), 20), clean(data.get("baths"), 20),
                     clean(data.get("sqft"), 20), clean(data.get("lot_size"), 20), clean(data.get("description"), 1000),
                     _parse_photo_urls(data.get("photo_urls")), clean(data.get("photo_alt"), 300),
-                    bool(data.get("hide_address")), clean(data.get("media_link"), 2000),
+                    bool(data.get("hide_address")), clean(data.get("media_link"), 2000), bool(data.get("hide_media_link")),
                 )
                 self._send_json(200, {"ok": True})
                 return
@@ -2055,7 +2063,7 @@ class handler(BaseHTTPRequestHandler):
                     _normalize_price(clean(data.get("price"), 40)), clean(data.get("beds"), 20), clean(data.get("baths"), 20),
                     clean(data.get("sqft"), 20), clean(data.get("lot_size"), 20), clean(data.get("description"), 1000),
                     _parse_photo_urls(data.get("photo_urls")), clean(data.get("photo_alt"), 300),
-                    bool(data.get("hide_address")), clean(data.get("media_link"), 2000),
+                    bool(data.get("hide_address")), clean(data.get("media_link"), 2000), bool(data.get("hide_media_link")),
                 )
                 self._send_json(200, {"ok": True})
                 return

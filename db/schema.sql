@@ -154,29 +154,33 @@ CREATE TABLE IF NOT EXISTS offmarket_buyers (
 -- -- common for off-market listings kept discreet until under contract.
 -- media_link: an optional single link to more photos/video hosted
 -- elsewhere (a Drive/Dropbox folder, a video, a Matterport tour, etc.) --
--- shown as a "View More Photos & Video" link on the flyer page when set.
+-- shown as a "View More Photos & Video" link on the flyer page when set
+-- and hide_media_link is false (lets Simone save the link ahead of time
+-- without showing the button until she's ready, without clearing the URL).
 CREATE TABLE IF NOT EXISTS offmarket_listings (
-    id           SERIAL PRIMARY KEY,
-    address      TEXT NOT NULL,
-    area         TEXT NOT NULL DEFAULT '',
-    status       TEXT NOT NULL DEFAULT 'Available',
-    price        TEXT NOT NULL DEFAULT '',
-    beds         TEXT NOT NULL DEFAULT '',
-    baths        TEXT NOT NULL DEFAULT '',
-    sqft         TEXT NOT NULL DEFAULT '',
-    lot_size     TEXT NOT NULL DEFAULT '',
-    description  TEXT NOT NULL DEFAULT '',
-    photo_urls   TEXT[] NOT NULL DEFAULT '{}',
-    photo_alt    TEXT NOT NULL DEFAULT '',
-    hide_address BOOLEAN NOT NULL DEFAULT FALSE,
-    media_link   TEXT NOT NULL DEFAULT '',
-    active       BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+    id               SERIAL PRIMARY KEY,
+    address          TEXT NOT NULL,
+    area             TEXT NOT NULL DEFAULT '',
+    status           TEXT NOT NULL DEFAULT 'Available',
+    price            TEXT NOT NULL DEFAULT '',
+    beds             TEXT NOT NULL DEFAULT '',
+    baths            TEXT NOT NULL DEFAULT '',
+    sqft             TEXT NOT NULL DEFAULT '',
+    lot_size         TEXT NOT NULL DEFAULT '',
+    description      TEXT NOT NULL DEFAULT '',
+    photo_urls       TEXT[] NOT NULL DEFAULT '{}',
+    photo_alt        TEXT NOT NULL DEFAULT '',
+    hide_address     BOOLEAN NOT NULL DEFAULT FALSE,
+    media_link       TEXT NOT NULL DEFAULT '',
+    hide_media_link  BOOLEAN NOT NULL DEFAULT FALSE,
+    active           BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ALTER TABLE offmarket_listings ADD COLUMN IF NOT EXISTS hide_address BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE offmarket_listings ADD COLUMN IF NOT EXISTS media_link TEXT NOT NULL DEFAULT '';
 ALTER TABLE offmarket_listings ADD COLUMN IF NOT EXISTS lot_size TEXT NOT NULL DEFAULT '';
+ALTER TABLE offmarket_listings ADD COLUMN IF NOT EXISTS hide_media_link BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS idx_offmarket_listings_created ON offmarket_listings(created_at);
 
 -- team_members / resource_tiles (for a team resource hub) were designed

@@ -169,8 +169,10 @@ no code change or redeploy needed to add either one.
   in; there's no file upload here. Pasted Google Drive/Dropbox "share"
   links are automatically rewritten into the direct-image format that
   actually displays. "Hide" pulls a listing off `/off-market` without
-  deleting it. There's also an optional "link to more photos/video" field
-  (e.g. a Drive folder or a video) shown as its own button on the flyer.
+  deleting it, and "Delete" removes it for good. There's also an
+  optional "link to more photos/video" field (e.g. a Drive folder or a
+  video), shown as its own button above "Ask a Question" on the flyer --
+  check "Hide the button" to keep the link saved without showing it yet.
 - **Hiding the address**: check "Hide address from buyers" on a listing
   to keep the exact street address private — the listing card and flyer
   page both show "Address Available Upon Request" instead (the area/
