@@ -133,7 +133,7 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .om-card-title{font-family:var(--serif);font-size:1.15rem;font-weight:400;color:var(--white)}
 .om-card-price{font-family:var(--serif);font-size:1.05rem;color:var(--red)}
 .om-card-specs{font-size:.78rem;color:var(--g5);font-weight:300}
-.om-card-desc{font-size:.8rem;line-height:1.7;color:var(--g6);font-weight:300}
+.om-card-desc{font-size:.8rem;line-height:1.7;color:var(--g6);font-weight:300;text-align:left}
 .om-card-desc ul,.om-card-desc ol,.flyer-desc ul,.flyer-desc ol{padding-left:1.3em;margin:.6em 0}
 .adm-rte-toolbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
 .adm-rte-btn{font-size:.68rem;letter-spacing:.05em;color:var(--g5);background:var(--g1);border:1px solid var(--g3);padding:6px 10px;cursor:pointer;font-family:inherit;transition:border-color .2s,color .2s}
@@ -148,7 +148,7 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .om-empty{text-align:center;color:var(--g5);font-size:.9rem;font-weight:300;max-width:480px;margin:0 auto}
 .flyer-price{font-family:var(--serif);font-size:2.2rem;color:var(--red);font-weight:400}
 .flyer-specs{font-size:.9rem;color:var(--g5);font-weight:300;margin-top:8px}
-.flyer-desc{font-size:.92rem;line-height:1.8;color:var(--g6);font-weight:300;margin-top:20px}
+.flyer-desc{font-size:.92rem;line-height:1.8;color:var(--g6);font-weight:300;margin-top:20px;text-align:left}
 .flyer-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:28px}
 .flyer-gallery-img{width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--g2)}
 .om-hero-compact{min-height:36vh}
