@@ -1,7 +1,9 @@
-"""Client dashboard (/dashboard) and admin panel (/admin) that feeds it,
+"""Client dashboard (/clientaccess) and admin panel (/admin) that feeds it,
 combined into one Vercel Python function. Routed internally by a `section`
 query param (dashboard|admin) set in vercel.json's rewrite destinations --
 the same pattern api/areas.py already uses for its own multiple routes.
+(The internal section value stays "dashboard" -- only the public URL
+changed to /clientaccess.)
 
 Combined into a single file deliberately: Vercel's Hobby plan caps a
 deployment at 12 Serverless Functions, and this site already had 11 --
@@ -68,7 +70,7 @@ NAV_ITEMS = [
     ("THE AGENCY", "/#the-agency"),
     ("CALCULATOR", "/flipcalculator"),
     ("CONTACT", "/contact"),
-    ("LOG IN", "/dashboard"),
+    ("LOG IN", "/clientaccess"),
 ]
 
 THEME_INIT_SCRIPT = """<script>if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; window.scrollTo(0, 0);</script>
@@ -337,11 +339,27 @@ def get_cookie(cookie_header, name):
 # Database access -- every query is parameterized (%s placeholders); user
 # input is never formatted directly into SQL text.
 # ---------------------------------------------------------------------------
+_LIBPQ_QUERY_PARAMS = {"sslmode", "connect_timeout", "application_name", "options"}
+
+
+def _clean_dsn(dsn):
+    """Some providers (Supabase's pooler included) append extra query
+    params to the connection URL for their own routing purposes (e.g.
+    "supa=base-pooler.x") that aren't real libpq options -- psycopg2's DSN
+    parser rejects the whole URL outright over a single param it doesn't
+    recognize. Keep only the handful of params libpq actually understands."""
+    parsed = urllib.parse.urlsplit(dsn)
+    query = urllib.parse.parse_qs(parsed.query)
+    safe_query = {k: v for k, v in query.items() if k in _LIBPQ_QUERY_PARAMS}
+    new_query = urllib.parse.urlencode(safe_query, doseq=True)
+    return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, parsed.path, new_query, parsed.fragment))
+
+
 def get_conn():
     dsn = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
     if not dsn:
         return None
-    return psycopg2.connect(dsn, connect_timeout=5)
+    return psycopg2.connect(_clean_dsn(dsn), connect_timeout=5)
 
 
 def fetch_client_by_email(conn, email):
@@ -543,7 +561,7 @@ document.getElementById('dash-form').addEventListener('submit', async function (
     }});
     const data = await res.json();
     if (res.ok && data.ok) {{
-      window.location.href = '/dashboard';
+      window.location.href = '/clientaccess';
     }} else {{
       errEl.textContent = data.error || 'Something went wrong. Please try again.';
       errEl.style.display = 'block';
@@ -663,7 +681,7 @@ def build_client_dashboard_html(data):
 <section class="section">
   <div class="wrap">
     {listings_html}
-    <div style="text-align:center;margin-top:36px"><a href="/dashboard?logout=1" class="om-logout">Log out</a></div>
+    <div style="text-align:center;margin-top:36px"><a href="/clientaccess?logout=1" class="om-logout">Log out</a></div>
   </div>
 </section>
 """
