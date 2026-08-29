@@ -30,6 +30,7 @@ import base64
 import hashlib
 import hmac
 import html
+import html.parser
 import json
 import os
 import re
@@ -50,6 +51,79 @@ FUB_EVENTS_URL = "https://api.followupboss.com/v1/events"
 MAX_BODY_BYTES = 8 * 1024
 MAX_FIELD_LEN = 500
 MIN_PASSWORD_LEN = 8
+
+# Listing descriptions are admin-authored rich text (bold/italic/lists/
+# alignment), stored as HTML by api/portal.py's own copy of this same
+# allowlist sanitizer. Running it again here at render time -- rather than
+# trusting the DB value -- is defense in depth, and it's also what makes a
+# listing saved before this feature existed (plain text, no tags) render
+# safely: sanitizing plain text just escapes it, identical to the old
+# html.escape() behavior it replaces.
+MAX_DESCRIPTION_HTML_LEN = 6000
+_DESC_ALLOWED_TAGS = {"b", "strong", "i", "em", "u", "ul", "ol", "li", "br", "div", "p", "span"}
+_DESC_VOID_TAGS = {"br"}
+_DESC_ALIGN_STYLE_RE = re.compile(r"^text-align:\s*(left|center|right|justify)\s*;?$", re.IGNORECASE)
+
+
+class _DescriptionHTMLSanitizer(html.parser.HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.out = []
+        self.open_stack = []
+
+    def handle_starttag(self, tag, attrs):
+        self._open(tag, attrs)
+
+    def handle_startendtag(self, tag, attrs):
+        self._open(tag, attrs, self_close=True)
+
+    def _open(self, tag, attrs, self_close=False):
+        if tag not in _DESC_ALLOWED_TAGS:
+            return
+        attr_html = ""
+        if tag in ("div", "p", "span", "li"):
+            for name, value in attrs:
+                if name == "style" and value and _DESC_ALIGN_STYLE_RE.match(value.strip()):
+                    attr_html = f' style="{value.strip()}"'
+                    break
+        if tag in _DESC_VOID_TAGS:
+            self.out.append(f"<{tag}>")
+        elif self_close:
+            self.out.append(f"<{tag}{attr_html}></{tag}>")
+        else:
+            self.out.append(f"<{tag}{attr_html}>")
+            self.open_stack.append(tag)
+
+    def handle_endtag(self, tag):
+        if tag not in _DESC_ALLOWED_TAGS or tag in _DESC_VOID_TAGS:
+            return
+        if tag not in self.open_stack:
+            return
+        while self.open_stack and self.open_stack[-1] != tag:
+            self.out.append(f"</{self.open_stack.pop()}>")
+        if self.open_stack:
+            self.open_stack.pop()
+            self.out.append(f"</{tag}>")
+
+    def handle_data(self, data):
+        self.out.append(html.escape(data))
+
+    def close(self):
+        super().close()
+        while self.open_stack:
+            self.out.append(f"</{self.open_stack.pop()}>")
+
+    def get_html(self):
+        return "".join(self.out)
+
+
+def _sanitize_description_html(raw):
+    if not raw:
+        return ""
+    parser = _DescriptionHTMLSanitizer()
+    parser.feed(str(raw)[:MAX_DESCRIPTION_HTML_LEN])
+    parser.close()
+    return parser.get_html()
 
 NAV_ITEMS = [
     ("AREAS", "/areas"),
@@ -519,7 +593,7 @@ def _listing_card_html(l):
           <div class="om-card-title">{html.escape(title)}</div>
           <div class="om-card-price">{html.escape(l.get('price') or '')}</div>
           <div class="om-card-specs">{specs}</div>
-          {f'<p class="om-card-desc">{html.escape(l["description"])}</p>' if l.get('description') else ''}
+          {f'<div class="om-card-desc">{_sanitize_description_html(l["description"])}</div>' if l.get('description') else ''}
         </div>
       </a>"""
 
@@ -595,7 +669,7 @@ def build_flyer_html(listing):
   <div class="wrap" style="max-width:640px">
     <div class="flyer-price">{html.escape(listing.get('price') or 'Price upon request')}</div>
     <div class="flyer-specs">{specs}</div>
-    {f'<p class="flyer-desc">{html.escape(listing["description"])}</p>' if listing.get('description') else ''}
+    {f'<div class="flyer-desc">{_sanitize_description_html(listing["description"])}</div>' if listing.get('description') else ''}
     {gallery_html}
     <div style="margin-top:32px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
       {media_link_html}

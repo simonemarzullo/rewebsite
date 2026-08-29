@@ -53,6 +53,7 @@ import base64
 import hashlib
 import hmac
 import html
+import html.parser
 import json
 import os
 import re
@@ -79,6 +80,21 @@ FUB_EVENTS_URL = "https://api.followupboss.com/v1/events"
 LISTING_STATUSES = ["Active", "Under Contract", "Sold", "Expired", "Withdrawn"]
 OFFMARKET_STATUSES = ["Available", "Pending", "Sold"]
 MAX_PHOTO_URLS = 20
+
+# Reused for both the "Add New Listing" and every existing listing's edit
+# form -- a contenteditable rich-text box (see .adm-rte-editor JS) sits
+# right below this and is kept in sync with a hidden `description` input.
+_RTE_TOOLBAR_HTML = """<div class="adm-rte-toolbar">
+            <button type="button" class="adm-rte-btn" data-cmd="bold" title="Bold"><strong>B</strong></button>
+            <button type="button" class="adm-rte-btn" data-cmd="italic" title="Italic"><em>I</em></button>
+            <span class="adm-rte-sep" aria-hidden="true"></span>
+            <button type="button" class="adm-rte-btn" data-cmd="insertUnorderedList" title="Bullet list">&bull; List</button>
+            <button type="button" class="adm-rte-btn" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+            <span class="adm-rte-sep" aria-hidden="true"></span>
+            <button type="button" class="adm-rte-btn" data-cmd="justifyLeft" title="Align left">Left</button>
+            <button type="button" class="adm-rte-btn" data-cmd="justifyCenter" title="Align center">Center</button>
+            <button type="button" class="adm-rte-btn" data-cmd="justifyRight" title="Align right">Right</button>
+          </div>"""
 # Selectable feedback categories -- "pricing_agent" and "buyer_feedback" used
 # to be split further into pricing-specific vs. general buyer feedback
 # ("Pricing Feedback (Agent/Buyer)" + a separate plain "Buyer Feedback");
@@ -333,6 +349,86 @@ def clean(value, max_len=MAX_FIELD_LEN):
 _GDRIVE_FILE_ID_RE = re.compile(r"drive\.google\.com/file/d/([a-zA-Z0-9_-]+)")
 _GDRIVE_ID_PARAM_RE = re.compile(r"[?&]id=([a-zA-Z0-9_-]+)")
 _PRICE_NUMERIC_RE = re.compile(r"^\$?[\d,]+(\.\d+)?$")
+
+# Listing descriptions are edited as rich text (bold/italic/lists/alignment)
+# in the admin panel and stored as HTML, so they need a real allowlist
+# sanitizer rather than a plain-text clean() -- this runs on every save.
+# api/offmarket.py runs the same allowlist again at render time (duplicated,
+# not imported, per this project's no-cross-import rule) as defense in depth
+# and so any pre-existing plain-text description (saved before this feature
+# existed) degrades safely into escaped plain text instead of raw HTML.
+MAX_DESCRIPTION_HTML_LEN = 6000
+_DESC_ALLOWED_TAGS = {"b", "strong", "i", "em", "u", "ul", "ol", "li", "br", "div", "p", "span"}
+_DESC_VOID_TAGS = {"br"}
+_DESC_ALIGN_STYLE_RE = re.compile(r"^text-align:\s*(left|center|right|justify)\s*;?$", re.IGNORECASE)
+
+
+class _DescriptionHTMLSanitizer(html.parser.HTMLParser):
+    """Strips everything except a small allowlisted subset of formatting
+    tags, and the `style` attribute only when it is exactly a text-align
+    rule -- no other attribute (href, src, onclick, class, arbitrary style,
+    etc.) survives. Unknown tags are dropped but their text content is kept
+    (escaped), so e.g. a stray <script> just becomes visible plain text,
+    never executes."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.out = []
+        self.open_stack = []
+
+    def handle_starttag(self, tag, attrs):
+        self._open(tag, attrs)
+
+    def handle_startendtag(self, tag, attrs):
+        self._open(tag, attrs, self_close=True)
+
+    def _open(self, tag, attrs, self_close=False):
+        if tag not in _DESC_ALLOWED_TAGS:
+            return
+        attr_html = ""
+        if tag in ("div", "p", "span", "li"):
+            for name, value in attrs:
+                if name == "style" and value and _DESC_ALIGN_STYLE_RE.match(value.strip()):
+                    attr_html = f' style="{value.strip()}"'
+                    break
+        if tag in _DESC_VOID_TAGS:
+            self.out.append(f"<{tag}>")
+        elif self_close:
+            self.out.append(f"<{tag}{attr_html}></{tag}>")
+        else:
+            self.out.append(f"<{tag}{attr_html}>")
+            self.open_stack.append(tag)
+
+    def handle_endtag(self, tag):
+        if tag not in _DESC_ALLOWED_TAGS or tag in _DESC_VOID_TAGS:
+            return
+        if tag not in self.open_stack:
+            return
+        while self.open_stack and self.open_stack[-1] != tag:
+            self.out.append(f"</{self.open_stack.pop()}>")
+        if self.open_stack:
+            self.open_stack.pop()
+            self.out.append(f"</{tag}>")
+
+    def handle_data(self, data):
+        self.out.append(html.escape(data))
+
+    def close(self):
+        super().close()
+        while self.open_stack:
+            self.out.append(f"</{self.open_stack.pop()}>")
+
+    def get_html(self):
+        return "".join(self.out)
+
+
+def _sanitize_description_html(raw):
+    if not raw:
+        return ""
+    parser = _DescriptionHTMLSanitizer()
+    parser.feed(str(raw)[:MAX_DESCRIPTION_HTML_LEN])
+    parser.close()
+    return parser.get_html()
 
 
 def _normalize_photo_url(url):
@@ -1316,8 +1412,10 @@ def _offmarket_listing_admin_html(listing):
         <input type="text" name="baths" class="om-input" value="{html.escape(listing.get('baths') or '')}" placeholder="Baths" style="max-width:100px">
         <input type="text" name="sqft" class="om-input" value="{html.escape(listing.get('sqft') or '')}" placeholder="Sqft" style="max-width:120px">
         <input type="text" name="lot_size" class="om-input" value="{html.escape(listing.get('lot_size') or '')}" placeholder="Lot Size" style="max-width:120px">
-        <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Description (max 1000 characters)</span>
-          <textarea name="description" class="om-input adm-autogrow" maxlength="1000" rows="1" style="width:100%;font-family:inherit;resize:none;overflow:hidden">{html.escape(listing.get('description') or '')}</textarea>
+        <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Description</span>
+          {_RTE_TOOLBAR_HTML}
+          <div class="om-input adm-rte-editor" contenteditable="true" data-placeholder="Describe the property...">{_sanitize_description_html(listing.get('description'))}</div>
+          <input type="hidden" name="description" class="adm-rte-hidden">
         </label>
         <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Photo URLs (one per line -- first is the main photo)</span>
           <textarea name="photo_urls" class="om-input" rows="3" style="width:100%;font-family:inherit;resize:vertical">{html.escape(photo_urls_text)}</textarea>
@@ -1437,8 +1535,10 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
         <input type="text" name="baths" class="om-input" placeholder="Baths" style="max-width:100px">
         <input type="text" name="sqft" class="om-input" placeholder="Sqft" style="max-width:120px">
         <input type="text" name="lot_size" class="om-input" placeholder="Lot Size" style="max-width:120px">
-        <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Description (max 1000 characters)</span>
-          <textarea name="description" class="om-input adm-autogrow" maxlength="1000" rows="1" style="width:100%;font-family:inherit;resize:none;overflow:hidden"></textarea>
+        <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Description</span>
+          {_RTE_TOOLBAR_HTML}
+          <div class="om-input adm-rte-editor" contenteditable="true" data-placeholder="Describe the property..."></div>
+          <input type="hidden" name="description" class="adm-rte-hidden">
         </label>
         <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Photo URLs (one per line -- first is the main photo)</span>
           <textarea name="photo_urls" class="om-input" rows="3" style="width:100%;font-family:inherit;resize:vertical"></textarea>
@@ -1599,6 +1699,31 @@ function admAutoGrow(el) {{
 document.querySelectorAll('textarea.adm-autogrow').forEach(function (ta) {{
   admAutoGrow(ta);
   ta.addEventListener('input', function () {{ admAutoGrow(ta); }});
+}});
+
+// Rich-text description editor: a contenteditable box + a small toolbar
+// that calls document.execCommand, kept in sync with a hidden `description`
+// input so the generic form[data-action] handler above picks it up like
+// any other field. styleWithCSS off so bold/italic/lists come out as plain
+// <b>/<i>/<ul>/<ol> tags, which is what the server-side sanitizer allows.
+try {{ document.execCommand('styleWithCSS', false, false); }} catch (e) {{}}
+document.querySelectorAll('.adm-rte-editor').forEach(function (editor) {{
+  const field = editor.closest('.om-field');
+  const hidden = field.querySelector('input.adm-rte-hidden');
+  const toolbar = field.querySelector('.adm-rte-toolbar');
+  function sync() {{ hidden.value = editor.innerHTML; }}
+  sync();
+  editor.addEventListener('input', sync);
+  editor.addEventListener('blur', sync);
+  if (toolbar) {{
+    toolbar.querySelectorAll('[data-cmd]').forEach(function (btn) {{
+      btn.addEventListener('click', function () {{
+        editor.focus();
+        document.execCommand(btn.dataset.cmd, false, null);
+        sync();
+      }});
+    }});
+  }}
 }});
 </script>
 <script>{DB_TABS_SCRIPT}</script>
@@ -2042,7 +2167,7 @@ class handler(BaseHTTPRequestHandler):
                 create_offmarket_listing(
                     conn, address, clean(data.get("area")), status,
                     _normalize_price(clean(data.get("price"), 40)), clean(data.get("beds"), 20), clean(data.get("baths"), 20),
-                    clean(data.get("sqft"), 20), clean(data.get("lot_size"), 20), clean(data.get("description"), 1000),
+                    clean(data.get("sqft"), 20), clean(data.get("lot_size"), 20), _sanitize_description_html(data.get("description")),
                     _parse_photo_urls(data.get("photo_urls")), clean(data.get("photo_alt"), 300),
                     bool(data.get("hide_address")), clean(data.get("media_link"), 2000), bool(data.get("hide_media_link")),
                 )
@@ -2061,7 +2186,7 @@ class handler(BaseHTTPRequestHandler):
                 update_offmarket_listing(
                     conn, listing_id, address, clean(data.get("area")), status,
                     _normalize_price(clean(data.get("price"), 40)), clean(data.get("beds"), 20), clean(data.get("baths"), 20),
-                    clean(data.get("sqft"), 20), clean(data.get("lot_size"), 20), clean(data.get("description"), 1000),
+                    clean(data.get("sqft"), 20), clean(data.get("lot_size"), 20), _sanitize_description_html(data.get("description")),
                     _parse_photo_urls(data.get("photo_urls")), clean(data.get("photo_alt"), 300),
                     bool(data.get("hide_address")), clean(data.get("media_link"), 2000), bool(data.get("hide_media_link")),
                 )
