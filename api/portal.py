@@ -1429,7 +1429,7 @@ def _offmarket_listing_admin_html(listing):
         <input type="url" name="media_link" class="om-input" value="{html.escape(listing.get('media_link') or '')}" placeholder="Link to more photos/video (optional, e.g. a Drive folder)" style="flex-basis:100%">
         <label class="db-checkbox" style="flex-basis:100%">
           <input type="checkbox" name="hide_media_link" value="on" {"checked" if listing.get('hide_media_link') else ""}>
-          Hide the "View More Photos &amp; Video" button (keeps the link saved above, just doesn't show it yet)
+          Hide the "View Photos &amp; Videos" button (keeps the link saved above, just doesn't show it yet)
         </label>
         <button type="submit" class="btn-primary adm-btn-sm">Save Listing</button>
       </form>
@@ -1553,7 +1553,7 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
         <input type="url" name="media_link" class="om-input" placeholder="Link to more photos/video (optional, e.g. a Drive folder)" style="flex-basis:100%">
         <label class="db-checkbox" style="flex-basis:100%">
           <input type="checkbox" name="hide_media_link" value="on">
-          Hide the "View More Photos &amp; Video" button (keeps the link saved above, just doesn't show it yet)
+          Hide the "View Photos &amp; Videos" button (keeps the link saved above, just doesn't show it yet)
         </label>
         <button type="submit" class="btn-primary adm-btn-sm">Add Listing</button>
       </form>

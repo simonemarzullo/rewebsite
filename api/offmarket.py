@@ -652,7 +652,7 @@ def build_flyer_html(listing):
     hero_img_html = f'<img class="area-hero-img" src="{html.escape(hero_photo)}" alt="{html.escape(photo_alt)}" loading="eager">' if hero_photo else '<img class="area-hero-img" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk" loading="eager">'
 
     media_link = listing.get("media_link") or ""
-    media_link_html = f'<a href="{html.escape(media_link)}" target="_blank" rel="noopener noreferrer" class="btn-hero-outline" style="border-color:var(--g3);color:var(--white)">View More Photos &amp; Video</a>' if media_link and not listing.get("hide_media_link") else ""
+    media_link_html = f'<a href="{html.escape(media_link)}" target="_blank" rel="noopener noreferrer" class="btn-hero-outline" style="border-color:var(--g3);color:var(--white)">View Photos &amp; Videos</a>' if media_link and not listing.get("hide_media_link") else ""
 
     body = f"""
 <section class="area-hero" style="min-height:56vh">
