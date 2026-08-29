@@ -724,6 +724,7 @@ def build_client_login_html(error=None):
       <button type="submit" class="btn-primary" id="dash-submit" style="width:100%;justify-content:center;margin-top:22px">Sign In</button>
     </form>
     <p style="font-size:.75rem;color:var(--g5);margin-top:20px;line-height:1.7">Don't have login details? <a href="/contact" style="color:var(--white);text-decoration:underline">Contact Simone</a>.</p>
+    <p style="margin-top:28px"><a href="/admin" class="om-logout">Admin</a></p>
   </div>
 </section>
 
