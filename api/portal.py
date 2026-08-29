@@ -676,6 +676,12 @@ def toggle_toolbox_link_active(conn, link_id):
     conn.commit()
 
 
+def delete_toolbox_link(conn, link_id):
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM toolbox_links WHERE id = %s", (link_id,))
+    conn.commit()
+
+
 def build_error_html(message, title):
     body = f"""
 <section class="section" style="text-align:center;padding-top:140px">
@@ -1110,6 +1116,7 @@ def _toolbox_link_admin_html(link):
     <button type="submit" class="btn-primary adm-btn-sm">Save</button>
     <span class="om-status">{status_label}</span>
     <button type="button" class="om-logout adm-toggle-active" data-action="toggle_toolbox_link_active" data-id="{link["id"]}">{"Hide" if link["active"] else "Show"}</button>
+    <button type="button" class="om-logout adm-delete-btn" data-action="delete_toolbox_link" data-id="{link["id"]}">Delete</button>
   </form>"""
 
 
@@ -1682,6 +1689,11 @@ class handler(BaseHTTPRequestHandler):
 
             if action == "toggle_toolbox_link_active":
                 toggle_toolbox_link_active(conn, int(data.get("id")))
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "delete_toolbox_link":
+                delete_toolbox_link(conn, int(data.get("id")))
                 self._send_json(200, {"ok": True})
                 return
 
