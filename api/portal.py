@@ -790,7 +790,7 @@ def build_admin_login_html(error=None):
     body = f"""
 <section class="section" style="text-align:center;padding-top:140px">
   <div class="wrap" style="max-width:380px">
-    <h1 class="area-h1" style="margin-bottom:24px">Admin</h1>
+    <h1 class="adm-h1" style="margin-bottom:24px">Admin</h1>
     <form id="adm-login-form" novalidate>
       <div class="om-form">
         <label class="om-field">
@@ -1037,12 +1037,12 @@ def build_admin_html(clients, contingency_types, metric_types, toolbox_links):
     body = f"""
 <section class="section" style="padding-top:120px">
   <div class="wrap">
-    <h1 class="area-h1" style="margin-bottom:8px">Admin</h1>
-    <p class="area-tagline" style="margin-bottom:32px">Your tools, your sellers, all in one place.</p>
+    <h1 class="adm-h1" style="margin-bottom:8px">Admin</h1>
+    <p class="adm-tagline" style="margin-bottom:32px">Your tools, your sellers, all in one place.</p>
     <div id="adm-notice" class="adm-notice" style="display:none"></div>
 
     <h2 class="db-section-title" style="font-size:.9rem;margin-bottom:16px">Access Toolbox</h2>
-    <p class="area-tagline" style="margin-bottom:16px">Shortcuts to your own tools -- only visible here, never shown to sellers.</p>
+    <p class="adm-tagline" style="margin-bottom:16px">Shortcuts to your own tools -- only visible here, never shown to sellers.</p>
     <div class="adm-toolbox-buttons">{toolbox_buttons_html}</div>
     <details class="adm-history" style="margin-top:16px">
       <summary>Manage tools</summary>
@@ -1085,7 +1085,7 @@ def build_admin_html(clients, contingency_types, metric_types, toolbox_links):
     <div class="adm-list">{contingency_html}</div>
 
     <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Marketing Metrics</h2>
-    <p class="area-tagline" style="margin-bottom:16px">Define any metric you want tracked per listing (e.g. "Online Reactions", "Zillow Saves", "Ad Impressions") -- each shows up as a field under a listing's Marketing section once added here.</p>
+    <p class="adm-tagline" style="margin-bottom:16px">Define any metric you want tracked per listing (e.g. "Online Reactions", "Zillow Saves", "Ad Impressions") -- each shows up as a field under a listing's Marketing section once added here.</p>
     <div class="adm-panel">
       <form id="adm-create-metric-form" class="adm-inline-form">
         <input type="text" name="name" class="om-input" placeholder="New metric name" required>
