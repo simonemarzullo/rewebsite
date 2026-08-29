@@ -203,6 +203,8 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .adm-feedback-entry{padding:14px 0;border-top:1px solid var(--g3)}
 .adm-feedback-entry:first-child{border-top:none;padding-top:0}
 .adm-feedback-entry .db-note-date{margin-bottom:10px}
+.adm-oh-entry{padding:14px 0;border-top:1px solid var(--g3)}
+.adm-oh-entry:first-child{border-top:none;padding-top:0}
 .adm-history{margin-top:8px;margin-bottom:8px}
 .adm-history summary{padding:12px 0;cursor:pointer;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--g5);list-style:none}
 .adm-history summary::-webkit-details-marker{display:none}

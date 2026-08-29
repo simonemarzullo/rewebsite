@@ -445,7 +445,7 @@ def fetch_dashboard_data(conn, client_id):
 
         cur.execute(
             """SELECT id, address, status, agents_reached_count
-               FROM listings WHERE client_id = %s ORDER BY created_at DESC""",
+               FROM listings WHERE client_id = %s AND active = TRUE ORDER BY created_at DESC""",
             (client_id,),
         )
         listings = cur.fetchall()
@@ -456,13 +456,13 @@ def fetch_dashboard_data(conn, client_id):
         for listing in listings:
             cur.execute(
                 """SELECT price, financing_type, close_of_escrow, created_at
-                   FROM offers WHERE listing_id = %s ORDER BY created_at ASC""",
+                   FROM offers WHERE listing_id = %s AND active = TRUE ORDER BY created_at ASC""",
                 (listing["id"],),
             )
             listing["offers"] = cur.fetchall()
 
             cur.execute(
-                "SELECT event_date, groups_count, notes FROM open_houses WHERE listing_id = %s ORDER BY event_date DESC, created_at DESC",
+                "SELECT event_date, groups_count, notes FROM open_houses WHERE listing_id = %s AND active = TRUE ORDER BY event_date DESC, created_at DESC",
                 (listing["id"],),
             )
             listing["open_houses"] = cur.fetchall()
@@ -492,7 +492,7 @@ def fetch_all_clients(conn):
 
         for client in clients:
             cur.execute(
-                """SELECT id, address, status, agents_reached_count
+                """SELECT id, address, status, active, agents_reached_count
                    FROM listings WHERE client_id = %s ORDER BY created_at DESC""",
                 (client["id"],),
             )
@@ -505,13 +505,13 @@ def fetch_all_clients(conn):
                 listing["feedback"] = cur.fetchall()
 
                 cur.execute(
-                    "SELECT id, price, financing_type, close_of_escrow, created_at FROM offers WHERE listing_id = %s ORDER BY created_at ASC",
+                    "SELECT id, price, financing_type, close_of_escrow, active, created_at FROM offers WHERE listing_id = %s ORDER BY created_at ASC",
                     (listing["id"],),
                 )
                 listing["offers"] = cur.fetchall()
 
                 cur.execute(
-                    "SELECT id, event_date, groups_count, notes FROM open_houses WHERE listing_id = %s ORDER BY event_date DESC, created_at DESC",
+                    "SELECT id, event_date, groups_count, notes, active FROM open_houses WHERE listing_id = %s ORDER BY event_date DESC, created_at DESC",
                     (listing["id"],),
                 )
                 listing["open_houses"] = cur.fetchall()
@@ -570,6 +570,12 @@ def update_listing_address(conn, listing_id, address):
     conn.commit()
 
 
+def toggle_listing_active(conn, listing_id):
+    with conn.cursor() as cur:
+        cur.execute("UPDATE listings SET active = NOT active, updated_at = now() WHERE id = %s", (listing_id,))
+    conn.commit()
+
+
 def update_marketing(conn, listing_id, agents_reached):
     with conn.cursor() as cur:
         cur.execute(
@@ -585,6 +591,12 @@ def create_open_house(conn, listing_id, event_date, groups_count, notes):
             "INSERT INTO open_houses (listing_id, event_date, groups_count, notes) VALUES (%s, %s, %s, %s)",
             (listing_id, event_date, groups_count, notes),
         )
+    conn.commit()
+
+
+def toggle_open_house_active(conn, open_house_id):
+    with conn.cursor() as cur:
+        cur.execute("UPDATE open_houses SET active = NOT active WHERE id = %s", (open_house_id,))
     conn.commit()
 
 
@@ -619,6 +631,12 @@ def add_offer(conn, listing_id, price, financing_type, close_of_escrow):
                VALUES (%s, %s, %s, %s)""",
             (listing_id, price, financing_type, close_of_escrow),
         )
+    conn.commit()
+
+
+def toggle_offer_active(conn, offer_id):
+    with conn.cursor() as cur:
+        cur.execute("UPDATE offers SET active = NOT active WHERE id = %s", (offer_id,))
     conn.commit()
 
 
@@ -794,6 +812,17 @@ def _open_house_html(oh):
     </div>"""
 
 
+def _open_house_admin_html(oh):
+    status_html = ' <span class="om-status">Canceled</span>' if not oh["active"] else ""
+    toggle_label = "Restore" if not oh["active"] else "Cancel"
+    return f"""<div class="adm-oh-entry">
+      {_open_house_html(oh)}
+      <div class="adm-list-row-actions" style="margin-left:0">{status_html}
+        <button type="button" class="om-logout adm-toggle-active" data-action="toggle_open_house_active" data-id="{oh["id"]}">{toggle_label}</button>
+      </div>
+    </div>"""
+
+
 def _feedback_html(notes, empty_message):
     if not notes:
         return f'<p class="db-empty-note">{html.escape(empty_message)}</p>'
@@ -943,9 +972,12 @@ def _offer_admin_html(offer, number):
     price = f"${offer['price']:,.0f}"
     financing_label = "Cash" if offer["financing_type"] == "cash" else "Loan"
     close_label = offer["close_of_escrow"].strftime("%b %-d, %Y") if offer["close_of_escrow"] else "Not specified"
+    canceled_label = " (Canceled)" if not offer["active"] else ""
+    toggle_label = "Restore" if not offer["active"] else "Cancel"
     return f"""<details class="adm-offer">
-      <summary>Offer #{number} &mdash; {price}</summary>
+      <summary>Offer #{number} &mdash; {price}{canceled_label}</summary>
       <div class="db-offer-meta">Financing: {financing_label} &middot; Close: {close_label}</div>
+      <button type="button" class="om-logout adm-toggle-active" data-action="toggle_offer_active" data-id="{offer["id"]}" style="margin-top:10px">{toggle_label}</button>
     </details>"""
 
 
@@ -981,19 +1013,27 @@ def _feedback_admin_html(f):
 
 
 def _listing_admin_html(listing, metric_types):
+    active_offers = [o for o in listing["offers"] if o["active"]]
+    active_open_houses = [oh for oh in listing["open_houses"] if oh["active"]]
     offers_html = "".join(_offer_admin_html(o, i + 1) for i, o in enumerate(listing["offers"])) or '<p class="db-empty-note">No offers yet.</p>'
-    open_houses_html = "".join(_open_house_html(oh) for oh in listing["open_houses"]) or '<p class="db-empty-note">No open houses logged yet.</p>'
-    groups_total = sum(oh["groups_count"] or 0 for oh in listing["open_houses"])
+    open_houses_html = "".join(_open_house_admin_html(oh) for oh in listing["open_houses"]) or '<p class="db-empty-note">No open houses logged yet.</p>'
+    groups_total = sum(oh["groups_count"] or 0 for oh in active_open_houses)
     summary_stats_html = "".join([
-        _stat_tile("Showings", len(listing["open_houses"])),
+        _stat_tile("Showings", len(active_open_houses)),
         _stat_tile("Open House Groups", groups_total),
         _stat_tile("Agents Reached", listing["agents_reached_count"]),
-        _stat_tile("Offers Received", len(listing["offers"])),
+        _stat_tile("Offers Received", len(active_offers)),
     ])
     feedback_html = "".join(_feedback_admin_html(f) for f in listing["feedback"]) or '<p class="db-empty-note">No feedback yet.</p>'
+    listing_status_label = "Active" if listing["active"] else "Canceled"
+    listing_toggle_label = "Reactivate" if not listing["active"] else "Cancel"
 
     return f"""
     <div class="adm-listing">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+        <span class="om-status">{listing_status_label}</span>
+        <button type="button" class="om-logout adm-toggle-active" data-action="toggle_listing_active" data-id="{listing["id"]}">{listing_toggle_label} this listing</button>
+      </div>
       <form class="adm-inline-form" data-action="update_listing_address" data-listing-id="{listing["id"]}" style="margin-bottom:14px">
         <input type="text" name="address" class="om-input" value="{html.escape(listing["address"])}" maxlength="{MAX_FIELD_LEN}" required style="flex:1 1 300px">
         <button type="submit" class="btn-primary adm-btn-sm">Save Address</button>
@@ -1068,7 +1108,15 @@ def _listing_admin_html(listing, metric_types):
 
 
 def _client_admin_html(client, metric_types):
-    listings_html = "".join(_listing_admin_html(l, metric_types) for l in client["listings"]) or '<p class="db-empty-note">No listings yet.</p>'
+    active_listings = [l for l in client["listings"] if l["active"]]
+    canceled_listings = [l for l in client["listings"] if not l["active"]]
+    listings_html = "".join(_listing_admin_html(l, metric_types) for l in active_listings) or '<p class="db-empty-note">No listings yet.</p>'
+    canceled_listings_html = "".join(_listing_admin_html(l, metric_types) for l in canceled_listings)
+    history_html = f"""
+      <details class="adm-history">
+        <summary>History (canceled listings)</summary>
+        {canceled_listings_html}
+      </details>""" if canceled_listings else ""
     status_label = "Active" if client["active"] else "Deactivated"
     return f"""
   <details class="adm-client">
@@ -1085,6 +1133,7 @@ def _client_admin_html(client, metric_types):
         <button type="submit" class="btn-primary adm-btn-sm">Save Email</button>
       </form>
       {listings_html}
+      {history_html}
       <form class="adm-inline-form" data-action="create_listing" data-client-id="{client["id"]}">
         <input type="text" name="address" class="om-input" placeholder="New listing address" maxlength="{MAX_FIELD_LEN}" required>
         <button type="submit" class="btn-primary adm-btn-sm">Add Listing</button>
@@ -1572,6 +1621,11 @@ class handler(BaseHTTPRequestHandler):
                 self._send_json(200, {"ok": True})
                 return
 
+            if action == "toggle_listing_active":
+                toggle_listing_active(conn, int(data.get("id")))
+                self._send_json(200, {"ok": True})
+                return
+
             if action == "update_marketing":
                 listing_id = int(data.get("listingId"))
                 agents_reached = max(0, int(data.get("agents_reached_count") or 0))
@@ -1637,6 +1691,11 @@ class handler(BaseHTTPRequestHandler):
                 self._send_json(200, {"ok": True})
                 return
 
+            if action == "toggle_offer_active":
+                toggle_offer_active(conn, int(data.get("id")))
+                self._send_json(200, {"ok": True})
+                return
+
             if action == "add_open_house":
                 listing_id = int(data.get("listingId"))
                 event_raw = clean(data.get("event_date"), 20)
@@ -1651,6 +1710,11 @@ class handler(BaseHTTPRequestHandler):
                 groups_count = max(0, int(data.get("groups_count") or 0))
                 notes = clean(data.get("notes"), 2000)
                 create_open_house(conn, listing_id, event_date, groups_count, notes)
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "toggle_open_house_active":
+                toggle_open_house_active(conn, int(data.get("id")))
                 self._send_json(200, {"ok": True})
                 return
 

@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS listings (
     client_id           INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
     address             TEXT NOT NULL,
     status              TEXT NOT NULL DEFAULT 'Active',
+    active              BOOLEAN NOT NULL DEFAULT TRUE,
     showings_count      INTEGER NOT NULL DEFAULT 0,
     emails_sent_count   INTEGER NOT NULL DEFAULT 0,
     calls_made_count    INTEGER NOT NULL DEFAULT 0,
@@ -33,6 +34,7 @@ CREATE TABLE IF NOT EXISTS listings (
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ALTER TABLE listings ADD COLUMN IF NOT EXISTS agents_reached_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
 CREATE INDEX IF NOT EXISTS idx_listings_client_id ON listings(client_id);
 
 -- Showing feedback, pricing feedback (from agents or buyers), and general
@@ -65,7 +67,8 @@ INSERT INTO contingency_types (name) VALUES
     ('Inspection'), ('Appraisal'), ('Loan/Financing'), ('Sale of Buyer''s Property')
 ON CONFLICT (name) DO NOTHING;
 
--- Offers received on a listing.
+-- Offers received on a listing. `active = false` means canceled/withdrawn
+-- -- kept (not deleted) so a listing's full offer history stays intact.
 CREATE TABLE IF NOT EXISTS offers (
     id               SERIAL PRIMARY KEY,
     listing_id       INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
@@ -73,20 +76,25 @@ CREATE TABLE IF NOT EXISTS offers (
     financing_type   TEXT NOT NULL CHECK (financing_type IN ('cash', 'loan')),
     close_of_escrow  DATE,
     contingencies    TEXT[] NOT NULL DEFAULT '{}',
+    active           BOOLEAN NOT NULL DEFAULT TRUE,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE offers ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
 CREATE INDEX IF NOT EXISTS idx_offers_listing_id ON offers(listing_id);
 
 -- One row per open house / showing event logged against a listing -- a
 -- dated log (not a running counter like showings_count used to be).
+-- `active = false` means canceled, same convention as offers above.
 CREATE TABLE IF NOT EXISTS open_houses (
     id           SERIAL PRIMARY KEY,
     listing_id   INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
     event_date   DATE NOT NULL,
     groups_count INTEGER NOT NULL DEFAULT 0,
     notes        TEXT NOT NULL DEFAULT '',
+    active       BOOLEAN NOT NULL DEFAULT TRUE,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE open_houses ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
 CREATE INDEX IF NOT EXISTS idx_open_houses_listing_id ON open_houses(listing_id);
 
 -- Admin-defined marketing metric names (e.g. "Online Reactions", "Zillow
