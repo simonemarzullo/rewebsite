@@ -212,6 +212,7 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .adm-tiles .adm-inline-form{background:var(--g1);border:1px solid var(--g3);padding:16px 20px}
 .adm-toolbox-buttons{display:flex;flex-wrap:wrap;gap:12px}
 .adm-toolbox-btn{padding:14px 26px}
+.adm-toolbox-add-btn{aspect-ratio:1;background:var(--red);color:#fff;border:none;font-size:1.4rem;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .2s}
 .adm-modal-overlay{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.72);padding:24px;overflow-y:auto;align-items:flex-start;justify-content:center}
 .adm-modal-overlay.on{display:flex}
 .adm-modal{background:var(--black);border:1px solid var(--g3);max-width:420px;width:100%;margin:60px auto;padding:36px 32px;position:relative}
@@ -353,6 +354,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   .news-card:hover .news-card-link{color:var(--red)}
   .news-modal-close:hover{color:var(--white)}
   .adm-modal-close:hover{color:var(--white)}
+  .adm-toolbox-add-btn:hover{background:var(--red-h)}
   .breadcrumb a:hover{color:#fff}
   .btn-primary:hover{background:var(--red-h);transform:translateY(-1px)}
   .btn-hero-outline:hover{border-color:#fff;background:rgba(255,255,255,.1)}

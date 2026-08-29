@@ -1035,7 +1035,7 @@ def build_admin_html(clients, contingency_types, metric_types, toolbox_links):
     toolbox_buttons_html = "".join(
         f'<a href="{html.escape(t["url"])}" target="_blank" rel="noopener noreferrer" class="btn-primary adm-toolbox-btn">{html.escape(t["name"])}</a>'
         for t in active_toolbox_links
-    ) or '<p class="db-empty-note">No tools added yet -- add one below.</p>'
+    )
     toolbox_manage_html = "".join(_toolbox_link_admin_html(t) for t in toolbox_links) or '<p class="db-empty-note">No tools yet.</p>'
 
     body = f"""
@@ -1045,11 +1045,11 @@ def build_admin_html(clients, contingency_types, metric_types, toolbox_links):
     <p class="adm-tagline" style="margin-bottom:32px">Your tools, your sellers, all in one place.</p>
     <div id="adm-notice" class="adm-notice" style="display:none"></div>
 
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;flex-wrap:wrap">
-      <h2 class="db-section-title" style="font-size:.9rem;margin-bottom:0">Toolbox</h2>
-      <button type="button" class="btn-primary adm-btn-sm" id="adm-toolbox-add-btn">Add Tool</button>
+    <h2 class="db-section-title" style="font-size:.9rem;margin-bottom:14px">Toolbox</h2>
+    <div class="adm-toolbox-buttons">
+      <button type="button" class="adm-toolbox-add-btn" id="adm-toolbox-add-btn" aria-label="Add a tool" title="Add a tool">+</button>
+      {toolbox_buttons_html}
     </div>
-    <div class="adm-toolbox-buttons">{toolbox_buttons_html}</div>
     <details class="adm-history" style="margin-top:12px">
       <summary>Manage tools</summary>
       <div class="adm-tiles" style="margin-top:12px">{toolbox_manage_html}</div>
