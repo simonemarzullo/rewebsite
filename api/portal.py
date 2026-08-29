@@ -990,8 +990,10 @@ def _contingency_type_admin_html(c):
     return f"""
   <div class="adm-list-row">
     <span class="adm-client-email">{html.escape(c["name"])}</span>
-    <span class="om-status">{status_label}</span>
-    <button type="button" class="om-logout adm-toggle-active" data-action="toggle_contingency_type_active" data-id="{c["id"]}">{"Hide" if c["active"] else "Show"}</button>
+    <div class="adm-list-row-actions">
+      <span class="om-status">{status_label}</span>
+      <button type="button" class="om-logout adm-toggle-active" data-action="toggle_contingency_type_active" data-id="{c["id"]}">{"Hide" if c["active"] else "Show"}</button>
+    </div>
   </div>"""
 
 
@@ -1000,8 +1002,10 @@ def _metric_type_admin_html(m):
     return f"""
   <div class="adm-list-row">
     <span class="adm-client-email">{html.escape(m["name"])}</span>
-    <span class="om-status">{status_label}</span>
-    <button type="button" class="om-logout adm-toggle-active" data-action="toggle_metric_type_active" data-id="{m["id"]}">{"Hide" if m["active"] else "Show"}</button>
+    <div class="adm-list-row-actions">
+      <span class="om-status">{status_label}</span>
+      <button type="button" class="om-logout adm-toggle-active" data-action="toggle_metric_type_active" data-id="{m["id"]}">{"Hide" if m["active"] else "Show"}</button>
+    </div>
   </div>"""
 
 
