@@ -29,7 +29,7 @@
     { "source": "/market-report", "destination": "/api/areas?report=q1-2026" },
     { "source": "/off-market", "destination": "/api/offmarket" },
     { "source": "/news", "destination": "/api/news" },
-    { "source": "/dashboard", "destination": "/api/portal?section=dashboard" },
+    { "source": "/clientaccess", "destination": "/api/portal?section=dashboard" },
     { "source": "/admin", "destination": "/api/portal?section=admin" },
     { "source": "/areas/santa-monica", "destination": "/api/areas?slug=santa-monica" },
     { "source": "/areas/venice", "destination": "/api/areas?slug=venice" },

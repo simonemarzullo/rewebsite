@@ -169,19 +169,21 @@ listings with select buyers/investors before they hit the open market.
 
 ## Client dashboard and admin panel
 
-Two private, password-gated sections (`api/portal.py`), reachable only via
-direct link (not in the nav, footer, or sitemap):
+Two private, password-gated sections (`api/portal.py`):
 
-- **`/dashboard`** — a per-client login where a seller can check on a
+- **`/clientaccess`** — a per-client login where a seller can check on a
   listing's progress: showings, emails sent, calls made, texts sent, offers
   received (price, cash/loan, contingencies, close of escrow), and feedback
   (split into showing feedback and pricing feedback from agents/buyers).
+  Linked from the nav as "Log In" so clients can find their way back in
+  without needing the raw URL.
 - **`/admin`** — your own dashboard to run it: create client accounts
   (email + a password you choose — tell them what it is, there's no
   "forgot password" flow yet), add listings to a client and update their
   numbers, add offers and feedback, and manage the list of contingency
   types offers can be tagged with (add new ones anytime, e.g. "Sale of
-  Buyer's Property").
+  Buyer's Property"). Deliberately **not** linked anywhere on the site
+  (not in the nav, footer, or sitemap) — bookmark it directly.
 
 Both live in one Vercel function (`api/portal.py`) rather than the usual
 one-file-per-page pattern — Vercel's Hobby plan caps a deployment at 12

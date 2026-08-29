@@ -507,7 +507,7 @@ NAV_ITEMS = [
     ("THE AGENCY", "/#the-agency"),
     ("CALCULATOR", "/flipcalculator"),
     ("CONTACT", "/contact"),
-    ("LOG IN", "/dashboard"),
+    ("LOG IN", "/clientaccess"),
 ]
 
 THEME_INIT_SCRIPT = """<script>if ('scrollRestoration' in history) history.scrollRestoration = 'manual';</script>
