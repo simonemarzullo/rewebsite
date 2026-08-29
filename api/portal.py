@@ -17,7 +17,15 @@ Auth model: each client gets their own row in the `clients` table (email
 single shared password. Admin uses a single shared ADMIN_PASSWORD, same
 pattern as OFFMARKET_PASSWORD. Session cookies are HMAC-signed and
 role-scoped (a client token can't be replayed as an admin token or
-someone else's client session).
+someone else's client session). Both sessions last 24h -- sellers re-enter
+their password daily, which also naturally caps the FollowUpBoss login
+notification below to about once per day per seller instead of needing
+its own throttling/schema.
+
+Every successful seller login pushes a FollowUpBoss event (same
+push-to-FollowUpBoss pattern as api/offmarket.py and api/submit-lead.py,
+using the FUB_API_KEY/FUB_SOURCE/FUB_SYSTEM* env vars already set for
+those) so Simone knows when a seller checks their dashboard.
 
 "Cancel account" sets active=false rather than deleting -- a client's
 data stays intact and shows up in admin's History filter, never gone for
@@ -32,6 +40,7 @@ the function-count limit -- may come back as its own file later if the
 site drops below 12 functions, or once this project is on a paid plan.
 """
 
+import base64
 import hashlib
 import hmac
 import html
@@ -39,7 +48,9 @@ import json
 import os
 import re
 import time
+import urllib.error
 import urllib.parse
+import urllib.request
 from datetime import date
 from http.server import BaseHTTPRequestHandler
 
@@ -50,10 +61,11 @@ import psycopg2.extras
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 CLIENT_COOKIE_NAME = "client_session"
 ADMIN_COOKIE_NAME = "admin_session"
-SESSION_HOURS = {"client": 24 * 30, "admin": 24}  # client: 30 days, admin: 24h
+SESSION_HOURS = {"client": 24, "admin": 24}  # both: 24h -- sellers re-enter their password daily
 MAX_BODY_BYTES = 16 * 1024
 MAX_FIELD_LEN = 500
 MIN_PASSWORD_LEN = 8
+FUB_EVENTS_URL = "https://api.followupboss.com/v1/events"
 
 LISTING_STATUSES = ["Active", "Under Contract", "Sold", "Expired", "Withdrawn"]
 FEEDBACK_CATEGORIES = {
@@ -378,6 +390,44 @@ def get_conn():
     if not dsn:
         return None
     return psycopg2.connect(_clean_dsn(dsn), connect_timeout=5)
+
+
+def push_dashboard_login_to_followupboss(email, name):
+    """Best-effort notification that a seller just logged into their
+    client-access dashboard -- same pattern as offmarket.py's FollowUpBoss
+    push. Never raises; a FollowUpBoss outage should never break a login."""
+    api_key = os.environ.get("FUB_API_KEY")
+    if not api_key:
+        print("portal: FUB_API_KEY is not configured")
+        return
+    who = name or email
+    event_payload = {
+        "source": os.environ.get("FUB_SOURCE", "Simone Marzullo Website"),
+        "system": os.environ.get("FUB_SYSTEM", "Simone Marzullo Website"),
+        "type": "General Inquiry",
+        "message": f"{who} logged into their Client Access dashboard.",
+        "person": {"emails": [{"value": email}], "tags": ["Client Dashboard Login"]},
+    }
+    req = urllib.request.Request(
+        FUB_EVENTS_URL,
+        data=json.dumps(event_payload).encode("utf-8"),
+        method="POST",
+    )
+    auth = base64.b64encode(f"{api_key}:".encode("utf-8")).decode("ascii")
+    req.add_header("Authorization", f"Basic {auth}")
+    req.add_header("Content-Type", "application/json")
+    system_name = os.environ.get("FUB_SYSTEM")
+    system_key = os.environ.get("FUB_SYSTEM_KEY")
+    if system_name and system_key:
+        req.add_header("X-System", system_name)
+        req.add_header("X-System-Key", system_key)
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            resp.read()
+    except urllib.error.HTTPError as e:
+        print(f"portal: FollowUpBoss API error {e.code}: {e.read().decode('utf-8', errors='replace')}")
+    except Exception as e:
+        print(f"portal: unexpected error calling FollowUpBoss: {e}")
 
 
 def fetch_client_by_email(conn, email):
@@ -1342,6 +1392,7 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(401, {"ok": False, "error": "Incorrect email or password."})
             return
 
+        push_dashboard_login_to_followupboss(client["email"], client["name"])
         cookie = f"{CLIENT_COOKIE_NAME}={make_session_token('client', client['id'])}; Path=/; Max-Age={SESSION_HOURS['client'] * 3600}; HttpOnly; Secure; SameSite=Lax"
         self._send_json(200, {"ok": True}, set_cookie=cookie)
 

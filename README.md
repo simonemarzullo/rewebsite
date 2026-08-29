@@ -178,7 +178,10 @@ Two private, password-gated sections (`api/portal.py`):
   of each one, with groups through and notes), and Buyer Feedback (every
   feedback note logged against the listing, labeled by type). Linked from
   the nav as "Log In" so clients can find their way back in without
-  needing the raw URL.
+  needing the raw URL. Sessions (both seller and admin) last 24 hours, so
+  sellers re-enter their password daily -- each login also pushes a
+  FollowUpBoss event ("X logged into their Client Access dashboard") so
+  you know when a seller is actively checking in.
 - **`/admin`** — your own dashboard to run it: create seller accounts
   (email + a password you choose — tell them what it is; use "Reset
   Password" if they forget it), add listings to a seller and update the
