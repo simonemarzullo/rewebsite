@@ -348,6 +348,10 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   .db-tab{width:100%;text-align:center}
   .adm-inline-form .om-field{flex-basis:100%}
   .adm-inline-form > .om-input{flex-basis:100%}
+  .db-stats{grid-template-columns:1fr 1fr}
+  .db-stat{padding:28px 16px}
+  .db-stat-value{font-size:1.8rem}
+  .db-stat-label{font-size:.64rem}
 }
 @media(prefers-reduced-motion:reduce){*{transition-duration:0ms!important}}
 @media(hover:hover){

@@ -68,15 +68,26 @@ MIN_PASSWORD_LEN = 8
 FUB_EVENTS_URL = "https://api.followupboss.com/v1/events"
 
 LISTING_STATUSES = ["Active", "Under Contract", "Sold", "Expired", "Withdrawn"]
+# Selectable feedback categories -- "pricing_agent" and "buyer_feedback" used
+# to be split further into pricing-specific vs. general buyer feedback
+# ("Pricing Feedback (Agent/Buyer)" + a separate plain "Buyer Feedback");
+# simplified down to just who it came from, dropping the pricing framing.
 FEEDBACK_CATEGORIES = {
     "showing": "Showing Feedback",
-    "pricing_agent": "Pricing Feedback (Agent)",
-    "pricing_buyer": "Pricing Feedback (Buyer)",
-    "buyer_feedback": "Buyer Feedback",
+    "pricing_agent": "Buyer's Agent Feedback",
+    "buyer_feedback": "Buyer's Feedback",
 }
+# "pricing_buyer" is no longer offered in the Type dropdown (folded into the
+# broader "Buyer's Feedback" above) but existing notes saved under it still
+# need a real label instead of the raw DB value.
+LEGACY_FEEDBACK_LABELS = {"pricing_buyer": "Buyer's Feedback"}
+
+
+def feedback_category_label(category):
+    return FEEDBACK_CATEGORIES.get(category) or LEGACY_FEEDBACK_LABELS.get(category) or category
 
 # Shared tab-toggle script for the 4-tab layout on each listing (Marketing /
-# Number of Offers / Open Houses & Showings / Buyer Feedback) -- used on both
+# Number of Offers / Open Houses & Showings / Feedbacks) -- used on both
 # the client dashboard and the admin panel, each listing scoped independently
 # via the nearest [data-tabscope] ancestor.
 DB_TABS_SCRIPT = """
@@ -828,7 +839,7 @@ def _feedback_html(notes, empty_message):
         return f'<p class="db-empty-note">{html.escape(empty_message)}</p>'
     items = []
     for n in notes:
-        sub = FEEDBACK_CATEGORIES.get(n["category"], n["category"])
+        sub = feedback_category_label(n["category"])
         items.append(f"""<div class="db-note">
           <div class="db-note-date">{n["created_at"].strftime("%b %-d, %Y")}<span class="db-note-sub">{html.escape(sub)}</span></div>
           <div class="db-note-text">{html.escape(n["note"])}</div>
@@ -859,7 +870,7 @@ def _listing_html(listing):
         <button type="button" class="db-tab active" data-tab="marketing">Marketing</button>
         <button type="button" class="db-tab" data-tab="offers">Number of Offers</button>
         <button type="button" class="db-tab" data-tab="openhouses">Open Houses &amp; Showings</button>
-        <button type="button" class="db-tab" data-tab="feedback">Buyer Feedback</button>
+        <button type="button" class="db-tab" data-tab="feedback">Feedbacks</button>
       </div>
       <div class="db-tab-panel" data-tab-panel="marketing">
         <div class="db-stats">{marketing_stats}</div>
@@ -1050,7 +1061,7 @@ def _listing_admin_html(listing, metric_types):
           <button type="button" class="db-tab active" data-tab="marketing">Marketing</button>
           <button type="button" class="db-tab" data-tab="offers">Number of Offers</button>
           <button type="button" class="db-tab" data-tab="openhouses">Open Houses &amp; Showings</button>
-          <button type="button" class="db-tab" data-tab="feedback">Buyer Feedback</button>
+          <button type="button" class="db-tab" data-tab="feedback">Feedbacks</button>
         </div>
 
         <div class="db-tab-panel" data-tab-panel="marketing">

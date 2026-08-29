@@ -176,9 +176,9 @@ Two private, password-gated sections (`api/portal.py`):
   Showings/Groups at Open Houses/Offers Received computed automatically
   from the other tabs below, and any custom metrics you've added), Number
   of Offers (price, cash/loan, close of escrow), Open Houses & Showings (a
-  dated log of each one, with groups through and notes), and Buyer
-  Feedback (every feedback note logged against the listing, labeled by
-  type). Linked from
+  dated log of each one, with groups through and notes), and Feedbacks
+  (Showing Feedback, Buyer's Agent Feedback, and Buyer's Feedback -- every
+  note logged against the listing, labeled by type). Linked from
   the nav as "Log In" so clients can find their way back in without
   needing the raw URL. Sessions (both seller and admin) last 24 hours, so
   sellers re-enter their password daily -- each login also pushes a
