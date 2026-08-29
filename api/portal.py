@@ -1045,13 +1045,12 @@ def build_admin_html(clients, contingency_types, metric_types, toolbox_links):
     <p class="adm-tagline" style="margin-bottom:32px">Your tools, your sellers, all in one place.</p>
     <div id="adm-notice" class="adm-notice" style="display:none"></div>
 
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;flex-wrap:wrap">
       <h2 class="db-section-title" style="font-size:.9rem;margin-bottom:0">Toolbox</h2>
-      <button type="button" class="adm-fab-btn" id="adm-toolbox-add-btn" aria-label="Add a tool" title="Add a tool">+</button>
+      <button type="button" class="btn-primary adm-btn-sm" id="adm-toolbox-add-btn">Add Tool</button>
     </div>
-    <p class="adm-tagline" style="margin-bottom:16px">Shortcuts to your own tools -- only visible here, never shown to sellers.</p>
     <div class="adm-toolbox-buttons">{toolbox_buttons_html}</div>
-    <details class="adm-history" style="margin-top:16px">
+    <details class="adm-history" style="margin-top:12px">
       <summary>Manage tools</summary>
       <div class="adm-tiles" style="margin-top:12px">{toolbox_manage_html}</div>
     </details>
