@@ -130,6 +130,42 @@ CREATE TABLE IF NOT EXISTS toolbox_links (
 );
 CREATE INDEX IF NOT EXISTS idx_toolbox_links_sort_order ON toolbox_links(sort_order);
 
+-- Individual off-market buyer accounts (replaces the old single shared
+-- OFFMARKET_PASSWORD gate) -- same shape/auth pattern as clients above.
+-- Every active buyer sees the same pool of active offmarket_listings; there
+-- is no per-buyer assignment.
+CREATE TABLE IF NOT EXISTS offmarket_buyers (
+    id            SERIAL PRIMARY KEY,
+    email         TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    name          TEXT NOT NULL DEFAULT '',
+    active        BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Off-market listings, admin-managed from /admin. photo_urls holds
+-- shareable image links (Simone hosts photos elsewhere and pastes the
+-- URLs in) -- the first one is the card/flyer's primary photo, any others
+-- are additional flyer gallery photos. beds/baths/sqft are free text (not
+-- numeric) so an admin can enter "4+", a range, or leave one blank.
+CREATE TABLE IF NOT EXISTS offmarket_listings (
+    id          SERIAL PRIMARY KEY,
+    address     TEXT NOT NULL,
+    area        TEXT NOT NULL DEFAULT '',
+    status      TEXT NOT NULL DEFAULT 'Available',
+    price       TEXT NOT NULL DEFAULT '',
+    beds        TEXT NOT NULL DEFAULT '',
+    baths       TEXT NOT NULL DEFAULT '',
+    sqft        TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    photo_urls  TEXT[] NOT NULL DEFAULT '{}',
+    photo_alt   TEXT NOT NULL DEFAULT '',
+    active      BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_offmarket_listings_created ON offmarket_listings(created_at);
+
 -- team_members / resource_tiles (for a team resource hub) were designed
 -- alongside this but held back for a later phase -- see README's
 -- "Client dashboard and admin panel" section. Add them back here when

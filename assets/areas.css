@@ -125,7 +125,7 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .om-input:focus{outline:none;border-color:var(--red)}
 .om-error{color:var(--red);font-size:.78rem;margin-top:14px}
 .om-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--g3);border:1px solid var(--g3)}
-.om-card{background:var(--black);display:flex;flex-direction:column}
+.om-card{background:var(--black);display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:background .2s}
 .om-card-img{width:100%;height:220px;object-fit:cover;display:block;background:var(--g2)}
 .om-card-img-placeholder{display:flex;align-items:center;justify-content:center;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--g5);font-weight:500}
 .om-card-body{padding:26px;display:flex;flex-direction:column;gap:8px}
@@ -136,6 +136,11 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .om-card-desc{font-size:.8rem;line-height:1.7;color:var(--g6);font-weight:300}
 .om-status{display:inline-block;font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border:1px solid var(--g3);color:var(--g5);margin-left:8px;vertical-align:middle}
 .om-empty{text-align:center;color:var(--g5);font-size:.9rem;font-weight:300;max-width:480px;margin:0 auto}
+.flyer-price{font-family:var(--serif);font-size:2.2rem;color:var(--red);font-weight:400}
+.flyer-specs{font-size:.9rem;color:var(--g5);font-weight:300;margin-top:8px}
+.flyer-desc{font-size:.92rem;line-height:1.8;color:var(--g6);font-weight:300;margin-top:20px}
+.flyer-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:28px}
+.flyer-gallery-img{width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--g2)}
 .om-hero-compact{min-height:36vh}
 .om-logout{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--g5);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;font-family:inherit}
 
@@ -343,6 +348,7 @@ footer{background:var(--g1);border-top:1px solid var(--g3);padding:48px}
   .market-pulse-cta:hover{background:var(--g3)}
   .news-card:hover{background:var(--g1)}
   .news-card:hover .news-card-link{color:var(--red)}
+  .om-card:hover{background:var(--g1)}
   .news-modal-close:hover{color:var(--white)}
   .adm-modal-close:hover{color:var(--white)}
   .adm-toolbox-add-btn:hover{background:var(--red-h)}

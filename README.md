@@ -144,28 +144,40 @@ email either way.
 
 ## Off-market opportunities page
 
-`/off-market` is a private, password-gated page for sharing off-market
-listings with select buyers/investors before they hit the open market.
+`/off-market` is a private page for sharing off-market listings with
+select buyers/investors before they hit the open market. Buyers and
+listings are both managed from `/admin` (the "Off-Market Buyers" and
+"Off-Market Listings" sections) — same database-backed model as sellers,
+no code change or redeploy needed to add either one.
 
-- **Access code**: set `OFFMARKET_PASSWORD` in Vercel (Project Settings →
-  Environment Variables) to whatever code you want to hand out, then
-  redeploy. It's a single shared code, not a per-person login — anyone with
-  the code plus a valid email gets in. Change it anytime (redeploy required)
-  to rotate access; rotating it also signs out everyone currently logged in.
-- **How visitors get in**: they go to `/off-market`, enter their email and
-  the code. Their email is logged to FollowUpBoss (tagged "Off-Market
-  Access") and you get an email notification, so you know who's asked in.
-  After that, a cookie keeps them signed in for 24 hours before they need
-  to re-enter the code.
-- **Adding listings**: there's no admin form for this — message me the
-  property details (address, price, beds/baths/sqft, a short description,
-  and a photo) and I'll add them to `api/offmarket.py` and deploy. This
-  matches how every other page on this site is updated.
-- **Not linked anywhere public**: no nav or footer link points to it, so
-  it's only reachable by whoever you send the URL to directly. Let me know
-  if you'd rather have a small discreet link somewhere (e.g. the footer).
-- **Not in the sitemap**, and the page sends `noindex` — it won't show up
-  in Google.
+- **Buyer accounts**: each buyer gets their own email + password (you
+  assign the password when you create them, and can reset it anytime from
+  `/admin`) — a real per-person login, not a shared code like before.
+  Every active buyer sees every active listing; there's no per-buyer
+  assignment. Deactivating a buyer cuts off their access immediately
+  without deleting their account or history.
+- **How buyers get in**: they go to `/off-market` and sign in with the
+  email and password you gave them. Each login is logged to FollowUpBoss
+  (tagged "Off-Market Access") and you get an email notification, so you
+  know who's checking in. A cookie keeps them signed in for 24 hours
+  before they need to sign in again.
+- **Adding listings**: from `/admin`, fill in address, area, status,
+  price, beds/baths/sqft, a description, and paste photo URLs (one per
+  line, first one is the main photo) — you host the photos somewhere
+  yourself (Dropbox, Google Photos, etc. with a shareable link) and paste
+  the link in; there's no file upload here. "Hide" pulls a listing off
+  `/off-market` without deleting it.
+- **Sharing a "flyer"**: every listing gets its own shareable page at
+  `/flyer/<id>` — a clean, single-listing page with the photos, price,
+  and details, no login required to view it. Click "View Flyer" or "Copy
+  Flyer Link" next to any listing in `/admin` to grab the link and text
+  or email it directly to a specific buyer, even one without off-market
+  login access.
+- **Not linked anywhere public** beyond the nav's "Off-Market" link
+  itself, which always shows the login gate to a signed-out visitor —
+  flyer pages are only reachable via the direct link you share.
+- **Not in the sitemap**, and both the listings page and flyer pages send
+  `noindex` — they won't show up in Google.
 
 ## Client dashboard and admin panel
 

@@ -13,9 +13,11 @@ here) would have pushed it to 13 and failed to deploy
 the total at 12.
 
 Auth model: each client gets their own row in the `clients` table (email
-+ a password Simone assigns via /admin) -- unlike the off-market page's
-single shared password. Admin uses a single shared ADMIN_PASSWORD, same
-pattern as OFFMARKET_PASSWORD. Session cookies are HMAC-signed and
++ a password Simone assigns via /admin) -- same individual-account model
+now used for off-market buyers (also managed from here, see the
+"Off-market buyers + listings" section below). Admin itself still uses a
+single shared ADMIN_PASSWORD, since there's only ever one admin. Session
+cookies are HMAC-signed and
 role-scoped (a client token can't be replayed as an admin token or
 someone else's client session). Both sessions last 24h -- sellers re-enter
 their password daily, which also naturally caps the FollowUpBoss login
@@ -31,9 +33,16 @@ those) so Simone knows when a seller checks their dashboard.
 data stays intact and shows up in admin's History filter, never gone for
 good.
 
-Requires the `clients`/`listings`/`feedback_notes`/`offers`/`open_houses`
-tables from db/schema.sql, POSTGRES_URL (or DATABASE_URL), ADMIN_PASSWORD,
-and SESSION_SECRET.
+Requires the `clients`/`listings`/`feedback_notes`/`offers`/`open_houses`/
+`offmarket_buyers`/`offmarket_listings` tables from db/schema.sql,
+POSTGRES_URL (or DATABASE_URL), ADMIN_PASSWORD, and SESSION_SECRET.
+
+This admin page also manages the off-market buyers + listings that feed
+api/offmarket.py's /off-market page and its public /flyer/<id> pages --
+those two files share the `offmarket_buyers`/`offmarket_listings` tables
+but, per this project's no-cross-import rule, duplicate their own copies
+of the DB helpers and password/session code rather than importing them
+from here.
 
 Team member / resource hub support was dropped from this build to fit
 the function-count limit -- may come back as its own file later if the
@@ -68,6 +77,8 @@ MIN_PASSWORD_LEN = 8
 FUB_EVENTS_URL = "https://api.followupboss.com/v1/events"
 
 LISTING_STATUSES = ["Active", "Under Contract", "Sold", "Expired", "Withdrawn"]
+OFFMARKET_STATUSES = ["Available", "Pending", "Sold"]
+MAX_PHOTO_URLS = 20
 # Selectable feedback categories -- "pricing_agent" and "buyer_feedback" used
 # to be split further into pricing-specific vs. general buyer feedback
 # ("Pricing Feedback (Agent/Buyer)" + a separate plain "Buyer Feedback");
@@ -317,6 +328,11 @@ def verify_password(password, stored_hash):
 
 def clean(value, max_len=MAX_FIELD_LEN):
     return str(value).strip()[:max_len] if value is not None else ""
+
+
+def _parse_photo_urls(raw):
+    urls = [clean(u, 2000) for u in str(raw or "").splitlines()]
+    return [u for u in urls if u][:MAX_PHOTO_URLS]
 
 
 # ---------------------------------------------------------------------------
@@ -668,6 +684,86 @@ def toggle_toolbox_link_active(conn, link_id):
 def delete_toolbox_link(conn, link_id):
     with conn.cursor() as cur:
         cur.execute("DELETE FROM toolbox_links WHERE id = %s", (link_id,))
+    conn.commit()
+
+
+# ---------------------------------------------------------------------------
+# Off-market buyers + listings -- feeds api/offmarket.py's /off-market page
+# and its public per-listing /flyer/<id> page. Same auth pattern as sellers
+# (hash_password/verify_password above), but buyers don't have their own
+# listings nested under them -- every active buyer sees every active
+# offmarket_listings row, there's no per-buyer assignment.
+# ---------------------------------------------------------------------------
+def fetch_all_offmarket_buyers(conn):
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute("SELECT id, email, name, active, created_at FROM offmarket_buyers ORDER BY created_at DESC")
+        return cur.fetchall()
+
+
+def create_offmarket_buyer(conn, email, name, password):
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO offmarket_buyers (email, name, password_hash) VALUES (%s, %s, %s) RETURNING id",
+            (email, name, hash_password(password)),
+        )
+        buyer_id = cur.fetchone()[0]
+    conn.commit()
+    return buyer_id
+
+
+def toggle_offmarket_buyer_active(conn, buyer_id):
+    with conn.cursor() as cur:
+        cur.execute("UPDATE offmarket_buyers SET active = NOT active WHERE id = %s", (buyer_id,))
+    conn.commit()
+
+
+def reset_offmarket_buyer_password(conn, buyer_id, password):
+    with conn.cursor() as cur:
+        cur.execute("UPDATE offmarket_buyers SET password_hash = %s WHERE id = %s", (hash_password(password), buyer_id))
+    conn.commit()
+
+
+def update_offmarket_buyer_email(conn, buyer_id, email):
+    with conn.cursor() as cur:
+        cur.execute("UPDATE offmarket_buyers SET email = %s WHERE id = %s", (email, buyer_id))
+    conn.commit()
+
+
+def fetch_all_offmarket_listings(conn):
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            """SELECT id, address, area, status, price, beds, baths, sqft, description,
+                      photo_urls, photo_alt, active, created_at
+               FROM offmarket_listings ORDER BY created_at DESC"""
+        )
+        return cur.fetchall()
+
+
+def create_offmarket_listing(conn, address, area, status, price, beds, baths, sqft, description, photo_urls, photo_alt):
+    with conn.cursor() as cur:
+        cur.execute(
+            """INSERT INTO offmarket_listings
+               (address, area, status, price, beds, baths, sqft, description, photo_urls, photo_alt)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            (address, area, status, price, beds, baths, sqft, description, photo_urls, photo_alt),
+        )
+    conn.commit()
+
+
+def update_offmarket_listing(conn, listing_id, address, area, status, price, beds, baths, sqft, description, photo_urls, photo_alt):
+    with conn.cursor() as cur:
+        cur.execute(
+            """UPDATE offmarket_listings SET address = %s, area = %s, status = %s, price = %s, beds = %s,
+               baths = %s, sqft = %s, description = %s, photo_urls = %s, photo_alt = %s, updated_at = now()
+               WHERE id = %s""",
+            (address, area, status, price, beds, baths, sqft, description, photo_urls, photo_alt, listing_id),
+        )
+    conn.commit()
+
+
+def toggle_offmarket_listing_active(conn, listing_id):
+    with conn.cursor() as cur:
+        cur.execute("UPDATE offmarket_listings SET active = NOT active WHERE id = %s", (listing_id,))
     conn.commit()
 
 
@@ -1119,7 +1215,69 @@ def _toolbox_link_admin_html(link):
   </form>"""
 
 
-def build_admin_html(clients, toolbox_links):
+def _offmarket_buyer_admin_html(buyer):
+    status_label = "Active" if buyer["active"] else "Deactivated"
+    return f"""
+  <details class="adm-client">
+    <summary>
+      <span class="adm-client-email">{html.escape(buyer["email"])}</span>
+      {f'<span class="adm-client-name">{html.escape(buyer["name"])}</span>' if buyer["name"] else ''}
+      <span class="om-status">{status_label}</span>
+    </summary>
+    <div class="adm-client-body">
+      <form class="adm-inline-form" data-action="update_offmarket_buyer_email" data-id="{buyer["id"]}" style="margin-bottom:14px">
+        <label class="om-field"><span class="om-field-label">Buyer Email</span>
+          <input type="email" name="email" class="om-input" value="{html.escape(buyer["email"])}" required>
+        </label>
+        <button type="submit" class="btn-primary adm-btn-sm">Save Email</button>
+      </form>
+      <form class="adm-inline-form" data-action="reset_offmarket_buyer_password" data-id="{buyer["id"]}">
+        <input type="text" name="password" class="om-input" placeholder="New password for this buyer" required minlength="{MIN_PASSWORD_LEN}">
+        <button type="submit" class="btn-primary adm-btn-sm">Reset Password</button>
+      </form>
+      <button type="button" class="om-logout adm-toggle-active" data-action="toggle_offmarket_buyer_active" data-id="{buyer["id"]}" style="margin-top:14px">{"Deactivate" if buyer["active"] else "Reactivate"} this buyer</button>
+    </div>
+  </details>"""
+
+
+def _offmarket_status_options(current):
+    return "".join(f'<option value="{s}"{" selected" if s == current else ""}>{s}</option>' for s in OFFMARKET_STATUSES)
+
+
+def _offmarket_listing_admin_html(listing):
+    status_label = "Active" if listing["active"] else "Hidden"
+    toggle_label = "Hide" if listing["active"] else "Show"
+    photo_urls_text = "\n".join(listing.get("photo_urls") or [])
+    flyer_path = f"/flyer/{listing['id']}"
+    return f"""
+    <div class="adm-listing">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+        <span class="om-status">{status_label}</span>
+        <a href="{flyer_path}" target="_blank" rel="noopener noreferrer" class="om-logout">View Flyer</a>
+        <button type="button" class="om-logout adm-copy-link-btn" data-path="{flyer_path}">Copy Flyer Link</button>
+        <button type="button" class="om-logout adm-toggle-active" data-action="toggle_offmarket_listing_active" data-id="{listing["id"]}">{toggle_label}</button>
+      </div>
+      <form class="adm-inline-form" data-action="update_offmarket_listing" data-id="{listing["id"]}">
+        <input type="text" name="address" class="om-input" value="{html.escape(listing['address'])}" placeholder="Address" required style="flex-basis:100%">
+        <input type="text" name="area" class="om-input" value="{html.escape(listing.get('area') or '')}" placeholder="Area / neighborhood">
+        <label class="om-field"><span class="om-field-label">Status</span>
+          <select name="status" class="om-input">{_offmarket_status_options(listing['status'])}</select>
+        </label>
+        <input type="text" name="price" class="om-input" value="{html.escape(listing.get('price') or '')}" placeholder="Price (e.g. $4,995,000)">
+        <input type="text" name="beds" class="om-input" value="{html.escape(listing.get('beds') or '')}" placeholder="Beds" style="max-width:100px">
+        <input type="text" name="baths" class="om-input" value="{html.escape(listing.get('baths') or '')}" placeholder="Baths" style="max-width:100px">
+        <input type="text" name="sqft" class="om-input" value="{html.escape(listing.get('sqft') or '')}" placeholder="Sqft" style="max-width:120px">
+        <input type="text" name="description" class="om-input" value="{html.escape(listing.get('description') or '')}" placeholder="One-line description" style="flex-basis:100%">
+        <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Photo URLs (one per line -- first is the main photo)</span>
+          <textarea name="photo_urls" class="om-input" rows="3" style="width:100%;font-family:inherit;resize:vertical">{html.escape(photo_urls_text)}</textarea>
+        </label>
+        <input type="text" name="photo_alt" class="om-input" value="{html.escape(listing.get('photo_alt') or '')}" placeholder="Photo description (for accessibility)" style="flex-basis:100%">
+        <button type="submit" class="btn-primary adm-btn-sm">Save Listing</button>
+      </form>
+    </div>"""
+
+
+def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listings):
     active_clients = [c for c in clients if c["active"]]
     history_clients = [c for c in clients if not c["active"]]
 
@@ -1132,6 +1290,12 @@ def build_admin_html(clients, toolbox_links):
         for t in active_toolbox_links
     )
     toolbox_manage_html = "".join(_toolbox_link_admin_html(t) for t in toolbox_links) or '<p class="db-empty-note">No tools yet.</p>'
+
+    active_offmarket_buyers = [b for b in offmarket_buyers if b["active"]]
+    history_offmarket_buyers = [b for b in offmarket_buyers if not b["active"]]
+    offmarket_buyers_html = "".join(_offmarket_buyer_admin_html(b) for b in active_offmarket_buyers) or '<div class="om-empty">No active buyers -- add one below.</div>'
+    history_offmarket_buyers_html = "".join(_offmarket_buyer_admin_html(b) for b in history_offmarket_buyers) or '<div class="om-empty">No deactivated buyers.</div>'
+    offmarket_listings_html = "".join(_offmarket_listing_admin_html(l) for l in offmarket_listings) or '<p class="db-empty-note">No off-market listings yet -- add one below.</p>'
 
     body = f"""
 <section class="section" style="padding-top:120px">
@@ -1180,6 +1344,48 @@ def build_admin_html(clients, toolbox_links):
       <div class="adm-clients">{history_clients_html}</div>
     </details>
 
+    <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Off-Market Buyers</h2>
+    <div class="adm-panel">
+      <div class="db-section-title">Create New Buyer</div>
+      <form id="adm-create-offmarket-buyer-form" class="adm-inline-form">
+        <input type="email" name="email" class="om-input" placeholder="Buyer email" required>
+        <input type="text" name="name" class="om-input" placeholder="Buyer name">
+        <input type="text" name="password" class="om-input" placeholder="Password to assign" required minlength="{MIN_PASSWORD_LEN}">
+        <button type="submit" class="btn-primary adm-btn-sm">Create Buyer</button>
+      </form>
+      <div class="om-error" id="adm-create-offmarket-buyer-error"></div>
+    </div>
+    <div class="adm-clients">{offmarket_buyers_html}</div>
+
+    <details class="adm-history">
+      <summary>History (deactivated buyers)</summary>
+      <div class="adm-clients">{history_offmarket_buyers_html}</div>
+    </details>
+
+    <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Off-Market Listings</h2>
+    <p class="adm-tagline" style="margin-bottom:16px">Every active buyer above sees every active listing here. Paste photo links from wherever you're already hosting them -- there's no file upload. Each listing has its own shareable "flyer" page you can text or email directly, no login needed to view it.</p>
+    <div class="adm-panel">
+      <div class="db-section-title">Add New Listing</div>
+      <form id="adm-create-offmarket-listing-form" class="adm-inline-form" data-action="create_offmarket_listing">
+        <input type="text" name="address" class="om-input" placeholder="Address" required style="flex-basis:100%">
+        <input type="text" name="area" class="om-input" placeholder="Area / neighborhood">
+        <label class="om-field"><span class="om-field-label">Status</span>
+          <select name="status" class="om-input">{_offmarket_status_options('Available')}</select>
+        </label>
+        <input type="text" name="price" class="om-input" placeholder="Price (e.g. $4,995,000)">
+        <input type="text" name="beds" class="om-input" placeholder="Beds" style="max-width:100px">
+        <input type="text" name="baths" class="om-input" placeholder="Baths" style="max-width:100px">
+        <input type="text" name="sqft" class="om-input" placeholder="Sqft" style="max-width:120px">
+        <input type="text" name="description" class="om-input" placeholder="One-line description" style="flex-basis:100%">
+        <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Photo URLs (one per line -- first is the main photo)</span>
+          <textarea name="photo_urls" class="om-input" rows="3" style="width:100%;font-family:inherit;resize:vertical"></textarea>
+        </label>
+        <input type="text" name="photo_alt" class="om-input" placeholder="Photo description (for accessibility)" style="flex-basis:100%">
+        <button type="submit" class="btn-primary adm-btn-sm">Add Listing</button>
+      </form>
+    </div>
+    <div class="adm-clients">{offmarket_listings_html}</div>
+
     <div style="text-align:center;margin-top:36px"><a href="/admin?logout=1" class="om-logout">Log out</a></div>
   </div>
 </section>
@@ -1218,6 +1424,23 @@ document.getElementById('adm-create-client-form').addEventListener('submit', asy
   try {{
     await adminPost({{action: 'create_client', email, name: form.name.value.trim(), password}});
     showNotice(`Seller created — send them: ${{email}} / ${{password}}`);
+    window.location.reload();
+  }} catch (err) {{
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  }}
+}});
+
+document.getElementById('adm-create-offmarket-buyer-form').addEventListener('submit', async function (e) {{
+  e.preventDefault();
+  const form = e.target;
+  const email = form.email.value.trim();
+  const password = form.password.value;
+  const errEl = document.getElementById('adm-create-offmarket-buyer-error');
+  errEl.style.display = 'none';
+  try {{
+    await adminPost({{action: 'create_offmarket_buyer', email, name: form.name.value.trim(), password}});
+    showNotice(`Buyer created — send them: ${{email}} / ${{password}}`);
     window.location.reload();
   }} catch (err) {{
     errEl.textContent = err.message;
@@ -1286,6 +1509,20 @@ document.querySelectorAll('.adm-delete-btn[data-action]').forEach(function (btn)
     }}
   }});
 }});
+
+document.querySelectorAll('.adm-copy-link-btn[data-path]').forEach(function (btn) {{
+  btn.addEventListener('click', async function () {{
+    const url = location.origin + btn.dataset.path;
+    const original = btn.textContent;
+    try {{
+      await navigator.clipboard.writeText(url);
+      btn.textContent = 'Copied!';
+    }} catch (err) {{
+      window.prompt('Copy this link:', url);
+    }}
+    setTimeout(function () {{ btn.textContent = original; }}, 1500);
+  }});
+}});
 </script>
 <script>{DB_TABS_SCRIPT}</script>
 """
@@ -1342,6 +1579,8 @@ class handler(BaseHTTPRequestHandler):
                     return
                 clients = fetch_all_clients(conn)
                 toolbox_links = fetch_all_toolbox_links(conn)
+                offmarket_buyers = fetch_all_offmarket_buyers(conn)
+                offmarket_listings = fetch_all_offmarket_listings(conn)
             except Exception as e:
                 print(f"portal(admin): failed to load data: {e}")
                 self._send_html(503, build_error_html("Something went wrong loading the admin panel.", "Admin | Simone Marzullo"))
@@ -1349,7 +1588,7 @@ class handler(BaseHTTPRequestHandler):
             finally:
                 if conn:
                     conn.close()
-            self._send_html(200, build_admin_html(clients, toolbox_links))
+            self._send_html(200, build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listings))
             return
 
         # Default: client dashboard (section == "dashboard" or unset)
@@ -1663,6 +1902,95 @@ class handler(BaseHTTPRequestHandler):
 
             if action == "delete_toolbox_link":
                 delete_toolbox_link(conn, int(data.get("id")))
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "create_offmarket_buyer":
+                email = clean(data.get("email")).lower()
+                name = clean(data.get("name"))
+                password = str(data.get("password", ""))
+                if not email or not EMAIL_RE.match(email):
+                    self._send_json(400, {"ok": False, "error": "Enter a valid email address."})
+                    return
+                if len(password) < MIN_PASSWORD_LEN:
+                    self._send_json(400, {"ok": False, "error": f"Password must be at least {MIN_PASSWORD_LEN} characters."})
+                    return
+                try:
+                    create_offmarket_buyer(conn, email, name, password)
+                except psycopg2.errors.UniqueViolation:
+                    conn.rollback()
+                    self._send_json(400, {"ok": False, "error": "A buyer with that email already exists."})
+                    return
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "toggle_offmarket_buyer_active":
+                toggle_offmarket_buyer_active(conn, int(data.get("id")))
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "reset_offmarket_buyer_password":
+                buyer_id = int(data.get("id"))
+                password = str(data.get("password", ""))
+                if len(password) < MIN_PASSWORD_LEN:
+                    self._send_json(400, {"ok": False, "error": f"Password must be at least {MIN_PASSWORD_LEN} characters."})
+                    return
+                reset_offmarket_buyer_password(conn, buyer_id, password)
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "update_offmarket_buyer_email":
+                buyer_id = int(data.get("id"))
+                email = clean(data.get("email")).lower()
+                if not email or not EMAIL_RE.match(email):
+                    self._send_json(400, {"ok": False, "error": "Enter a valid email address."})
+                    return
+                try:
+                    update_offmarket_buyer_email(conn, buyer_id, email)
+                except psycopg2.errors.UniqueViolation:
+                    conn.rollback()
+                    self._send_json(400, {"ok": False, "error": "A buyer with that email already exists."})
+                    return
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "create_offmarket_listing":
+                address = clean(data.get("address"))
+                if not address:
+                    self._send_json(400, {"ok": False, "error": "Address is required."})
+                    return
+                status = clean(data.get("status"), 40) or "Available"
+                if status not in OFFMARKET_STATUSES:
+                    status = "Available"
+                create_offmarket_listing(
+                    conn, address, clean(data.get("area")), status,
+                    clean(data.get("price"), 40), clean(data.get("beds"), 20), clean(data.get("baths"), 20),
+                    clean(data.get("sqft"), 20), clean(data.get("description"), 2000),
+                    _parse_photo_urls(data.get("photo_urls")), clean(data.get("photo_alt"), 300),
+                )
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "update_offmarket_listing":
+                listing_id = int(data.get("id"))
+                address = clean(data.get("address"))
+                if not address:
+                    self._send_json(400, {"ok": False, "error": "Address is required."})
+                    return
+                status = clean(data.get("status"), 40) or "Available"
+                if status not in OFFMARKET_STATUSES:
+                    status = "Available"
+                update_offmarket_listing(
+                    conn, listing_id, address, clean(data.get("area")), status,
+                    clean(data.get("price"), 40), clean(data.get("beds"), 20), clean(data.get("baths"), 20),
+                    clean(data.get("sqft"), 20), clean(data.get("description"), 2000),
+                    _parse_photo_urls(data.get("photo_urls")), clean(data.get("photo_alt"), 300),
+                )
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "toggle_offmarket_listing_active":
+                toggle_offmarket_listing_active(conn, int(data.get("id")))
                 self._send_json(200, {"ok": True})
                 return
 
