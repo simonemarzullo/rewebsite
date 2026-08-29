@@ -1045,21 +1045,29 @@ def build_admin_html(clients, contingency_types, metric_types, toolbox_links):
     <p class="adm-tagline" style="margin-bottom:32px">Your tools, your sellers, all in one place.</p>
     <div id="adm-notice" class="adm-notice" style="display:none"></div>
 
-    <h2 class="db-section-title" style="font-size:.9rem;margin-bottom:16px">Access Toolbox</h2>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+      <h2 class="db-section-title" style="font-size:.9rem;margin-bottom:0">Access Toolbox</h2>
+      <button type="button" class="adm-fab-btn" id="adm-toolbox-add-btn" aria-label="Add a tool" title="Add a tool">+</button>
+    </div>
     <p class="adm-tagline" style="margin-bottom:16px">Shortcuts to your own tools -- only visible here, never shown to sellers.</p>
     <div class="adm-toolbox-buttons">{toolbox_buttons_html}</div>
     <details class="adm-history" style="margin-top:16px">
       <summary>Manage tools</summary>
-      <div class="adm-panel" style="margin-top:12px">
+      <div class="adm-tiles" style="margin-top:12px">{toolbox_manage_html}</div>
+    </details>
+
+    <div class="adm-modal-overlay" id="adm-toolbox-modal-overlay" onclick="if(event.target===this)closeToolboxModal()">
+      <div class="adm-modal">
+        <button type="button" class="adm-modal-close" aria-label="Close" onclick="closeToolboxModal()">✕</button>
+        <h2 class="adm-modal-title">Add a Tool</h2>
         <form id="adm-create-toolbox-form" class="adm-inline-form">
-          <input type="text" name="name" class="om-input" placeholder="Button name" required>
-          <input type="url" name="url" class="om-input" placeholder="https://..." required>
-          <input type="number" name="sort_order" class="om-input" placeholder="Sort order" value="0" style="max-width:100px">
-          <button type="submit" class="btn-primary adm-btn-sm">Add Tool</button>
+          <input type="text" name="name" class="om-input" placeholder="Button name" required style="flex-basis:100%">
+          <input type="url" name="url" class="om-input" placeholder="https://..." required style="flex-basis:100%">
+          <input type="number" name="sort_order" class="om-input" placeholder="Sort order" value="0" style="flex-basis:100%">
+          <button type="submit" class="btn-primary adm-btn-sm" style="width:100%;justify-content:center">Add Tool</button>
         </form>
       </div>
-      <div class="adm-tiles">{toolbox_manage_html}</div>
-    </details>
+    </div>
 
     <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Sellers</h2>
     <div class="adm-panel">
@@ -1164,6 +1172,10 @@ document.getElementById('adm-create-metric-form').addEventListener('submit', asy
     alert(err.message);
   }}
 }});
+
+function openToolboxModal() {{ document.getElementById('adm-toolbox-modal-overlay').classList.add('on'); }}
+function closeToolboxModal() {{ document.getElementById('adm-toolbox-modal-overlay').classList.remove('on'); }}
+document.getElementById('adm-toolbox-add-btn').addEventListener('click', openToolboxModal);
 
 document.getElementById('adm-create-toolbox-form').addEventListener('submit', async function (e) {{
   e.preventDefault();
