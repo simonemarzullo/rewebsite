@@ -1046,7 +1046,7 @@ def build_admin_html(clients, contingency_types, metric_types, toolbox_links):
     <div id="adm-notice" class="adm-notice" style="display:none"></div>
 
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
-      <h2 class="db-section-title" style="font-size:.9rem;margin-bottom:0">Access Toolbox</h2>
+      <h2 class="db-section-title" style="font-size:.9rem;margin-bottom:0">Toolbox</h2>
       <button type="button" class="adm-fab-btn" id="adm-toolbox-add-btn" aria-label="Add a tool" title="Add a tool">+</button>
     </div>
     <p class="adm-tagline" style="margin-bottom:16px">Shortcuts to your own tools -- only visible here, never shown to sellers.</p>
