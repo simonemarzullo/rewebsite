@@ -92,6 +92,18 @@ CREATE TABLE IF NOT EXISTS listing_metrics (
 );
 CREATE INDEX IF NOT EXISTS idx_listing_metrics_listing_id ON listing_metrics(listing_id);
 
+-- Admin-only shortcuts to other tools Simone builds -- shown at the top of
+-- /admin, not visible to clients.
+CREATE TABLE IF NOT EXISTS toolbox_links (
+    id         SERIAL PRIMARY KEY,
+    name       TEXT NOT NULL,
+    url        TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    active     BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_toolbox_links_sort_order ON toolbox_links(sort_order);
+
 -- team_members / resource_tiles (for a team resource hub) were designed
 -- alongside this but held back for a later phase -- see README's
 -- "Client dashboard and admin panel" section. Add them back here when

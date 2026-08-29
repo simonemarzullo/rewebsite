@@ -551,6 +551,36 @@ def upsert_listing_metric(conn, listing_id, metric_type_id, value):
     conn.commit()
 
 
+def fetch_all_toolbox_links(conn):
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute("SELECT id, name, url, sort_order, active FROM toolbox_links ORDER BY sort_order, created_at")
+        return cur.fetchall()
+
+
+def create_toolbox_link(conn, name, url, sort_order):
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO toolbox_links (name, url, sort_order) VALUES (%s, %s, %s)",
+            (name, url, sort_order),
+        )
+    conn.commit()
+
+
+def update_toolbox_link(conn, link_id, name, url, sort_order):
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE toolbox_links SET name = %s, url = %s, sort_order = %s WHERE id = %s",
+            (name, url, sort_order, link_id),
+        )
+    conn.commit()
+
+
+def toggle_toolbox_link_active(conn, link_id):
+    with conn.cursor() as cur:
+        cur.execute("UPDATE toolbox_links SET active = NOT active WHERE id = %s", (link_id,))
+    conn.commit()
+
+
 def build_error_html(message, title):
     body = f"""
 <section class="section" style="text-align:center;padding-top:140px">
@@ -965,37 +995,73 @@ def _metric_type_admin_html(m):
   </div>"""
 
 
-def build_admin_html(clients, contingency_types, metric_types):
+def _toolbox_link_admin_html(link):
+    status_label = "Active" if link["active"] else "Hidden"
+    return f"""
+  <form class="adm-inline-form" data-action="update_toolbox_link" data-id="{link["id"]}">
+    <input type="text" name="name" class="om-input" value="{html.escape(link['name'])}" placeholder="Button name" required>
+    <input type="url" name="url" class="om-input" value="{html.escape(link['url'])}" placeholder="https://..." required>
+    <input type="number" name="sort_order" class="om-input" value="{link['sort_order']}" style="max-width:80px" title="Sort order">
+    <button type="submit" class="btn-primary adm-btn-sm">Save</button>
+    <span class="om-status">{status_label}</span>
+    <button type="button" class="om-logout adm-toggle-active" data-action="toggle_toolbox_link_active" data-id="{link["id"]}">{"Hide" if link["active"] else "Show"}</button>
+  </form>"""
+
+
+def build_admin_html(clients, contingency_types, metric_types, toolbox_links):
     active_clients = [c for c in clients if c["active"]]
     history_clients = [c for c in clients if not c["active"]]
 
-    clients_html = "".join(_client_admin_html(c, contingency_types, metric_types) for c in active_clients) or '<div class="om-empty">No active clients -- add one above.</div>'
-    history_clients_html = "".join(_client_admin_html(c, contingency_types, metric_types) for c in history_clients) or '<div class="om-empty">No deactivated clients.</div>'
+    clients_html = "".join(_client_admin_html(c, contingency_types, metric_types) for c in active_clients) or '<div class="om-empty">No active sellers -- add one above.</div>'
+    history_clients_html = "".join(_client_admin_html(c, contingency_types, metric_types) for c in history_clients) or '<div class="om-empty">No deactivated sellers.</div>'
     contingency_html = "".join(_contingency_type_admin_html(c) for c in contingency_types) or '<p class="db-empty-note">No contingency types yet.</p>'
     metric_html = "".join(_metric_type_admin_html(m) for m in metric_types) or '<p class="db-empty-note">No marketing metrics yet -- add one below (e.g. "Online Reactions", "Zillow Saves").</p>'
+
+    active_toolbox_links = [t for t in toolbox_links if t["active"]]
+    toolbox_buttons_html = "".join(
+        f'<a href="{html.escape(t["url"])}" target="_blank" rel="noopener noreferrer" class="btn-primary adm-toolbox-btn">{html.escape(t["name"])}</a>'
+        for t in active_toolbox_links
+    ) or '<p class="db-empty-note">No tools added yet -- add one below.</p>'
+    toolbox_manage_html = "".join(_toolbox_link_admin_html(t) for t in toolbox_links) or '<p class="db-empty-note">No tools yet.</p>'
 
     body = f"""
 <section class="section" style="padding-top:120px">
   <div class="wrap">
     <h1 class="area-h1" style="margin-bottom:8px">Admin</h1>
-    <p class="area-tagline" style="margin-bottom:32px">Manage clients and their dashboards.</p>
+    <p class="area-tagline" style="margin-bottom:32px">Your tools, your sellers, all in one place.</p>
     <div id="adm-notice" class="adm-notice" style="display:none"></div>
 
-    <h2 class="db-section-title" style="font-size:.9rem;margin-bottom:16px">Clients</h2>
+    <h2 class="db-section-title" style="font-size:.9rem;margin-bottom:16px">Access Toolbox</h2>
+    <p class="area-tagline" style="margin-bottom:16px">Shortcuts to your own tools -- only visible here, never shown to sellers.</p>
+    <div class="adm-toolbox-buttons">{toolbox_buttons_html}</div>
+    <details class="adm-history" style="margin-top:16px">
+      <summary>Manage tools</summary>
+      <div class="adm-panel" style="margin-top:12px">
+        <form id="adm-create-toolbox-form" class="adm-inline-form">
+          <input type="text" name="name" class="om-input" placeholder="Button name" required>
+          <input type="url" name="url" class="om-input" placeholder="https://..." required>
+          <input type="number" name="sort_order" class="om-input" placeholder="Sort order" value="0" style="max-width:100px">
+          <button type="submit" class="btn-primary adm-btn-sm">Add Tool</button>
+        </form>
+      </div>
+      <div class="adm-tiles">{toolbox_manage_html}</div>
+    </details>
+
+    <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Sellers</h2>
     <div class="adm-panel">
-      <div class="db-section-title">Create New Client</div>
+      <div class="db-section-title">Create New Seller</div>
       <form id="adm-create-client-form" class="adm-inline-form">
-        <input type="email" name="email" class="om-input" placeholder="Client email" required>
-        <input type="text" name="name" class="om-input" placeholder="Client name">
+        <input type="email" name="email" class="om-input" placeholder="Seller email" required>
+        <input type="text" name="name" class="om-input" placeholder="Seller name">
         <input type="text" name="password" class="om-input" placeholder="Password to assign" required minlength="{MIN_PASSWORD_LEN}">
-        <button type="submit" class="btn-primary adm-btn-sm">Create Client</button>
+        <button type="submit" class="btn-primary adm-btn-sm">Create Seller</button>
       </form>
       <div class="om-error" id="adm-create-client-error"></div>
     </div>
     <div class="adm-clients">{clients_html}</div>
 
     <details class="adm-history">
-      <summary>History (deactivated clients)</summary>
+      <summary>History (deactivated sellers)</summary>
       <div class="adm-clients">{history_clients_html}</div>
     </details>
 
@@ -1079,6 +1145,19 @@ document.getElementById('adm-create-metric-form').addEventListener('submit', asy
   const form = e.target;
   try {{
     await adminPost({{action: 'create_metric_type', name: form.name.value.trim()}});
+    window.location.reload();
+  }} catch (err) {{
+    alert(err.message);
+  }}
+}});
+
+document.getElementById('adm-create-toolbox-form').addEventListener('submit', async function (e) {{
+  e.preventDefault();
+  const form = e.target;
+  const payload = {{action: 'create_toolbox_link'}};
+  new FormData(form).forEach(function (v, k) {{ payload[k] = v; }});
+  try {{
+    await adminPost(payload);
     window.location.reload();
   }} catch (err) {{
     alert(err.message);
@@ -1172,6 +1251,7 @@ class handler(BaseHTTPRequestHandler):
                     return
                 clients, metric_types = fetch_all_clients(conn)
                 contingency_types = fetch_all_contingency_types(conn)
+                toolbox_links = fetch_all_toolbox_links(conn)
             except Exception as e:
                 print(f"portal(admin): failed to load data: {e}")
                 self._send_html(503, build_error_html("Something went wrong loading the admin panel.", "Admin | Simone Marzullo"))
@@ -1179,7 +1259,7 @@ class handler(BaseHTTPRequestHandler):
             finally:
                 if conn:
                     conn.close()
-            self._send_html(200, build_admin_html(clients, contingency_types, metric_types))
+            self._send_html(200, build_admin_html(clients, contingency_types, metric_types, toolbox_links))
             return
 
         # Default: client dashboard (section == "dashboard" or unset)
@@ -1417,6 +1497,34 @@ class handler(BaseHTTPRequestHandler):
 
             if action == "toggle_metric_type_active":
                 toggle_metric_type_active(conn, int(data.get("id")))
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "create_toolbox_link":
+                name = clean(data.get("name"))
+                url = clean(data.get("url"), 2000)
+                sort_order = int(data.get("sort_order") or 0)
+                if not name or not url:
+                    self._send_json(400, {"ok": False, "error": "Name and URL are required."})
+                    return
+                create_toolbox_link(conn, name, url, sort_order)
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "update_toolbox_link":
+                link_id = int(data.get("id"))
+                name = clean(data.get("name"))
+                url = clean(data.get("url"), 2000)
+                sort_order = int(data.get("sort_order") or 0)
+                if not name or not url:
+                    self._send_json(400, {"ok": False, "error": "Name and URL are required."})
+                    return
+                update_toolbox_link(conn, link_id, name, url, sort_order)
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "toggle_toolbox_link_active":
+                toggle_toolbox_link_active(conn, int(data.get("id")))
                 self._send_json(200, {"ok": True})
                 return
 

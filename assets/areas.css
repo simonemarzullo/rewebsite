@@ -205,6 +205,10 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .adm-history summary::-webkit-details-marker{display:none}
 .adm-list{display:flex;flex-direction:column;gap:1px;margin-bottom:12px}
 .adm-list-row{background:var(--g1);border:1px solid var(--g3);padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:space-between}
+.adm-tiles{display:flex;flex-direction:column;gap:12px;margin-bottom:12px}
+.adm-tiles .adm-inline-form{background:var(--g1);border:1px solid var(--g3);padding:16px 20px}
+.adm-toolbox-buttons{display:flex;flex-wrap:wrap;gap:12px}
+.adm-toolbox-btn{padding:14px 26px}
 
 /* NEWS -- RSS roundup cards */
 .news-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--g3);border:1px solid var(--g3)}
