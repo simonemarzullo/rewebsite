@@ -1041,8 +1041,7 @@ def build_admin_html(clients, contingency_types, metric_types, toolbox_links):
     body = f"""
 <section class="section" style="padding-top:120px">
   <div class="wrap">
-    <h1 class="adm-h1" style="margin-bottom:8px">Admin</h1>
-    <p class="adm-tagline" style="margin-bottom:32px">Your tools, your sellers, all in one place.</p>
+    <h1 class="adm-h1" style="margin-bottom:24px">Admin</h1>
     <div id="adm-notice" class="adm-notice" style="display:none"></div>
 
     <h2 class="db-section-title" style="font-size:.9rem;margin-bottom:14px">Toolbox</h2>
