@@ -186,8 +186,9 @@ button{cursor:pointer;border:none;background:none;font-family:var(--sans);-webki
 .adm-notice{background:var(--g1);border:1px solid var(--red);color:var(--white);padding:14px 18px;font-size:.85rem;margin-bottom:24px}
 .adm-panel{background:var(--g1);border:1px solid var(--g3);padding:24px;margin-bottom:24px}
 .adm-inline-form{display:flex;flex-wrap:wrap;gap:10px;align-items:center;width:100%}
-.adm-inline-form .om-input{width:auto;flex:1 1 160px;padding:10px 14px}
+.adm-inline-form > .om-input{width:auto;flex:1 1 160px;padding:10px 14px}
 .adm-inline-form .om-field{flex:1 1 140px}
+.adm-inline-form .om-field .om-input{width:100%;padding:10px 14px}
 .adm-btn-sm{padding:10px 20px;font-size:.72rem}
 .adm-clients{display:flex;flex-direction:column;gap:1px;margin-bottom:12px}
 .adm-client{background:var(--g1);border:1px solid var(--g3)}
