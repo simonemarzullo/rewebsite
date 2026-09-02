@@ -104,7 +104,7 @@ LACOUNTY_PARCEL_URL = (
     "https://public.gis.lacounty.gov/public/rest/services/"
     "LACounty_Cache/LACounty_Parcel/MapServer/0/query"
 )
-_ENRICH_BATCH_DEFAULT = 15   # FUB contacts scanned per batch call (keeps one request well under maxDuration)
+_ENRICH_BATCH_DEFAULT = 10   # FUB contacts per batch; run_enrich_batch also self-limits to ~40s wall-clock
 _STREET_SUFFIX_RE = re.compile(
     r"\b(st|str|street|ave|av|avenue|blvd|boulevard|dr|drive|rd|road|ln|lane|ct|court|"
     r"pl|place|way|ter|terrace|cir|circle|hwy|highway|pkwy|parkway|trl|trail)\b\.?\s*$", re.I)
@@ -309,26 +309,46 @@ BUYER_MATCH_SCRIPT = r"""
     var enReset = document.getElementById('bm-enrich-reset');
     var enOut = document.getElementById('bm-enrich-result');
     var enLine = document.getElementById('bm-enrich-state');
-    var running = false;
-    var run = 0;
+    var enBusy = false;
+    var enStopReq = false;
+    var enCtrl = null;
 
-    async function loop() {
-      var mine = ++run;
-      running = true;
+    function enIdle() {
+      enBusy = false;
+      enStart.disabled = false; enStart.textContent = 'Start / resume sweep';
+      enStop.style.display = 'none';
+      enReset.style.display = ''; enReset.disabled = false;
+    }
+
+    async function enBatch() {
+      enCtrl = new AbortController();
+      var res = await fetch('/api/portal?section=admin', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: 'fub_enrich_run'}), signal: enCtrl.signal,
+      });
+      var d = await res.json();
+      if (!res.ok || !d.ok) throw new Error(d.error || 'Enrichment batch failed.');
+      return d;
+    }
+
+    async function enLoop() {
+      if (enBusy) return;
+      enBusy = true; enStopReq = false;
       enStart.disabled = true; enStart.textContent = 'Sweeping…';
-      enStop.style.display = ''; enReset.style.display = 'none';
+      enStop.style.display = ''; enStop.disabled = false; enStop.textContent = 'Stop';
+      enReset.style.display = 'none';
       var totUpd = 0, totProc = 0;
       try {
-        while (running && mine === run) {
-          var d = await adminPost({action: 'fub_enrich_run'});
+        while (!enStopReq) {
+          var d = await enBatch();
           totProc += d.processed || 0; totUpd += d.updated || 0;
           var ex = (d.examples || []).map(function (e) {
             return '<li>' + esc(e.name) + ' — filled ' + esc((e.filled || []).join(', '))
               + (e.matched ? ' <span class="bm-match-meta">(' + esc(e.matched) + ')</span>' : '') + '</li>';
           }).join('');
           enOut.innerHTML = '<p class="bm-note">This run: filled ' + totUpd + ' of ' + totProc
-            + ' contacts scanned. Batch: ' + (d.updated || 0) + ' filled, ' + (d.no_match || 0)
-            + ' no LA County match, ' + (d.no_address || 0) + ' with no street address.</p>'
+            + ' scanned. Last batch: ' + (d.updated || 0) + ' filled, ' + (d.no_match || 0)
+            + ' no LA County match, ' + (d.no_address || 0) + ' without a street address.</p>'
             + (ex ? '<ul class="bm-note" style="margin-top:0">' + ex + '</ul>' : '');
           if (d.totals) {
             enLine.textContent = 'Resume at contact #' + d.next_offset + ' · ' + d.totals.passes
@@ -339,22 +359,29 @@ BUYER_MATCH_SCRIPT = r"""
             enOut.innerHTML += '<p class="bm-note">Completed a full pass over the database.</p>';
             break;
           }
-          await new Promise(function (r) { setTimeout(r, 400); });
+          if (enStopReq) break;
+          await new Promise(function (r) { setTimeout(r, 300); });
         }
+        if (enStopReq) enOut.innerHTML += '<p class="bm-note">Stopped. Progress up to the last finished batch is saved — Start resumes from there.</p>';
       } catch (err) {
-        enOut.innerHTML += '<p class="om-error" style="display:block">' + esc(err.message) + '</p>';
-      } finally {
-        if (mine === run) {
-          running = false;
-          enStart.disabled = false; enStart.textContent = 'Start / resume sweep';
-          enStop.style.display = 'none'; enReset.style.display = '';
+        if (err && err.name === 'AbortError') {
+          enOut.innerHTML += '<p class="bm-note">Stopped. The batch in progress may still finish server-side; Start picks up from the saved point.</p>';
+        } else {
+          enOut.innerHTML += '<p class="om-error" style="display:block">' + esc(err.message) + '</p>';
         }
+      } finally {
+        enIdle();
       }
     }
 
-    enStart.addEventListener('click', loop);
-    enStop.addEventListener('click', function () { running = false; run++; });
+    enStart.addEventListener('click', enLoop);
+    enStop.addEventListener('click', function () {
+      enStopReq = true;
+      enStop.disabled = true; enStop.textContent = 'Stopping…';
+      if (enCtrl) { try { enCtrl.abort(); } catch (e) {} }
+    });
     enReset.addEventListener('click', async function () {
+      if (enBusy) { alert('Stop the sweep first.'); return; }
       if (!confirm('Reset the sweep back to the start of the database?')) return;
       try {
         await adminPost({action: 'fub_enrich_reset'});
@@ -1325,7 +1352,7 @@ def parse_buyer_criteria(data):
 # can't finish in one request), and only ever *fills* a blank field -- it
 # never overwrites data already in FollowUpBoss.
 # ---------------------------------------------------------------------------
-def _http_get_json(url, params, timeout=15):
+def _http_get_json(url, params, timeout=8):
     """Plain GET -> parsed JSON, or None. For the keyless LA County service."""
     full = url + "?" + urllib.parse.urlencode(params)
     req = urllib.request.Request(full, method="GET", headers={"Accept": "application/json"})
@@ -1530,8 +1557,16 @@ def run_enrich_batch(conn, batch_size):
     total = (body.get("_metadata") or {}).get("total")
     fieldmap = _fub_fieldmap()
 
+    # Per-batch wall-clock budget: LA County lookups are slow and variable, so
+    # bail out of the page early rather than risk the serverless timeout. The
+    # cursor only advances by what we actually processed, so nothing is skipped.
+    deadline = time.time() + 40
     updated, no_match, no_address, filled_examples = 0, 0, 0, []
+    processed = 0
     for p in people:
+        if processed and time.time() > deadline:
+            break
+        processed += 1
         prof = fub_prop_profile(p, fieldmap)
         if prof["beds"] and prof["baths"] and prof["sqft"] and prof["year_built"] and prof["property_type"]:
             continue  # already complete
@@ -1552,13 +1587,15 @@ def run_enrich_batch(conn, batch_size):
                 filled_examples.append({"name": _clean_str(p.get("name")) or f"#{p.get('id')}",
                                         "filled": filled, "matched": found.get("matched_address")})
 
-    got = len(people)
-    wrapped = got < batch_size or (total is not None and offset + got >= total)
-    save_enrich_state(conn, offset + got, got, updated, no_match, wrapped)
+    page_len = len(people)
+    new_offset = offset + processed
+    # "done" only when we finished the page AND that page was the tail of the DB
+    done = (processed >= page_len) and (page_len < batch_size or (total is not None and new_offset >= total))
+    save_enrich_state(conn, 0 if done else new_offset, processed, updated, no_match, done)
     return {
-        "ok": True, "processed": got, "updated": updated, "no_match": no_match,
-        "no_address": no_address, "offset": offset, "next_offset": 0 if wrapped else offset + got,
-        "total": total, "done": wrapped, "examples": filled_examples,
+        "ok": True, "processed": processed, "updated": updated, "no_match": no_match,
+        "no_address": no_address, "offset": offset, "next_offset": 0 if done else new_offset,
+        "total": total, "done": done, "examples": filled_examples,
     }
 
 
