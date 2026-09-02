@@ -229,6 +229,9 @@ CREATE TABLE IF NOT EXISTS fub_enrich_state (
     CONSTRAINT fub_enrich_state_singleton CHECK (id = 1)
 );
 INSERT INTO fub_enrich_state (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+-- db_total: the FollowUpBoss contact count as of the last batch, so the
+-- admin dashboard can show a real "% of the way through" progress ring.
+ALTER TABLE fub_enrich_state ADD COLUMN IF NOT EXISTS db_total INTEGER;
 
 -- team_members / resource_tiles (for a team resource hub) were designed
 -- alongside this but held back for a later phase -- see README's

@@ -1507,25 +1507,27 @@ def fetch_enrich_state(conn):
         return row
 
 
-def save_enrich_state(conn, next_offset, seen_inc, updated_inc, nomatch_inc, wrapped):
+def save_enrich_state(conn, next_offset, seen_inc, updated_inc, nomatch_inc, wrapped, db_total=None):
     with conn.cursor() as cur:
         if wrapped:
             cur.execute(
                 """UPDATE fub_enrich_state
                    SET next_offset = 0, last_run_at = now(), passes = passes + 1,
                        total_seen = total_seen + %s, total_updated = total_updated + %s,
-                       total_no_match = total_no_match + %s
+                       total_no_match = total_no_match + %s,
+                       db_total = COALESCE(%s, db_total)
                    WHERE id = 1""",
-                (seen_inc, updated_inc, nomatch_inc),
+                (seen_inc, updated_inc, nomatch_inc, db_total),
             )
         else:
             cur.execute(
                 """UPDATE fub_enrich_state
                    SET next_offset = %s, last_run_at = now(),
                        total_seen = total_seen + %s, total_updated = total_updated + %s,
-                       total_no_match = total_no_match + %s
+                       total_no_match = total_no_match + %s,
+                       db_total = COALESCE(%s, db_total)
                    WHERE id = 1""",
-                (next_offset, seen_inc, updated_inc, nomatch_inc),
+                (next_offset, seen_inc, updated_inc, nomatch_inc, db_total),
             )
     conn.commit()
 
@@ -1535,9 +1537,68 @@ def reset_enrich_state(conn):
         cur.execute(
             """UPDATE fub_enrich_state
                SET next_offset = 0, passes = 0, total_seen = 0, total_updated = 0,
-                   total_no_match = 0, last_run_at = NULL WHERE id = 1"""
+                   total_no_match = 0, last_run_at = NULL, db_total = NULL WHERE id = 1"""
         )
     conn.commit()
+
+
+def fetch_admin_counts(conn):
+    """Headline numbers for the Overview dashboard. Best-effort -- a missing
+    table (older DB) returns 0 for that row rather than failing the page."""
+    out = {"sellers_active": 0, "sellers_archived": 0, "listings_onmkt": 0,
+           "om_buyers": 0, "om_listings": 0, "om_available": 0, "buyer_needs": 0}
+    queries = {
+        "sellers_active": "SELECT count(*) FROM clients WHERE active",
+        "sellers_archived": "SELECT count(*) FROM clients WHERE NOT active",
+        "listings_onmkt": "SELECT count(*) FROM listings WHERE active AND status = 'Active'",
+        "om_buyers": "SELECT count(*) FROM offmarket_buyers WHERE active",
+        "om_listings": "SELECT count(*) FROM offmarket_listings WHERE active",
+        "om_available": "SELECT count(*) FROM offmarket_listings WHERE active AND status = 'Available'",
+        "buyer_needs": "SELECT count(*) FROM buyer_needs WHERE active",
+    }
+    for key, q in queries.items():
+        try:
+            with conn.cursor() as cur:
+                cur.execute(q)
+                out[key] = cur.fetchone()[0]
+        except Exception:
+            conn.rollback()
+    return out
+
+
+def fetch_admin_activity(conn, limit=6):
+    """A small merged 'recent activity' feed for the Overview screen, built
+    from created_at timestamps across the main tables + the last enrich run."""
+    rows = []
+    picks = [
+        ("seller", "SELECT name, created_at FROM clients ORDER BY created_at DESC LIMIT 4",
+         lambda r: f"New seller account — {r[0] or 'unnamed'}"),
+        ("listing", "SELECT address, created_at FROM offmarket_listings ORDER BY created_at DESC LIMIT 4",
+         lambda r: f"Off-market listing added — {r[0]}"),
+        ("buyer", "SELECT buyer_name, last_match_count, created_at FROM buyer_needs ORDER BY created_at DESC LIMIT 4",
+         lambda r: f"Buyer need — {r[0] or 'unnamed'} → {r[1]} prospect(s)"),
+    ]
+    for kind, q, fmt in picks:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(q)
+                for r in cur.fetchall():
+                    ts = r[-1]
+                    rows.append({"kind": kind, "text": fmt(r), "ts": ts})
+        except Exception:
+            conn.rollback()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT last_run_at, total_updated, total_seen FROM fub_enrich_state WHERE id = 1")
+            r = cur.fetchone()
+            if r and r[0]:
+                rows.append({"kind": "enrich", "ts": r[0],
+                             "text": f"Enrichment run — {r[1]} filled / {r[2]} scanned"})
+    except Exception:
+        conn.rollback()
+    rows = [r for r in rows if r.get("ts")]
+    rows.sort(key=lambda r: r["ts"], reverse=True)
+    return rows[:limit]
 
 
 def run_enrich_batch(conn, batch_size):
@@ -1591,7 +1652,8 @@ def run_enrich_batch(conn, batch_size):
     new_offset = offset + processed
     # "done" only when we finished the page AND that page was the tail of the DB
     done = (processed >= page_len) and (page_len < batch_size or (total is not None and new_offset >= total))
-    save_enrich_state(conn, 0 if done else new_offset, processed, updated, no_match, done)
+    save_enrich_state(conn, 0 if done else new_offset, processed, updated, no_match, done,
+                      db_total=total if isinstance(total, int) else None)
     return {
         "ok": True, "processed": processed, "updated": updated, "no_match": no_match,
         "no_address": no_address, "offset": offset, "next_offset": 0 if done else new_offset,
@@ -2447,26 +2509,293 @@ def _offmarket_listing_admin_html(listing):
   </details>"""
 
 
-_BUYER_MATCH_CSS = """<style>
-  .bm-wrap .adm-inline-form{margin-bottom:8px}
+# Admin dashboard shell + Buyer Match styles, in one admin-only stylesheet
+# (the public pages never load this). Colours all come from areas.css tokens
+# (--black ground, --white ink, --g1 surface, --g2 inset, --g3 hairline,
+# --g5 dim, --g6 secondary, --red accent) so light/dark already work; only
+# the two semantic hues are defined here.
+_ADMIN_CSS = """<style>
+  :root{--ac-ok:#5AA982;--ac-warn:#CB9440;--ac-shadow:0 16px 48px rgba(0,0,0,.5)}
+  :root[data-theme="light"]{--ac-ok:#3B7D5F;--ac-warn:#9C6E22;--ac-shadow:0 16px 48px rgba(120,108,90,.18)}
+
+  body{overflow-x:hidden}
+  .ac-eyebrow{font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;color:var(--g5);font-weight:500}
+  .ac-num{font-family:var(--serif);font-variant-numeric:tabular-nums;line-height:1}
+
+  .ac-shell{display:grid;grid-template-columns:1fr;grid-template-rows:auto 1fr;min-height:100vh}
+  @media (min-width:900px){ .ac-shell{grid-template-columns:216px 1fr} }
+
+  .ac-top{
+    grid-column:1/-1;position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;
+    padding:11px 16px;background:var(--black);border-bottom:1px solid var(--g3);
+  }
+  @media (max-width:480px){
+    .ac-top{gap:8px;padding:10px 12px}
+    .ac-top .theme-picker .theme-opt{width:26px;height:26px}
+  }
+  .ac-badge{width:30px;height:30px;flex:none;display:grid;place-items:center;background:var(--red);color:#fff;font-family:var(--serif);font-size:1rem;border-radius:6px}
+  .ac-brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .ac-brand b{font-family:var(--serif);font-weight:400;font-size:1rem;letter-spacing:.02em;display:block;line-height:1.15;white-space:nowrap}
+  .ac-brand small{font-size:.52rem;letter-spacing:.24em;text-transform:uppercase;color:var(--g5);display:block;white-space:nowrap}
+  @media (max-width:400px){ .ac-brand small{display:none} }
+  .ac-top-sp{flex:1}
+  .ac-logout{font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:var(--g5);white-space:nowrap}
+  .ac-logout:hover{color:var(--white)}
+
+  .ac-rail{display:none;grid-row:2;border-right:1px solid var(--g3);padding:14px 10px;position:sticky;top:53px;height:calc(100vh - 53px)}
+  @media (min-width:900px){ .ac-rail{display:flex;flex-direction:column;gap:2px} }
+  .ac-nav{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 12px;border-radius:8px;
+    font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--g5);font-family:var(--sans);
+  }
+  .ac-nav svg{width:17px;height:17px;flex:none}
+  .ac-nav:hover{color:var(--white);background:var(--g1)}
+  .ac-nav[aria-current="true"]{color:var(--white);background:var(--g1);box-shadow:inset 2px 0 0 var(--red)}
+  .ac-rail-sp{flex:1}
+  .ac-rail-foot{color:var(--g5);font-size:.52rem;letter-spacing:.14em;text-transform:uppercase;padding:0 12px}
+
+  .ac-main{grid-row:2;min-width:0;padding:20px 16px 40px;max-width:1140px;width:100%;margin:0 auto}
+  @media (min-width:900px){ .ac-main{padding:24px 32px 48px} }
+  @media (max-width:899px){ .ac-main{padding-bottom:108px} }
+
+  .ac-toolbox{display:flex;align-items:center;gap:9px;overflow-x:auto;padding-bottom:16px;margin-bottom:22px;border-bottom:1px solid var(--g3);scrollbar-width:none}
+  .ac-toolbox::-webkit-scrollbar{display:none}
+  .ac-toolbox .ac-eyebrow{flex:none}
+  .ac-toolbox .adm-toolbox-btn{flex:none;white-space:nowrap;padding:10px 16px;font-size:.62rem}
+  .ac-toolbox .adm-toolbox-add-btn{width:34px;height:34px;flex:none;font-size:1.1rem}
+  .ac-toolbox-manage{flex:none;margin-left:4px}
+  .ac-toolbox-manage summary{font-size:.56rem;letter-spacing:.14em;text-transform:uppercase;color:var(--g5);cursor:pointer;list-style:none;white-space:nowrap}
+  .ac-toolbox-manage summary::-webkit-details-marker{display:none}
+  .ac-toolbox-manage[open]{position:relative}
+  .ac-toolbox-manage[open] .adm-tiles{position:absolute;right:0;top:26px;z-index:30;width:min(90vw,420px);background:var(--black);border:1px solid var(--g3);padding:14px;box-shadow:var(--ac-shadow)}
+
+  .ac-view[hidden]{display:none}
+  .ac-view{animation:acfade .16s ease}
+  @keyframes acfade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.ac-view{animation:none}}
+
+  .ac-vhead{margin-bottom:18px}
+  .ac-vhead h1{font-family:var(--serif);font-weight:400;font-size:clamp(1.7rem,4vw,2.3rem);margin:0;letter-spacing:.01em}
+  .ac-vhead p{margin:5px 0 0;font-size:.82rem;color:var(--g5);max-width:56ch;line-height:1.6}
+
+  .ac-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--g3);border:1px solid var(--g3);margin-bottom:20px}
+  @media (min-width:640px){ .ac-kpis{grid-template-columns:repeat(3,1fr)} }
+  @media (min-width:1120px){ .ac-kpis{grid-template-columns:repeat(6,1fr)} }
+  .ac-kpi{background:var(--g1);padding:15px 14px}
+  .ac-kpi .ac-eyebrow{display:block;margin-bottom:8px}
+  .ac-kpi .ac-num{font-size:1.9rem;color:var(--red);display:block}
+  .ac-kpi .sub{display:block;margin-top:6px;font-size:.6rem;color:var(--g5)}
+
+  .ac-actions{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:22px}
+  .ac-actions .btn-primary{padding:11px 16px;font-size:.62rem}
+  .ac-ghostbtn{border:1px solid var(--g3);background:var(--g1);color:var(--white);padding:11px 16px;font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;border-radius:4px}
+  .ac-ghostbtn:hover{border-color:var(--red)}
+
+  .ac-grid2{display:grid;gap:16px}
+  @media (min-width:980px){ .ac-grid2{grid-template-columns:1.3fr 1fr;align-items:start} }
+
+  .ac-engine{display:grid;gap:20px}
+  @media (min-width:520px){ .ac-engine{grid-template-columns:1fr auto;align-items:center} }
+  .ac-statlist{display:flex;flex-direction:column}
+  .ac-statlist div{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:10px 0;border-top:1px solid var(--g3)}
+  .ac-statlist div:first-child{border-top:none}
+  .ac-statlist dt{font-size:.64rem;letter-spacing:.06em;text-transform:uppercase;color:var(--g5)}
+  .ac-statlist dd{margin:0;font-family:var(--serif);font-size:1.1rem;font-variant-numeric:tabular-nums}
+
+  .ac-ring{position:relative;width:132px;height:132px;margin:0 auto}
+  .ac-ring svg{transform:rotate(-90deg)}
+  .ac-ring .rt{fill:none;stroke:var(--g3);stroke-width:9}
+  .ac-ring .rp{fill:none;stroke:var(--red);stroke-width:9;stroke-linecap:round;transition:stroke-dashoffset 1s cubic-bezier(.4,0,.1,1)}
+  .ac-ring .lbl{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+  .ac-ring .lbl b{font-family:var(--serif);font-size:1.7rem;font-variant-numeric:tabular-nums;line-height:1}
+  .ac-ring .lbl span{font-size:.5rem;letter-spacing:.14em;text-transform:uppercase;color:var(--g5);margin-top:3px}
+
+  .ac-feed{display:flex;flex-direction:column}
+  .ac-feed-row{display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--g3)}
+  .ac-feed-row:first-child{border-top:none}
+  .ac-dot{width:7px;height:7px;border-radius:50%;flex:none;margin-top:6px;background:var(--g5)}
+  .ac-dot.ok{background:var(--ac-ok)} .ac-dot.accent{background:var(--red)} .ac-dot.warn{background:var(--ac-warn)}
+  .ac-feed-row p{margin:0;font-size:.8rem;line-height:1.5}
+  .ac-feed-row time{margin-left:auto;flex:none;font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:var(--g5);white-space:nowrap;padding-top:2px}
+  .ac-feed-empty{font-size:.8rem;color:var(--g5)}
+
+  .ac-tabbar{
+    display:none;position:fixed;left:12px;right:12px;bottom:12px;z-index:50;justify-content:space-around;
+    background:var(--g1);border:1px solid var(--g3);border-radius:16px;padding:7px 4px;box-shadow:var(--ac-shadow);
+  }
+  @media (max-width:899px){ .ac-tabbar{display:flex} }
+  .ac-tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 2px;color:var(--g5);border-radius:11px;font-family:var(--sans)}
+  .ac-tabbar button svg{width:19px;height:19px}
+  .ac-tabbar button span{font-size:.48rem;letter-spacing:.08em;text-transform:uppercase}
+  .ac-tabbar button[aria-current="true"]{color:var(--red)}
+
+  .ac-view .db-section-title{font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;color:var(--g5);margin-bottom:12px}
+  .ac-view > .db-section-title{margin-top:8px}
+
+  /* --- Buyer Match --- */
+  .bm-wrap{display:grid;gap:16px}
   .bm-grid{display:flex;flex-wrap:wrap;gap:10px}
   .bm-grid .om-field{flex:1 1 150px}
-  .bm-note{font-size:.85rem;color:var(--g5,#666);margin:10px 0 4px}
-  .bm-note-warn{color:#b45309}
-  .bm-results-title{font-size:.9rem;margin:16px 0 8px}
-  .bm-match{border:1px solid var(--g2,#e5e5e5);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+  .bm-note{font-size:.82rem;color:var(--g5);margin:10px 0 4px;line-height:1.6}
+  .bm-note-warn{color:var(--ac-warn)}
+  .bm-results-title{font-size:.86rem;letter-spacing:.08em;text-transform:uppercase;color:var(--g5);margin:16px 0 8px}
+  .bm-match{border:1px solid var(--g3);border-radius:6px;padding:12px 14px;margin-bottom:8px;background:var(--black)}
   .bm-match-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .bm-score{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:26px;
-    border-radius:6px;background:#111;color:#fff;font-weight:700;font-size:.8rem}
-  .bm-match-name{font-weight:600}
-  .bm-match-meta{color:var(--g5,#666);font-size:.85rem}
+  .bm-score{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:24px;border-radius:5px;background:var(--red);color:#fff;font-weight:600;font-size:.78rem;font-family:var(--serif)}
+  .bm-match-name{font-weight:500}
+  .bm-match-meta{color:var(--g5);font-size:.82rem}
   .bm-chips{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
-  .bm-chip{font-size:.72rem;padding:2px 8px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
-  .bm-chip-hit{background:#dcfce7;border-color:#86efac;color:#166534}
-  .bm-chip-miss{background:#fee2e2;border-color:#fca5a5;color:#991b1b}
-  .bm-chip-unknown{background:#f3f4f6;border-color:#d1d5db;color:#4b5563}
-  #bm-agent-fields{border-left:2px solid var(--g2,#e5e5e5);padding-left:12px;margin:4px 0}
+  .bm-chip{font-size:.66rem;padding:3px 9px;border-radius:999px;border:1px solid var(--g3);white-space:nowrap;color:var(--g6)}
+  .bm-chip-hit{color:var(--ac-ok);border-color:var(--ac-ok)}
+  .bm-chip-miss{color:var(--red);border-color:var(--red)}
+  .bm-chip-unknown{color:var(--g5)}
+  #bm-agent-fields{border-left:2px solid var(--g3);padding-left:12px;margin:4px 0}
 </style>"""
+
+# Tiny stroke icons for the rail + bottom tab bar (no braces -> f-string safe).
+_ICON = {
+    "overview": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>',
+    "sellers": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.6-3.4 3-5.3 5.5-5.3s4.9 1.9 5.5 5.3"/><path d="M16 5.5a3 3 0 0 1 0 5.6M17.5 20c-.3-2-1-3.6-2-4.7 2.3-.2 4.3 1.5 5 4.7"/></svg>',
+    "offmarket": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 13 11 6h7v7l-7 7z"/><circle cx="14.5" cy="9.5" r="1.4"/></svg>',
+    "match": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.4"/><circle cx="12" cy="12" r="1"/></svg>',
+    "enrich": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 11a8 8 0 0 0-14-4.5M4 5v3.5h3.5"/><path d="M4 13a8 8 0 0 0 14 4.5M20 19v-3.5h-3.5"/></svg>',
+}
+
+_ADMIN_SHELL_JS = r"""
+(function () {
+  // ---- Section switching (rail + bottom tab bar) ----
+  var views = document.querySelectorAll('.ac-view');
+  var navs = document.querySelectorAll('[data-nav]');
+  function go(name) {
+    var hit = false;
+    views.forEach(function (v) { var on = v.dataset.view === name; v.hidden = !on; if (on) hit = true; });
+    if (!hit) return;
+    navs.forEach(function (b) { b.setAttribute('aria-current', b.dataset.nav === name ? 'true' : 'false'); });
+    try { history.replaceState(null, '', '#' + name); } catch (e) {}
+    window.scrollTo(0, 0);
+    drawRings();
+  }
+  navs.forEach(function (b) { b.addEventListener('click', function () { go(b.dataset.nav); }); });
+  var start = (location.hash || '').replace('#', '');
+  if (start && document.querySelector('.ac-view[data-view="' + start + '"]')) go(start);
+
+  // ---- Progress rings ----
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function drawRings() {
+    document.querySelectorAll('.ac-ring').forEach(function (r) {
+      var pct = Math.max(0, Math.min(100, parseFloat(r.dataset.pct) || 0));
+      var c = r.querySelector('.rp');
+      if (!c) return;
+      var len = 2 * Math.PI * 52;
+      c.style.strokeDasharray = len;
+      if (reduce) { c.style.strokeDashoffset = len * (1 - pct / 100); return; }
+      c.style.strokeDashoffset = len;
+      requestAnimationFrame(function () { requestAnimationFrame(function () {
+        c.style.strokeDashoffset = len * (1 - pct / 100);
+      }); });
+    });
+  }
+  drawRings();
+
+  // ---- Theme picker (same behaviour as the public site) ----
+  function updateThemePickerUI(choice) {
+    document.querySelectorAll('.theme-opt').forEach(function (btn) {
+      btn.classList.toggle('active', btn.dataset.themeChoice === choice);
+    });
+  }
+  function applyThemeChoice(choice) {
+    var resolved = choice === 'auto'
+      ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+      : choice;
+    document.documentElement.setAttribute('data-theme', resolved);
+    document.documentElement.setAttribute('data-theme-choice', choice);
+    updateThemePickerUI(choice);
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', resolved === 'light' ? '#FFFFFF' : '#000000');
+  }
+  window.setThemeChoice = function (choice) {
+    try { localStorage.setItem('themeChoice', choice); } catch (e) {}
+    applyThemeChoice(choice);
+  };
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function () {
+      var c = 'auto';
+      try { c = localStorage.getItem('themeChoice') || 'auto'; } catch (e) {}
+      if (c === 'auto') applyThemeChoice('auto');
+    });
+  }
+  var cur = 'auto';
+  try { cur = localStorage.getItem('themeChoice') || 'auto'; } catch (e) {}
+  updateThemePickerUI(cur);
+
+  // ---- Quick-action buttons on Overview jump to a section ----
+  document.querySelectorAll('[data-goto]').forEach(function (b) {
+    b.addEventListener('click', function () { go(b.dataset.goto); });
+  });
+})();
+"""
+
+
+def render_admin_page(body_html, title="Admin | Simone Marzullo"):
+    """Dedicated app-shell wrapper for /admin -- no public marketing nav or
+    footer, its own stylesheet, but the same theme tokens (areas.css) and
+    pre-paint theme stamp as the rest of the site."""
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+{THEME_INIT_SCRIPT}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>{html.escape(title)}</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#000000">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/areas.css">
+{_ADMIN_CSS}
+</head>
+<body>
+{body_html}
+</body>
+</html>"""
+
+
+def _relative_time(ts):
+    try:
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        secs = (now - ts).total_seconds()
+    except Exception:
+        return ""
+    if secs < 90:
+        return "now"
+    mins = secs / 60
+    if mins < 60:
+        return f"{int(mins)}m"
+    hrs = mins / 60
+    if hrs < 24:
+        return f"{int(hrs)}h"
+    days = hrs / 24
+    if days < 14:
+        return f"{int(days)}d"
+    return f"{int(days / 7)}w"
+
+
+def _activity_feed_html(activity):
+    if not activity:
+        return '<p class="ac-feed-empty">Nothing yet — activity from the tools shows up here.</p>'
+    dot = {"buyer": "ok", "enrich": "accent", "listing": "", "seller": ""}
+    rows = []
+    for a in activity:
+        rows.append(
+            f'<div class="ac-feed-row"><span class="ac-dot {dot.get(a["kind"], "")}"></span>'
+            f'<p>{html.escape(a["text"])}</p><time>{html.escape(_relative_time(a["ts"]))}</time></div>'
+        )
+    return "".join(rows)
 
 
 def _buyer_need_row_html(n):
@@ -2498,17 +2827,12 @@ def _enrich_state_line(st):
             f"{st['total_no_match']} with no LA County match")
 
 
-def _buyer_match_admin_html(buyer_needs, enrich_state=None):
+def _buyer_match_panels_html(buyer_needs):
     active_needs = [n for n in buyer_needs if n.get("active")]
     history_needs = [n for n in buyer_needs if not n.get("active")]
     needs_html = "".join(_buyer_need_row_html(n) for n in active_needs) or '<p class="db-empty-note">No saved buyer needs yet -- add one above.</p>'
     history_html = "".join(_buyer_need_row_html(n) for n in history_needs) or '<p class="db-empty-note">Nothing archived.</p>'
-    enrich_stage = os.environ.get("FUB_ENRICH_STAGE", "").strip()
-    enrich_scope = f'the <strong>{html.escape(enrich_stage)}</strong> stage' if enrich_stage else "your whole FollowUpBoss database"
     return f"""
-    {_BUYER_MATCH_CSS}
-    <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Buyer Match — prospect for listings</h2>
-    <p class="adm-tagline" style="margin-bottom:16px">Enter what a buyer wants (yours or another agent's). The tool saves the buyer to FollowUpBoss and scans your <strong>{html.escape(os.environ.get('FUB_NURTURE_STAGE', 'Nurture'))}</strong> stage for prospects whose property fits — the ones to call with an "I have a buyer" pitch. Matching reads standard property custom fields; run setup once so they exist.</p>
     <div class="bm-wrap">
       <div class="adm-panel">
         <div class="db-section-title">FollowUpBoss property fields</div>
@@ -2578,7 +2902,13 @@ def _buyer_match_admin_html(buyer_needs, enrich_state=None):
           <div class="adm-clients">{history_html}</div>
         </details>
       </div>
+    </div>"""
 
+
+def _enrichment_panel_html(enrich_state):
+    enrich_stage = os.environ.get("FUB_ENRICH_STAGE", "").strip()
+    enrich_scope = f'the <strong>{html.escape(enrich_stage)}</strong> stage' if enrich_stage else "your whole FollowUpBoss database"
+    return f"""
       <div class="adm-panel">
         <div class="db-section-title">Fill missing property data from public records</div>
         <p class="adm-tagline" style="margin:0 0 12px">Sweeps {enrich_scope} in small batches and, for any contact with a street address but blank beds / baths / sq ft / year / type, looks the parcel up in the <strong>LA County Assessor</strong> public records and fills the gaps in FollowUpBoss. It only fills blanks — it never overwrites data you already have — and tags each contact it touches <em>Enriched: LA County Assessor</em>. LA County only.</p>
@@ -2589,11 +2919,11 @@ def _buyer_match_admin_html(buyer_needs, enrich_state=None):
           <button type="button" class="om-logout" id="bm-enrich-reset">Reset progress</button>
         </div>
         <div id="bm-enrich-result" style="margin-top:10px"></div>
-      </div>
-    </div>"""
+      </div>"""
 
 
-def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listings, buyer_needs=None, enrich_state=None):
+def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listings,
+                     buyer_needs=None, enrich_state=None, counts=None, activity=None):
     active_clients = [c for c in clients if c["active"]]
     history_clients = [c for c in clients if not c["active"]]
 
@@ -2613,23 +2943,62 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
     history_offmarket_buyers_html = "".join(_offmarket_buyer_admin_html(b) for b in history_offmarket_buyers) or '<div class="om-empty">No deactivated buyers.</div>'
     offmarket_listings_html = "".join(_offmarket_listing_admin_html(l) for l in offmarket_listings) or '<p class="db-empty-note">No off-market listings yet -- add one below.</p>'
 
-    buyer_match_section = _buyer_match_admin_html(buyer_needs or [], enrich_state)
+    counts = counts or {}
+    seller_archived = counts.get("sellers_archived", 0)
+    buyer_match_panels = _buyer_match_panels_html(buyer_needs or [])
+    enrichment_panel = _enrichment_panel_html(enrich_state)
+    activity_html = _activity_feed_html(activity or [])
+    nurture_stage = html.escape(os.environ.get("FUB_NURTURE_STAGE", "Nurture"))
+
+    est = enrich_state or {}
+    db_total = est.get("db_total") or 0
+    next_off = est.get("next_offset") or 0
+    passes = est.get("passes") or 0
+    e_filled = est.get("total_updated") or 0
+    e_scanned = est.get("total_seen") or 0
+    e_nomatch = est.get("total_no_match") or 0
+    if passes:
+        ring_pct = 100
+    elif db_total and next_off:
+        ring_pct = min(100, round(100 * next_off / db_total))
+    else:
+        ring_pct = 0
+    ring_txt = f"{ring_pct}%" if (db_total or passes) else "—"
+    needs_active = len([n for n in (buyer_needs or []) if n.get("active")])
+    last_match = "never"
+    _lm = [n.get("last_matched_at") for n in (buyer_needs or []) if n.get("last_matched_at")]
+    if _lm:
+        _rt = _relative_time(max(_lm))
+        last_match = "just now" if _rt == "now" else f"{_rt} ago"
 
     body = f"""
-<section class="section" style="padding-top:120px">
-  <div class="wrap">
-    <h1 class="adm-h1" style="margin-bottom:24px">Admin</h1>
+<div class="ac-shell">
+  <header class="ac-top">
+    <div class="ac-brand"><span class="ac-badge">M</span><span><b>Simone Marzullo</b><small>Admin Console</small></span></div>
+    <div class="ac-top-sp"></div>
+    {_theme_picker_html()}
+    <a href="/admin?logout=1" class="ac-logout">Log out</a>
+  </header>
+
+  <nav class="ac-rail" aria-label="Sections">
+    <button type="button" class="ac-nav" data-nav="overview" aria-current="true">{_ICON['overview']}<span>Overview</span></button>
+    <button type="button" class="ac-nav" data-nav="sellers">{_ICON['sellers']}<span>Sellers</span></button>
+    <button type="button" class="ac-nav" data-nav="offmarket">{_ICON['offmarket']}<span>Off-Market</span></button>
+    <button type="button" class="ac-nav" data-nav="match">{_ICON['match']}<span>Buyer Match</span></button>
+    <button type="button" class="ac-nav" data-nav="enrich">{_ICON['enrich']}<span>Enrichment</span></button>
+    <div class="ac-rail-sp"></div>
+    <small class="ac-rail-foot">{nurture_stage} stage · marzullore.com</small>
+  </nav>
+
+  <main class="ac-main">
     <div id="adm-notice" class="adm-notice" style="display:none"></div>
 
-    <h2 class="db-section-title" style="font-size:.9rem;margin-bottom:14px">Toolbox</h2>
-    <div class="adm-toolbox-buttons">
+    <div class="ac-toolbox" aria-label="Toolbox">
+      <span class="ac-eyebrow">Toolbox</span>
       <button type="button" class="adm-toolbox-add-btn" id="adm-toolbox-add-btn" aria-label="Add a tool" title="Add a tool">+</button>
       {toolbox_buttons_html}
+      <details class="ac-toolbox-manage"><summary>Manage</summary><div class="adm-tiles">{toolbox_manage_html}</div></details>
     </div>
-    <details class="adm-history" style="margin-top:12px">
-      <summary>Manage tools</summary>
-      <div class="adm-tiles" style="margin-top:12px">{toolbox_manage_html}</div>
-    </details>
 
     <div class="adm-modal-overlay" id="adm-toolbox-modal-overlay" onclick="if(event.target===this)closeToolboxModal()">
       <div class="adm-modal">
@@ -2644,47 +3013,92 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
       </div>
     </div>
 
-    <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Sellers</h2>
-    <div class="adm-panel">
-      <div class="db-section-title">Create New Seller</div>
-      <form id="adm-create-client-form" class="adm-inline-form">
-        <input type="email" name="email" class="om-input" placeholder="Seller email" required>
-        <input type="text" name="name" class="om-input" placeholder="Seller name">
-        <input type="text" name="password" class="om-input" placeholder="Password to assign" required minlength="{MIN_PASSWORD_LEN}">
-        <button type="submit" class="btn-primary adm-btn-sm">Create Seller</button>
-      </form>
-      <div class="om-error" id="adm-create-client-error"></div>
-    </div>
-    <div class="adm-clients">{clients_html}</div>
+    <section class="ac-view" data-view="overview">
+      <div class="ac-vhead"><h1>Overview</h1><p>The state of the business at a glance — tap a section in the rail or the bar below to go deeper.</p></div>
 
-    <details class="adm-history">
-      <summary>History (deactivated sellers)</summary>
-      <div class="adm-clients">{history_clients_html}</div>
-    </details>
+      <div class="ac-kpis">
+        <div class="ac-kpi"><span class="ac-eyebrow">Sellers</span><span class="ac-num">{counts.get('sellers_active', 0)}</span><span class="sub">{seller_archived} archived</span></div>
+        <div class="ac-kpi"><span class="ac-eyebrow">On-Market</span><span class="ac-num">{counts.get('listings_onmkt', 0)}</span><span class="sub">active listings</span></div>
+        <div class="ac-kpi"><span class="ac-eyebrow">OM Buyers</span><span class="ac-num">{counts.get('om_buyers', 0)}</span><span class="sub">active</span></div>
+        <div class="ac-kpi"><span class="ac-eyebrow">OM Listings</span><span class="ac-num">{counts.get('om_listings', 0)}</span><span class="sub">{counts.get('om_available', 0)} available</span></div>
+        <div class="ac-kpi"><span class="ac-eyebrow">Buyer Needs</span><span class="ac-num">{needs_active}</span><span class="sub">last scan {last_match}</span></div>
+        <div class="ac-kpi"><span class="ac-eyebrow">Enriched</span><span class="ac-num">{e_filled}</span><span class="sub">of {db_total or '—'} contacts</span></div>
+      </div>
 
-    <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Off-Market Buyers</h2>
-    <div class="adm-panel">
-      <div class="db-section-title">Create New Buyer</div>
-      <form id="adm-create-offmarket-buyer-form" class="adm-inline-form">
-        <input type="email" name="email" class="om-input" placeholder="Buyer email" required>
-        <input type="text" name="name" class="om-input" placeholder="Buyer name">
-        <input type="text" name="password" class="om-input" placeholder="Password to assign" required minlength="{MIN_PASSWORD_LEN}">
-        <button type="submit" class="btn-primary adm-btn-sm">Create Buyer</button>
-      </form>
-      <div class="om-error" id="adm-create-offmarket-buyer-error"></div>
-    </div>
-    <div class="adm-clients">{offmarket_buyers_html}</div>
+      <div class="ac-actions">
+        <button type="button" class="btn-primary adm-btn-sm" data-goto="match">+ New buyer need</button>
+        <button type="button" class="ac-ghostbtn" data-goto="offmarket">+ Off-market listing</button>
+        <button type="button" class="ac-ghostbtn" data-goto="sellers">+ Seller</button>
+        <button type="button" class="ac-ghostbtn" data-goto="enrich">Run enrichment</button>
+      </div>
 
-    <details class="adm-history">
-      <summary>History (deactivated buyers)</summary>
-      <div class="adm-clients">{history_offmarket_buyers_html}</div>
-    </details>
+      <div class="ac-grid2">
+        <div class="adm-panel">
+          <div class="db-section-title">Buyer Match engine</div>
+          <div class="ac-engine">
+            <dl class="ac-statlist">
+              <div><dt>Saved buyer needs</dt><dd>{needs_active}</dd></div>
+              <div><dt>Last match run</dt><dd>{last_match}</dd></div>
+              <div><dt>Contacts filled</dt><dd>{e_filled}</dd></div>
+              <div><dt>Nurture stage</dt><dd>{nurture_stage}</dd></div>
+            </dl>
+            <div class="ac-ring" data-pct="{ring_pct}">
+              <svg viewBox="0 0 120 120" width="132" height="132"><circle class="rt" cx="60" cy="60" r="52"/><circle class="rp" cx="60" cy="60" r="52"/></svg>
+              <div class="lbl"><b>{ring_txt}</b><span>Enriched</span></div>
+            </div>
+          </div>
+        </div>
 
-    <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Off-Market Listings</h2>
-    <p class="adm-tagline" style="margin-bottom:16px">Every active buyer above sees every active listing here. Paste photo links from wherever you're already hosting them -- there's no file upload. Each listing has its own shareable "flyer" page you can text or email directly, no login needed to view it.</p>
-    <div class="adm-panel">
-      <div class="db-section-title">Add New Listing</div>
-      <form id="adm-create-offmarket-listing-form" class="adm-inline-form" data-action="create_offmarket_listing">
+        <div class="adm-panel">
+          <div class="db-section-title">Recent activity</div>
+          <div class="ac-feed">{activity_html}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ac-view" data-view="sellers" hidden>
+      <div class="ac-vhead"><h1>Sellers</h1><p>Client accounts and the listings tied to them.</p></div>
+      <div class="adm-panel">
+        <div class="db-section-title">Create new seller</div>
+        <form id="adm-create-client-form" class="adm-inline-form">
+          <input type="email" name="email" class="om-input" placeholder="Seller email" required>
+          <input type="text" name="name" class="om-input" placeholder="Seller name">
+          <input type="text" name="password" class="om-input" placeholder="Password to assign" required minlength="{MIN_PASSWORD_LEN}">
+          <button type="submit" class="btn-primary adm-btn-sm">Create Seller</button>
+        </form>
+        <div class="om-error" id="adm-create-client-error"></div>
+      </div>
+      <div class="adm-clients">{clients_html}</div>
+      <details class="adm-history">
+        <summary>History (deactivated sellers)</summary>
+        <div class="adm-clients">{history_clients_html}</div>
+      </details>
+    </section>
+
+    <section class="ac-view" data-view="offmarket" hidden>
+      <div class="ac-vhead"><h1>Off-Market</h1><p>The private buyer list and the inventory those buyers can see. Each listing has its own shareable flyer page — no login needed to view it.</p></div>
+
+      <h2 class="db-section-title">Buyers</h2>
+      <div class="adm-panel">
+        <div class="db-section-title">Create new buyer</div>
+        <form id="adm-create-offmarket-buyer-form" class="adm-inline-form">
+          <input type="email" name="email" class="om-input" placeholder="Buyer email" required>
+          <input type="text" name="name" class="om-input" placeholder="Buyer name">
+          <input type="text" name="password" class="om-input" placeholder="Password to assign" required minlength="{MIN_PASSWORD_LEN}">
+          <button type="submit" class="btn-primary adm-btn-sm">Create Buyer</button>
+        </form>
+        <div class="om-error" id="adm-create-offmarket-buyer-error"></div>
+      </div>
+      <div class="adm-clients">{offmarket_buyers_html}</div>
+      <details class="adm-history">
+        <summary>History (deactivated buyers)</summary>
+        <div class="adm-clients">{history_offmarket_buyers_html}</div>
+      </details>
+
+      <h2 class="db-section-title" style="margin-top:34px">Listings</h2>
+      <div class="adm-panel">
+        <div class="db-section-title">Add new listing</div>
+        <form id="adm-create-offmarket-listing-form" class="adm-inline-form" data-action="create_offmarket_listing">
         <input type="text" name="address" class="om-input" placeholder="Address" required style="flex-basis:100%">
         <label class="db-checkbox" style="flex-basis:100%">
           <input type="checkbox" name="hide_address" value="on">
@@ -2717,10 +3131,44 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
       </form>
     </div>
     <div class="adm-clients">{offmarket_listings_html}</div>
-{buyer_match_section}
-    <div style="text-align:center;margin-top:36px"><a href="/admin?logout=1" class="om-logout">Log out</a></div>
-  </div>
-</section>
+    </section>
+
+    <section class="ac-view" data-view="match" hidden>
+      <div class="ac-vhead"><h1>Buyer Match</h1><p>Enter what a buyer wants — yours or another agent's. The tool saves the buyer to FollowUpBoss and scans your <strong>{nurture_stage}</strong> stage for sellers whose property fits, so you know who to call with an "I have a buyer" pitch.</p></div>
+      {buyer_match_panels}
+    </section>
+
+    <section class="ac-view" data-view="enrich" hidden>
+      <div class="ac-vhead"><h1>Enrichment</h1><p>Backfill blank property fields on your FollowUpBoss contacts from LA County Assessor public records.</p></div>
+      <div class="ac-grid2" style="margin-bottom:16px">
+        <div class="adm-panel">
+          <div class="db-section-title">Progress</div>
+          <div class="ac-engine">
+            <dl class="ac-statlist">
+              <div><dt>Contacts filled</dt><dd>{e_filled}</dd></div>
+              <div><dt>Scanned</dt><dd>{e_scanned}</dd></div>
+              <div><dt>No LA County match</dt><dd>{e_nomatch}</dd></div>
+              <div><dt>Full passes done</dt><dd>{passes}</dd></div>
+            </dl>
+            <div class="ac-ring" data-pct="{ring_pct}">
+              <svg viewBox="0 0 120 120" width="132" height="132"><circle class="rt" cx="60" cy="60" r="52"/><circle class="rp" cx="60" cy="60" r="52"/></svg>
+              <div class="lbl"><b>{ring_txt}</b><span>of pass {passes + 1}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {enrichment_panel}
+    </section>
+  </main>
+
+  <nav class="ac-tabbar" aria-label="Sections">
+    <button type="button" data-nav="overview" aria-current="true">{_ICON['overview']}<span>Home</span></button>
+    <button type="button" data-nav="sellers">{_ICON['sellers']}<span>Sellers</span></button>
+    <button type="button" data-nav="offmarket">{_ICON['offmarket']}<span>Off-Mkt</span></button>
+    <button type="button" data-nav="match">{_ICON['match']}<span>Match</span></button>
+    <button type="button" data-nav="enrich">{_ICON['enrich']}<span>Enrich</span></button>
+  </nav>
+</div>
 
 <script>
 async function adminPost(payload) {{
@@ -2892,8 +3340,9 @@ document.querySelectorAll('.adm-rte-editor').forEach(function (editor) {{
 </script>
 <script>{DB_TABS_SCRIPT}</script>
 <script>{BUYER_MATCH_SCRIPT}</script>
+<script>{_ADMIN_SHELL_JS}</script>
 """
-    return render_page(body, "Admin | Simone Marzullo")
+    return render_admin_page(body, "Admin | Simone Marzullo")
 
 
 # ---------------------------------------------------------------------------
@@ -2963,6 +3412,13 @@ class handler(BaseHTTPRequestHandler):
                     conn.rollback()
                     print(f"portal(admin): enrich state unavailable (run db/schema.sql?): {e}")
                     enrich_state = None
+                try:
+                    admin_counts = fetch_admin_counts(conn)
+                    admin_activity = fetch_admin_activity(conn)
+                except Exception as e:
+                    conn.rollback()
+                    print(f"portal(admin): overview data unavailable: {e}")
+                    admin_counts, admin_activity = {}, []
             except Exception as e:
                 print(f"portal(admin): failed to load data: {e}")
                 self._send_html(503, build_error_html("Something went wrong loading the admin panel.", "Admin | Simone Marzullo"))
@@ -2970,7 +3426,8 @@ class handler(BaseHTTPRequestHandler):
             finally:
                 if conn:
                     conn.close()
-            self._send_html(200, build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listings, buyer_needs, enrich_state))
+            self._send_html(200, build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listings,
+                                                  buyer_needs, enrich_state, admin_counts, admin_activity))
             return
 
         # Default: client dashboard (section == "dashboard" or unset)
