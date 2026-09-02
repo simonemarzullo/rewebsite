@@ -232,6 +232,11 @@ INSERT INTO fub_enrich_state (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 -- db_total: the FollowUpBoss contact count as of the last batch, so the
 -- admin dashboard can show a real "% of the way through" progress ring.
 ALTER TABLE fub_enrich_state ADD COLUMN IF NOT EXISTS db_total INTEGER;
+-- next_link: FollowUpBoss disables offset-based ("deep") pagination past
+-- ~2000 records and requires following the cursor URL it returns in
+-- _metadata.nextLink. This stores that URL so the sweep resumes correctly
+-- across batches. next_offset is now just a display counter ("resume at #N").
+ALTER TABLE fub_enrich_state ADD COLUMN IF NOT EXISTS next_link TEXT;
 
 -- team_members / resource_tiles (for a team resource hub) were designed
 -- alongside this but held back for a later phase -- see README's

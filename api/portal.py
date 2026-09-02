@@ -1007,21 +1007,21 @@ def fub_fetch_nurture_people():
     except ValueError:
         cap = 600
     cap = max(1, min(cap, 5000))
-    people, offset = [], 0
-    while len(people) < cap:
-        params = urllib.parse.urlencode({
-            "stage": stage, "limit": 100, "offset": offset,
-            "fields": "allFields,allCustom", "includeTrash": "false",
-        })
-        _status, body, err = _fub_request("GET", f"{FUB_API_BASE}/people?{params}")
+    people = []
+    # FollowUpBoss rejects offset paging past ~2000 rows, so follow the
+    # _metadata.nextLink cursor URL instead of incrementing an offset.
+    url = f"{FUB_API_BASE}/people?" + urllib.parse.urlencode({
+        "stage": stage, "limit": 100, "fields": "allFields,allCustom",
+        "includeTrash": "false",
+    })
+    while len(people) < cap and url:
+        _status, body, err = _fub_request("GET", url)
         if not body:
             return (people, len(people), err or "FollowUpBoss request failed.")
         batch = body.get("people") or []
         people.extend(batch)
-        offset += len(batch)
-        meta = body.get("_metadata") or {}
-        total = meta.get("total")
-        if len(batch) < 100 or (total is not None and offset >= total):
+        url = (body.get("_metadata") or {}).get("nextLink") or ""
+        if len(batch) < 100:
             break
     return (people[:cap], min(len(people), cap), None)
 
@@ -1507,12 +1507,15 @@ def fetch_enrich_state(conn):
         return row
 
 
-def save_enrich_state(conn, next_offset, seen_inc, updated_inc, nomatch_inc, wrapped, db_total=None):
+def save_enrich_state(conn, next_offset, seen_inc, updated_inc, nomatch_inc, wrapped,
+                      db_total=None, next_link=None):
+    # next_link is set explicitly every call (None clears it -> next run starts
+    # a fresh pass), so it is NOT COALESCE'd the way db_total is.
     with conn.cursor() as cur:
         if wrapped:
             cur.execute(
                 """UPDATE fub_enrich_state
-                   SET next_offset = 0, last_run_at = now(), passes = passes + 1,
+                   SET next_offset = 0, next_link = NULL, last_run_at = now(), passes = passes + 1,
                        total_seen = total_seen + %s, total_updated = total_updated + %s,
                        total_no_match = total_no_match + %s,
                        db_total = COALESCE(%s, db_total)
@@ -1522,12 +1525,12 @@ def save_enrich_state(conn, next_offset, seen_inc, updated_inc, nomatch_inc, wra
         else:
             cur.execute(
                 """UPDATE fub_enrich_state
-                   SET next_offset = %s, last_run_at = now(),
+                   SET next_offset = %s, next_link = %s, last_run_at = now(),
                        total_seen = total_seen + %s, total_updated = total_updated + %s,
                        total_no_match = total_no_match + %s,
                        db_total = COALESCE(%s, db_total)
                    WHERE id = 1""",
-                (next_offset, seen_inc, updated_inc, nomatch_inc, db_total),
+                (next_offset, next_link, seen_inc, updated_inc, nomatch_inc, db_total),
             )
     conn.commit()
 
@@ -1536,7 +1539,7 @@ def reset_enrich_state(conn):
     with conn.cursor() as cur:
         cur.execute(
             """UPDATE fub_enrich_state
-               SET next_offset = 0, passes = 0, total_seen = 0, total_updated = 0,
+               SET next_offset = 0, next_link = NULL, passes = 0, total_seen = 0, total_updated = 0,
                    total_no_match = 0, last_run_at = NULL, db_total = NULL WHERE id = 1"""
         )
     conn.commit()
@@ -1601,31 +1604,53 @@ def fetch_admin_activity(conn, limit=6):
     return rows[:limit]
 
 
+def _fub_people_first_page_url(batch_size):
+    stage = os.environ.get("FUB_ENRICH_STAGE", "").strip()
+    params = {"limit": batch_size, "fields": "allFields,allCustom", "includeTrash": "false"}
+    if stage:
+        params["stage"] = stage
+    return f"{FUB_API_BASE}/people?{urllib.parse.urlencode(params)}"
+
+
 def run_enrich_batch(conn, batch_size):
     """Process one page of FollowUpBoss contacts: for each with a street address
     but a blank bed/bath/sqft/year/type, look it up in LA County and fill the
-    gaps. Returns a summary dict; the caller loops until done=True."""
+    gaps. Returns a summary dict; the caller loops until done=True.
+
+    FollowUpBoss disables offset paging past ~2000 rows, so pagination follows
+    the _metadata.nextLink cursor URL (persisted in fub_enrich_state.next_link).
+    next_offset is kept only as a human 'resume at #N' counter."""
     state = fetch_enrich_state(conn)
-    offset = state["next_offset"] or 0
-    stage = os.environ.get("FUB_ENRICH_STAGE", "").strip()
-    params = {"limit": batch_size, "offset": offset, "fields": "allFields,allCustom", "includeTrash": "false"}
-    if stage:
-        params["stage"] = stage
-    _status, body, err = _fub_request("GET", f"{FUB_API_BASE}/people?{urllib.parse.urlencode(params)}")
+    counted = state.get("next_offset") or 0
+    nl = state.get("next_link") or ""
+    url = nl if nl.startswith(f"{FUB_API_BASE}/people") else _fub_people_first_page_url(batch_size)
+
+    _status, body, err = _fub_request("GET", url)
     if not body:
+        if err and "400" in err and nl:
+            # A stale / rejected cursor -- start the pass over rather than wedging.
+            save_enrich_state(conn, 0, 0, 0, 0, True)
+            return {"ok": True, "processed": 0, "updated": 0, "no_match": 0, "no_address": 0,
+                    "offset": counted, "next_offset": 0, "total": state.get("db_total"),
+                    "done": True, "examples": [],
+                    "notice": "FollowUpBoss rejected the saved page cursor — restarted from the top."}
         return {"ok": False, "error": err or "FollowUpBoss request failed."}
     people = body.get("people") or []
-    total = (body.get("_metadata") or {}).get("total")
+    meta = body.get("_metadata") or {}
+    total = meta.get("total")
+    next_link = meta.get("nextLink") or ""
     fieldmap = _fub_fieldmap()
 
-    # Per-batch wall-clock budget: LA County lookups are slow and variable, so
-    # bail out of the page early rather than risk the serverless timeout. The
-    # cursor only advances by what we actually processed, so nothing is skipped.
-    deadline = time.time() + 40
+    # Wall-clock guard so a slow page can't trip the 60s function limit. If we
+    # do run out of time mid-page we keep the SAME cursor (don't advance to
+    # next_link) so the rest of the page is retried on the next click.
+    deadline = time.time() + 42
+    ran_out = False
     updated, no_match, no_address, filled_examples = 0, 0, 0, []
     processed = 0
     for p in people:
         if processed and time.time() > deadline:
+            ran_out = True
             break
         processed += 1
         prof = fub_prop_profile(p, fieldmap)
@@ -1649,15 +1674,25 @@ def run_enrich_batch(conn, batch_size):
                                         "filled": filled, "matched": found.get("matched_address")})
 
     page_len = len(people)
-    new_offset = offset + processed
-    # "done" only when we finished the page AND that page was the tail of the DB
-    done = (processed >= page_len) and (page_len < batch_size or (total is not None and new_offset >= total))
-    save_enrich_state(conn, 0 if done else new_offset, processed, updated, no_match, done,
-                      db_total=total if isinstance(total, int) else None)
+    finished_page = processed >= page_len
+    new_count = counted + processed
+    # End of the list = we finished the page and FollowUpBoss gave no nextLink.
+    done = finished_page and not next_link
+    if not finished_page:
+        # ran out of time mid-page -- keep the cursor we came in on, retry it
+        cursor_to_save = nl if nl.startswith(f"{FUB_API_BASE}/people") else _fub_people_first_page_url(batch_size)
+    elif done:
+        cursor_to_save = None
+    else:
+        cursor_to_save = next_link
+    save_enrich_state(conn, 0 if done else new_count, processed, updated, no_match, done,
+                      db_total=total if isinstance(total, int) else None,
+                      next_link=cursor_to_save)
     return {
         "ok": True, "processed": processed, "updated": updated, "no_match": no_match,
-        "no_address": no_address, "offset": offset, "next_offset": 0 if done else new_offset,
+        "no_address": no_address, "offset": counted, "next_offset": 0 if done else new_count,
         "total": total, "done": done, "examples": filled_examples,
+        "timed_out": ran_out,
     }
 
 
@@ -2822,7 +2857,9 @@ def _buyer_need_row_html(n):
 def _enrich_state_line(st):
     if not st:
         return "Not run yet."
-    return (f"Resume at contact #{st['next_offset']} · {st['passes']} full pass(es) done · "
+    pos = st["next_offset"] or 0
+    where = "at the start of a new pass" if not pos else f"~{pos:,} contacts into this pass"
+    return (f"Resumes {where} · {st['passes']} full pass(es) done · "
             f"{st['total_updated']} contacts filled / {st['total_seen']} scanned · "
             f"{st['total_no_match']} with no LA County match")
 
