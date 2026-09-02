@@ -183,6 +183,53 @@ ALTER TABLE offmarket_listings ADD COLUMN IF NOT EXISTS lot_size TEXT NOT NULL D
 ALTER TABLE offmarket_listings ADD COLUMN IF NOT EXISTS hide_media_link BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS idx_offmarket_listings_created ON offmarket_listings(created_at);
 
+-- Buyer needs entered through the /admin "Buyer Match" prospecting tool.
+-- Simone types in what a buyer wants (his own buyer or one represented by
+-- another agent) and the tool scans his FollowUpBoss "Nurture" stage for
+-- seller prospects whose property fits -- i.e. who to call with an
+-- "I have a buyer" listing pitch. Rows are kept so every saved need can be
+-- re-matched against the pipeline later as it grows / gets enriched.
+-- criteria holds the raw search: price_min/max, beds, baths, sqft, areas,
+-- types, timeline, notes. fub_person_id is the buyer contact this tool
+-- created in FollowUpBoss. active = false soft-archives a need.
+CREATE TABLE IF NOT EXISTS buyer_needs (
+    id               SERIAL PRIMARY KEY,
+    buyer_name       TEXT NOT NULL DEFAULT '',
+    buyer_email      TEXT NOT NULL DEFAULT '',
+    buyer_phone      TEXT NOT NULL DEFAULT '',
+    buyer_source     TEXT NOT NULL DEFAULT 'self',   -- 'self' | 'other_agent'
+    agent_name       TEXT NOT NULL DEFAULT '',
+    agent_brokerage  TEXT NOT NULL DEFAULT '',
+    agent_contact    TEXT NOT NULL DEFAULT '',
+    criteria         JSONB NOT NULL DEFAULT '{}',
+    fub_person_id    BIGINT,
+    last_match_count INTEGER NOT NULL DEFAULT 0,
+    last_matched_at  TIMESTAMPTZ,
+    active           BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_buyer_needs_active ON buyer_needs(active, created_at DESC);
+
+-- Phase 2 of the Buyer Match tool: a single-row cursor for the "enrich the
+-- FollowUpBoss database from LA County Assessor public records" sweep. The
+-- sweep runs in small batches (a full pass can't finish inside one
+-- serverless request), so next_offset remembers where to resume; it wraps
+-- back to 0 and bumps `passes` after each complete pass. Counters are
+-- cumulative across passes. Only ever fills blank property custom fields in
+-- FollowUpBoss -- never overwrites existing data.
+CREATE TABLE IF NOT EXISTS fub_enrich_state (
+    id             INTEGER PRIMARY KEY DEFAULT 1,
+    next_offset    INTEGER NOT NULL DEFAULT 0,
+    passes         INTEGER NOT NULL DEFAULT 0,
+    total_seen     INTEGER NOT NULL DEFAULT 0,
+    total_updated  INTEGER NOT NULL DEFAULT 0,
+    total_no_match INTEGER NOT NULL DEFAULT 0,
+    last_run_at    TIMESTAMPTZ,
+    CONSTRAINT fub_enrich_state_singleton CHECK (id = 1)
+);
+INSERT INTO fub_enrich_state (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
 -- team_members / resource_tiles (for a team resource hub) were designed
 -- alongside this but held back for a later phase -- see README's
 -- "Client dashboard and admin panel" section. Add them back here when

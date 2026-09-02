@@ -1,4 +1,7 @@
 {
+  "functions": {
+    "api/portal.py": { "maxDuration": 60 }
+  },
   "headers": [
     {
       "source": "/(.*)",

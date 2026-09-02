@@ -76,6 +76,42 @@ MAX_BODY_BYTES = 16 * 1024
 MAX_FIELD_LEN = 500
 MIN_PASSWORD_LEN = 8
 FUB_EVENTS_URL = "https://api.followupboss.com/v1/events"
+FUB_API_BASE = "https://api.followupboss.com/v1"
+
+# --- Buyer Match prospecting tool -------------------------------------------
+# The fixed set of FollowUpBoss person custom fields the tool matches on and
+# (Phase 2) backfills. Referenced in API payloads as "custom" + name, e.g.
+# customBedrooms -- names are case-sensitive. label -> FUB field type.
+BUYER_MATCH_FIELDS = [
+    ("Bedrooms", "number"),
+    ("Bathrooms", "number"),
+    ("SqFt", "number"),
+    ("LotSize", "number"),
+    ("YearBuilt", "number"),
+    ("PropertyType", "text"),
+    ("AskingPrice", "number"),
+    ("Area", "text"),
+]
+BUYER_MATCH_MIN_SCORE = 35  # rows below this are dropped from the results
+_MATCH_BEDS_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(?:\+)?\s*(?:bed|bd|br|bedroom)", re.I)
+_MATCH_BATHS_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(?:\+)?\s*(?:bath|ba|bthrm|bathroom)", re.I)
+_MATCH_SQFT_RE = re.compile(r"([\d,]{3,})\s*(?:sq\.?\s*ft|sqft|sf)\b", re.I)
+
+# --- Phase 2: enrich FUB contacts from LA County Assessor public records ----
+# Free, no key, official. ArcGIS REST layer, ~2.4M parcels, updated monthly.
+# Building attributes repeat 1..5 for parcels with multiple structures.
+LACOUNTY_PARCEL_URL = (
+    "https://public.gis.lacounty.gov/public/rest/services/"
+    "LACounty_Cache/LACounty_Parcel/MapServer/0/query"
+)
+_ENRICH_BATCH_DEFAULT = 15   # FUB contacts scanned per batch call (keeps one request well under maxDuration)
+_STREET_SUFFIX_RE = re.compile(
+    r"\b(st|str|street|ave|av|avenue|blvd|boulevard|dr|drive|rd|road|ln|lane|ct|court|"
+    r"pl|place|way|ter|terrace|cir|circle|hwy|highway|pkwy|parkway|trl|trail)\b\.?\s*$", re.I)
+_UNIT_RE = re.compile(
+    r"(?:\s(?:apt|apartment|unit|ste|suite|rm|room|fl|floor|no|bldg|lot|sp|space)\.?\s*[\w-]+"
+    r"|\s?#\s*[\w-]+)\s*$", re.I)
+_LEADING_DIR_RE = re.compile(r"^(N|S|E|W|NE|NW|SE|SW)\s+", re.I)
 
 LISTING_STATUSES = ["Active", "Under Contract", "Sold", "Expired", "Withdrawn"]
 OFFMARKET_STATUSES = ["Available", "Pending", "Sold"]
@@ -128,6 +164,208 @@ document.querySelectorAll('[data-tabscope]').forEach(function (scope) {
     });
   });
 });
+"""
+
+# Client-side glue for the /admin "Buyer Match" section. Kept as its own
+# module constant (single braces) and dropped in via <script>{BUYER_MATCH_SCRIPT}</script>
+# so it doesn't fight the doubled-brace f-string in build_admin_html. Reuses
+# the adminPost() helper defined in that page's main script block.
+BUYER_MATCH_SCRIPT = r"""
+(function () {
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c];
+    });
+  }
+  function chip(check) {
+    var cls = check.status === 'hit' ? 'bm-chip-hit' : (check.status === 'miss' ? 'bm-chip-miss' : 'bm-chip-unknown');
+    return '<span class="bm-chip ' + cls + '">' + esc(check.label) + '</span>';
+  }
+  function matchRow(m) {
+    var prof = m.prof || {};
+    var bits = [];
+    if (prof.area) bits.push(esc(prof.area));
+    if (prof.asking_price) bits.push('$' + Number(prof.asking_price).toLocaleString());
+    var bb = [];
+    if (prof.beds) bb.push(esc(prof.beds) + ' bd');
+    if (prof.baths) bb.push(esc(prof.baths) + ' ba');
+    if (prof.sqft) bb.push(Number(prof.sqft).toLocaleString() + ' sqft');
+    if (bb.length) bits.push(bb.join(' / '));
+    var name = m.fub_url
+      ? '<a href="' + esc(m.fub_url) + '" target="_blank" rel="noopener noreferrer">' + esc(m.name) + '</a>'
+      : esc(m.name);
+    var chips = (m.checks || []).map(chip).join('');
+    return '<div class="bm-match">'
+      + '<div class="bm-match-head"><span class="bm-score">' + Math.round(m.score) + '</span>'
+      + '<span class="bm-match-name">' + name + '</span>'
+      + '<span class="bm-match-meta">' + esc(bits.join('  ·  ')) + '</span></div>'
+      + '<div class="bm-chips">' + chips + '</div></div>';
+  }
+  function renderMatches(container, matches, emptyMsg) {
+    if (!matches || !matches.length) {
+      container.innerHTML = '<p class="db-empty-note">' + esc(emptyMsg || 'No matching prospects.') + '</p>';
+      return;
+    }
+    container.innerHTML = matches.map(matchRow).join('');
+  }
+
+  var form = document.getElementById('bm-need-form');
+  if (form) {
+    var sourceSel = form.querySelector('[name="buyer_source"]');
+    var agentBox = document.getElementById('bm-agent-fields');
+    function syncAgent() {
+      if (agentBox) agentBox.style.display = (sourceSel && sourceSel.value === 'other_agent') ? '' : 'none';
+    }
+    if (sourceSel) sourceSel.addEventListener('change', syncAgent);
+    syncAgent();
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var btn = form.querySelector('button[type="submit"]');
+      var out = document.getElementById('bm-need-result');
+      var payload = {action: 'buyer_need_run'};
+      new FormData(form).forEach(function (v, k) { payload[k] = v; });
+      payload.log_matches = form.querySelector('[name="log_matches"]').checked;
+      btn.disabled = true;
+      var prev = btn.textContent;
+      btn.textContent = 'Scanning FollowUpBoss…';
+      out.innerHTML = '<p class="db-empty-note">Scanning your Nurture pipeline…</p>';
+      try {
+        var data = await adminPost(payload);
+        var head = '<p class="bm-note">' + esc(data.save_note || '') + '</p>';
+        if (data.notice) head += '<p class="bm-note bm-note-warn">' + esc(data.notice) + '</p>';
+        head += '<h4 class="bm-results-title">' + (data.matches ? data.matches.length : 0)
+          + ' matching prospect(s) — scanned ' + (data.scanned || 0) + '</h4>';
+        out.innerHTML = head + '<div id="bm-need-matches"></div>';
+        renderMatches(document.getElementById('bm-need-matches'), data.matches);
+        var tbl = document.getElementById('bm-saved-needs');
+        if (tbl) setTimeout(function () { window.location.reload(); }, 1200);
+      } catch (err) {
+        out.innerHTML = '<p class="om-error" style="display:block">' + esc(err.message) + '</p>';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = prev;
+      }
+    });
+  }
+
+  var rematchBtn = document.getElementById('bm-rematch-all');
+  if (rematchBtn) {
+    rematchBtn.addEventListener('click', async function () {
+      var out = document.getElementById('bm-rematch-result');
+      rematchBtn.disabled = true;
+      var prev = rematchBtn.textContent;
+      rematchBtn.textContent = 'Re-matching…';
+      out.innerHTML = '<p class="db-empty-note">Re-scanning for every saved buyer need…</p>';
+      try {
+        var data = await adminPost({action: 'rematch_buyer_needs'});
+        if (!data.report || !data.report.length) {
+          out.innerHTML = '<p class="db-empty-note">No active buyer needs to re-match.</p>';
+        } else {
+          out.innerHTML = data.report.map(function (r) {
+            var body = '<div class="bm-report-matches"></div>';
+            return '<details class="adm-client"><summary><span class="adm-client-email">'
+              + esc(r.buyer_name) + '</span><span class="om-status">' + r.match_count + ' match(es)</span></summary>'
+              + '<div class="adm-client-body" data-matches=\'' + esc(JSON.stringify(r.matches || [])) + '\'>' + body + '</div></details>';
+          }).join('');
+          out.querySelectorAll('.adm-client-body[data-matches]').forEach(function (el) {
+            var matches = [];
+            try { matches = JSON.parse(el.getAttribute('data-matches')); } catch (e) {}
+            renderMatches(el.querySelector('.bm-report-matches'), matches);
+          });
+        }
+      } catch (err) {
+        out.innerHTML = '<p class="om-error" style="display:block">' + esc(err.message) + '</p>';
+      } finally {
+        rematchBtn.disabled = false;
+        rematchBtn.textContent = prev;
+      }
+    });
+  }
+
+  var setupBtn = document.getElementById('bm-fub-setup');
+  if (setupBtn) {
+    setupBtn.addEventListener('click', async function () {
+      var out = document.getElementById('bm-fub-setup-result');
+      setupBtn.disabled = true;
+      var prev = setupBtn.textContent;
+      setupBtn.textContent = 'Checking FollowUpBoss…';
+      try {
+        var data = await adminPost({action: 'fub_setup_fields'});
+        out.innerHTML = '<p class="bm-note">' + esc(data.summary) + '</p>';
+      } catch (err) {
+        out.innerHTML = '<p class="om-error" style="display:block">' + esc(err.message) + '</p>';
+      } finally {
+        setupBtn.disabled = false;
+        setupBtn.textContent = prev;
+      }
+    });
+  }
+
+  // --- Phase 2: LA County enrichment sweep (loops small batches) ---------
+  var enStart = document.getElementById('bm-enrich-start');
+  if (enStart) {
+    var enStop = document.getElementById('bm-enrich-stop');
+    var enReset = document.getElementById('bm-enrich-reset');
+    var enOut = document.getElementById('bm-enrich-result');
+    var enLine = document.getElementById('bm-enrich-state');
+    var running = false;
+    var run = 0;
+
+    async function loop() {
+      var mine = ++run;
+      running = true;
+      enStart.disabled = true; enStart.textContent = 'Sweeping…';
+      enStop.style.display = ''; enReset.style.display = 'none';
+      var totUpd = 0, totProc = 0;
+      try {
+        while (running && mine === run) {
+          var d = await adminPost({action: 'fub_enrich_run'});
+          totProc += d.processed || 0; totUpd += d.updated || 0;
+          var ex = (d.examples || []).map(function (e) {
+            return '<li>' + esc(e.name) + ' — filled ' + esc((e.filled || []).join(', '))
+              + (e.matched ? ' <span class="bm-match-meta">(' + esc(e.matched) + ')</span>' : '') + '</li>';
+          }).join('');
+          enOut.innerHTML = '<p class="bm-note">This run: filled ' + totUpd + ' of ' + totProc
+            + ' contacts scanned. Batch: ' + (d.updated || 0) + ' filled, ' + (d.no_match || 0)
+            + ' no LA County match, ' + (d.no_address || 0) + ' with no street address.</p>'
+            + (ex ? '<ul class="bm-note" style="margin-top:0">' + ex + '</ul>' : '');
+          if (d.totals) {
+            enLine.textContent = 'Resume at contact #' + d.next_offset + ' · ' + d.totals.passes
+              + ' full pass(es) done · ' + d.totals.updated + ' filled / ' + d.totals.seen
+              + ' scanned · ' + d.totals.no_match + ' with no LA County match';
+          }
+          if (d.done) {
+            enOut.innerHTML += '<p class="bm-note">Completed a full pass over the database.</p>';
+            break;
+          }
+          await new Promise(function (r) { setTimeout(r, 400); });
+        }
+      } catch (err) {
+        enOut.innerHTML += '<p class="om-error" style="display:block">' + esc(err.message) + '</p>';
+      } finally {
+        if (mine === run) {
+          running = false;
+          enStart.disabled = false; enStart.textContent = 'Start / resume sweep';
+          enStop.style.display = 'none'; enReset.style.display = '';
+        }
+      }
+    }
+
+    enStart.addEventListener('click', loop);
+    enStop.addEventListener('click', function () { running = false; run++; });
+    enReset.addEventListener('click', async function () {
+      if (!confirm('Reset the sweep back to the start of the database?')) return;
+      try {
+        await adminPost({action: 'fub_enrich_reset'});
+        enLine.textContent = 'Not run yet.';
+        enOut.innerHTML = '<p class="bm-note">Progress reset.</p>';
+      } catch (err) {
+        enOut.innerHTML = '<p class="om-error" style="display:block">' + esc(err.message) + '</p>';
+      }
+    });
+  }
+})();
 """
 
 NAV_ITEMS = [
@@ -587,6 +825,741 @@ def push_dashboard_login_to_followupboss(email, name):
         print(f"portal: FollowUpBoss API error {e.code}: {e.read().decode('utf-8', errors='replace')}")
     except Exception as e:
         print(f"portal: unexpected error calling FollowUpBoss: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Buyer Match prospecting tool. Reads seller prospects out of FollowUpBoss
+# (the first FUB *read* in this codebase -- everything else here only POSTs
+# events) and scores them against a buyer's stated needs so Simone knows who
+# to call with an "I have a buyer" listing pitch. Every network call below is
+# best-effort: it logs and returns an empty/failure value rather than
+# raising, so a FollowUpBoss outage degrades the tool instead of 500-ing.
+# ---------------------------------------------------------------------------
+def _fub_headers():
+    api_key = os.environ.get("FUB_API_KEY")
+    if not api_key:
+        return None
+    headers = {
+        "Authorization": "Basic " + base64.b64encode(f"{api_key}:".encode("utf-8")).decode("ascii"),
+        "Content-Type": "application/json",
+    }
+    system_name = os.environ.get("FUB_SYSTEM")
+    system_key = os.environ.get("FUB_SYSTEM_KEY")
+    if system_name and system_key:
+        headers["X-System"] = system_name
+        headers["X-System-Key"] = system_key
+    return headers
+
+
+def _fub_request(method, url, payload=None):
+    """Returns (status_int, parsed_json_or_None, error_str_or_None). Never raises."""
+    headers = _fub_headers()
+    if headers is None:
+        return (0, None, "FollowUpBoss API key is not configured.")
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+    req = urllib.request.Request(url, data=data, method=method)
+    for k, v in headers.items():
+        req.add_header(k, v)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+            body = json.loads(raw) if raw.strip() else {}
+            return (getattr(resp, "status", 200), body, None)
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", errors="replace")[:500]
+        print(f"portal(buyer-match): FUB {method} {url} -> {e.code}: {detail}")
+        return (e.code, None, f"FollowUpBoss returned {e.code}.")
+    except Exception as e:
+        print(f"portal(buyer-match): FUB {method} {url} failed: {e}")
+        return (0, None, "Couldn't reach FollowUpBoss.")
+
+
+def fub_list_custom_fields():
+    """{name: field_dict} for all person custom fields, or None on failure."""
+    _status, body, _err = _fub_request("GET", f"{FUB_API_BASE}/customFields?limit=100")
+    if not body:
+        return None
+    items = body.get("customfields") or body.get("customFields") or []
+    return {f.get("name"): f for f in items if f.get("name")}
+
+
+def fub_create_custom_field(label, ftype):
+    status, body, err = _fub_request(
+        "POST", f"{FUB_API_BASE}/customFields", {"label": label, "type": ftype}
+    )
+    if body is not None and status in (200, 201):
+        return (True, None)
+    return (False, err or "create failed")
+
+
+def fub_setup_custom_fields():
+    """Create any BUYER_MATCH_FIELDS field that doesn't exist yet. Returns a
+    human summary string. Needs an account-owner API key to create fields."""
+    existing = fub_list_custom_fields()
+    if existing is None:
+        return "Couldn't read custom fields from FollowUpBoss -- check that the API key is valid."
+    have, made, failed = [], [], []
+    for label, ftype in BUYER_MATCH_FIELDS:
+        if ("custom" + label) in existing:
+            have.append(label)
+            continue
+        ok, msg = fub_create_custom_field(label, ftype)
+        if ok:
+            made.append(label)
+        else:
+            failed.append(f"{label} ({msg})")
+    parts = []
+    if made:
+        parts.append("Created: " + ", ".join(made) + ".")
+    if have:
+        parts.append(f"Already set up: {len(have)} of {len(BUYER_MATCH_FIELDS)}.")
+    if failed:
+        parts.append("Could not create (needs an account-owner API key): " + ", ".join(failed) + ".")
+    return "  ".join(parts) or "All property fields are already set up."
+
+
+def _fub_fieldmap():
+    """{label: real custom-field name or None}. Resolved fresh on every scan
+    (one extra GET) so fields added straight in the FollowUpBoss UI are picked
+    up without waiting for the serverless instance to recycle."""
+    existing = fub_list_custom_fields()
+    out = {}
+    for label, _ftype in BUYER_MATCH_FIELDS:
+        guess = "custom" + label
+        if existing is None:
+            out[label] = guess  # can't reach FUB to confirm -- assume default naming
+        elif guess in existing:
+            out[label] = guess
+        else:
+            out[label] = next((n for n in existing if n.lower() == guess.lower()), None)
+    return out
+
+
+def _num(value):
+    """Parse a loose numeric string ($2,500,000 / 2.5M / 800k / 4+ / 3-4 /
+    1,800) into a float, or None. A range returns its low end."""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    s = str(value).strip().lower().replace(",", "").replace("$", "")
+    if not s:
+        return None
+    rng = re.search(r"(\d+(?:\.\d+)?)\s*[-–]\s*\d+(?:\.\d+)?", s)
+    if rng:
+        try:
+            return float(rng.group(1))
+        except ValueError:
+            return None
+    m = re.search(r"(\d+(?:\.\d+)?)\s*([mk])?", s)
+    if not m:
+        return None
+    try:
+        n = float(m.group(1))
+    except ValueError:
+        return None
+    return n * (1_000_000.0 if m.group(2) == "m" else 1_000.0 if m.group(2) == "k" else 1.0)
+
+
+def _first(*vals):
+    for v in vals:
+        if v not in (None, "", []):
+            return v
+    return None
+
+
+def _clean_str(v):
+    return str(v).strip() if v not in (None, "") else ""
+
+
+def fub_fetch_nurture_people():
+    """(people_list, scanned_count, error_or_None). Paginated, capped at FUB_SCAN_MAX."""
+    stage = os.environ.get("FUB_NURTURE_STAGE", "Nurture")
+    try:
+        cap = int(os.environ.get("FUB_SCAN_MAX", "600"))
+    except ValueError:
+        cap = 600
+    cap = max(1, min(cap, 5000))
+    people, offset = [], 0
+    while len(people) < cap:
+        params = urllib.parse.urlencode({
+            "stage": stage, "limit": 100, "offset": offset,
+            "fields": "allFields,allCustom", "includeTrash": "false",
+        })
+        _status, body, err = _fub_request("GET", f"{FUB_API_BASE}/people?{params}")
+        if not body:
+            return (people, len(people), err or "FollowUpBoss request failed.")
+        batch = body.get("people") or []
+        people.extend(batch)
+        offset += len(batch)
+        meta = body.get("_metadata") or {}
+        total = meta.get("total")
+        if len(batch) < 100 or (total is not None and offset >= total):
+            break
+    return (people[:cap], min(len(people), cap), None)
+
+
+def fub_prop_profile(person, fieldmap):
+    """Best-effort property profile for a FUB contact: standard custom fields
+    first, then the built-in price / mailing address, then a light regex over
+    the background/notes text for anything still blank."""
+    def cf(label):
+        name = fieldmap.get(label)
+        return person.get(name) if name else None
+
+    background = " ".join(str(person.get(f) or "") for f in ("background", "notes")).strip()
+    addrs = person.get("addresses") or []
+    addr0 = addrs[0] if isinstance(addrs, list) and addrs else {}
+    if not isinstance(addr0, dict):
+        addr0 = {}
+
+    beds = _num(cf("Bedrooms"))
+    if beds is None:
+        m = _MATCH_BEDS_RE.search(background)
+        beds = _num(m.group(1)) if m else None
+    baths = _num(cf("Bathrooms"))
+    if baths is None:
+        m = _MATCH_BATHS_RE.search(background)
+        baths = _num(m.group(1)) if m else None
+    sqft = _num(cf("SqFt"))
+    if sqft is None:
+        m = _MATCH_SQFT_RE.search(background)
+        sqft = _num(m.group(1)) if m else None
+    asking = _num(cf("AskingPrice"))
+    if asking is None:
+        asking = _num(person.get("price"))
+
+    return {
+        "beds": beds, "baths": baths, "sqft": sqft,
+        "lot_size": _num(cf("LotSize")),
+        "year_built": _num(cf("YearBuilt")),
+        "property_type": _clean_str(cf("PropertyType")),
+        "asking_price": asking,
+        "area": _clean_str(_first(cf("Area"), addr0.get("city"), addr0.get("code"))),
+        "address": _clean_str(_first(addr0.get("street"), addr0.get("full"))),
+        "text": background,
+    }
+
+
+def _budget_band(pmin, pmax):
+    def m(n):
+        if n >= 1_000_000:
+            return (f"${n / 1_000_000:.1f}M").replace(".0M", "M")
+        return f"${n / 1000:.0f}K"
+    if pmin and pmax:
+        return f"{m(pmin)}–{m(pmax)}"
+    if pmax:
+        return f"Under {m(pmax)}"
+    if pmin:
+        return f"{m(pmin)}+"
+    return ""
+
+
+def _criteria_sentence(c):
+    bits = []
+    if c.get("beds"):
+        bits.append(f"{c['beds']:g}+ bd")
+    if c.get("baths"):
+        bits.append(f"{c['baths']:g}+ ba")
+    if c.get("sqft"):
+        bits.append(f"{c['sqft']:g}+ sqft")
+    if c.get("types"):
+        bits.append("/".join(c["types"]))
+    band = _budget_band(c.get("price_min"), c.get("price_max"))
+    if band:
+        bits.append(band)
+    if c.get("areas"):
+        bits.append("in " + ", ".join(c["areas"]))
+    return ", ".join(bits) or "unspecified"
+
+
+def score_buyer_match(criteria, prof):
+    """-> {score: 0-100, checks: [{label, status}]}. status is hit|miss|unknown.
+    A missed hard gate (price/beds/baths/sqft/area) forces the score below the
+    display threshold; missing prospect data is 'unknown', not a rejection."""
+    checks = []
+    score = 0.0
+    weight_total = 0.0
+    gate_ok = True
+
+    def add(label, status, w, got):
+        nonlocal score, weight_total
+        checks.append({"label": label, "status": status})
+        weight_total += w
+        if status == "hit":
+            score += w * got
+        elif status == "unknown":
+            score += w * 0.35
+
+    pmin, pmax = criteria.get("price_min"), criteria.get("price_max")
+    ask = prof.get("asking_price")
+    if pmin or pmax:
+        if ask is None:
+            add("Price (no data)", "unknown", 3, 0)
+        elif (pmin or 0) <= ask <= (pmax or float("inf")) * 1.05:
+            add(f"Price ${ask:,.0f}", "hit", 3, 0.7 if (pmax and ask > pmax) else 1.0)
+        else:
+            add(f"Price ${ask:,.0f}", "miss", 3, 0)
+            gate_ok = False
+
+    for label, key, w in (("Beds", "beds", 2.0), ("Baths", "baths", 1.5), ("Sq ft", "sqft", 1.5)):
+        want = criteria.get(key)
+        if not want:
+            continue
+        got_val = prof.get(key)
+        if got_val is None:
+            add(f"{label} (no data)", "unknown", w, 0)
+        elif got_val + 1e-9 >= want:
+            add(f"{label} {got_val:g}+", "hit", w, 1.0)
+        else:
+            add(f"{label} {got_val:g} (< {want:g})", "miss", w, 0)
+            gate_ok = False
+
+    areas = criteria.get("areas") or []
+    if areas:
+        hay = " ".join(filter(None, [prof.get("area", ""), prof.get("address", ""), prof.get("text", "")])).lower()
+        if not hay.strip():
+            add("Area (no data)", "unknown", 3, 0)
+        else:
+            hit_area = next((a for a in areas if a.lower() in hay), None)
+            if hit_area:
+                add(f"Area: {hit_area}", "hit", 3, 1.0)
+            else:
+                add("Area mismatch", "miss", 3, 0)
+                gate_ok = False
+
+    types = criteria.get("types") or []
+    if types:
+        pt = (prof.get("property_type") or "").lower()
+        if not pt:
+            add("Type (no data)", "unknown", 1, 0)
+        elif any(t.lower() in pt or pt in t.lower() for t in types):
+            add(f"Type: {prof.get('property_type')}", "hit", 1, 1.0)
+        else:
+            add("Type mismatch", "miss", 1, 0)
+
+    notes = (criteria.get("notes") or "").lower()
+    if notes:
+        words = set(re.findall(r"[a-z]{4,}", notes))
+        text = (prof.get("text") or "").lower()
+        overlap = sorted(w for w in words if w in text)
+        if overlap:
+            add("Keywords: " + ", ".join(overlap[:4]), "hit", 1, min(1.0, len(overlap) / 3.0))
+
+    pct = 100.0 * score / weight_total if weight_total else 0.0
+    if not gate_ok:
+        pct = min(pct, BUYER_MATCH_MIN_SCORE - 1)
+    return {"score": round(pct, 1), "checks": checks, "gate_ok": gate_ok}
+
+
+def run_buyer_match(criteria):
+    """-> {matches: [...], scanned: int, error: str|None}. Pure FUB read; safe
+    to call without a DB connection."""
+    people, scanned, err = fub_fetch_nurture_people()
+    fieldmap = _fub_fieldmap()
+    acct = os.environ.get("FUB_ACCOUNT_URL", "").rstrip("/")
+    rows = []
+    for p in people:
+        prof = fub_prop_profile(p, fieldmap)
+        res = score_buyer_match(criteria, prof)
+        if res["score"] < BUYER_MATCH_MIN_SCORE:
+            continue
+        # Skip prospects we know nothing relevant about -- a row needs at least
+        # one real "hit", not just a pile of "no data" checks.
+        if not any(c["status"] == "hit" for c in res["checks"]):
+            continue
+        name = (_clean_str(p.get("name"))
+                or " ".join(filter(None, [p.get("firstName"), p.get("lastName")])).strip()
+                or f"Contact #{p.get('id')}")
+        rows.append({
+            "fub_id": p.get("id"),
+            "name": name,
+            "fub_url": f"{acct}/2/people/view/{p.get('id')}" if acct and p.get("id") else "",
+            "score": res["score"],
+            "checks": res["checks"],
+            "prof": {
+                "area": prof["area"], "asking_price": prof["asking_price"],
+                "beds": prof["beds"], "baths": prof["baths"], "sqft": prof["sqft"],
+                "property_type": prof["property_type"],
+            },
+        })
+    rows.sort(key=lambda r: r["score"], reverse=True)
+    return {"matches": rows[:50], "scanned": scanned, "error": err}
+
+
+def push_buyer_need_to_fub(need, criteria):
+    """Create/merge the buyer as a FollowUpBoss contact via an event.
+    -> (fub_person_id_or_None, note_string)."""
+    if not os.environ.get("FUB_API_KEY"):
+        return (None, "Saved locally. Not sent to FollowUpBoss (no API key configured).")
+    emails = [{"value": need["buyer_email"]}] if need["buyer_email"] else []
+    phones = [{"value": need["buyer_phone"]}] if need["buyer_phone"] else []
+    if not emails and not phones:
+        return (None, "Saved locally and matched. Not added to FollowUpBoss -- a new contact needs an email or phone.")
+
+    tags = ["Buyer Need", "Prospecting - Buyer Match"]
+    tags.append("Buyer Source: Other Agent" if need["buyer_source"] == "other_agent" else "Buyer Source: My Client")
+    if need["buyer_source"] == "other_agent" and need["agent_name"]:
+        tags.append(f"Referring Agent: {need['agent_name']}")
+    for a in criteria.get("areas", []):
+        tags.append(f"Buyer Area: {a}")
+    band = _budget_band(criteria.get("price_min"), criteria.get("price_max"))
+    if band:
+        tags.append(f"Buyer Budget: {band}")
+
+    summary = _criteria_sentence(criteria)
+    bg = ["Buyer need logged via the Buyer Match tool.", f"Looking for: {summary}"]
+    if need["buyer_source"] == "other_agent":
+        bg.append("Represented by agent: " + " ".join(filter(None, [
+            need["agent_name"], need["agent_brokerage"], need["agent_contact"]])).strip())
+    if criteria.get("timeline"):
+        bg.append(f"Timeline: {criteria['timeline']}")
+    if criteria.get("notes"):
+        bg.append(f"Notes: {criteria['notes']}")
+
+    person = {"tags": tags, "background": "\n".join(bg)}
+    if need["buyer_name"]:
+        parts = need["buyer_name"].split()
+        person["firstName"] = parts[0]
+        if len(parts) > 1:
+            person["lastName"] = " ".join(parts[1:])
+    if emails:
+        person["emails"] = emails
+    if phones:
+        person["phones"] = phones
+
+    payload = {
+        "source": os.environ.get("FUB_SOURCE", "Simone Marzullo Website"),
+        "system": os.environ.get("FUB_SYSTEM", "Simone Marzullo Website"),
+        "type": "Property Inquiry",
+        "message": f"New buyer need (Buyer Match tool): {summary}",
+        "person": person,
+    }
+    _status, body, err = _fub_request("POST", FUB_EVENTS_URL, payload)
+    if isinstance(body, dict):
+        pid = body.get("personId") or (body.get("person") or {}).get("id")
+        return (pid, f"Added {need['buyer_name'] or 'the buyer'} to FollowUpBoss · tags: {', '.join(tags)}.")
+    return (None, f"Saved locally and matched. FollowUpBoss add failed: {err or 'unknown error'}.")
+
+
+def log_match_to_fub(person_id, criteria_line, buyer_label):
+    """Drop a note on a matched prospect so Simone remembers why he's calling."""
+    if not person_id:
+        return False
+    _status, body, _err = _fub_request("POST", f"{FUB_API_BASE}/notes", {
+        "personId": person_id,
+        "subject": "Buyer Match",
+        "body": f"Possible fit for a buyer need: {criteria_line} — buyer: {buyer_label}.",
+    })
+    return body is not None
+
+
+def fetch_all_buyer_needs(conn):
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            """SELECT id, buyer_name, buyer_email, buyer_phone, buyer_source, agent_name,
+                      agent_brokerage, agent_contact, criteria, fub_person_id,
+                      last_match_count, last_matched_at, active, created_at
+               FROM buyer_needs ORDER BY active DESC, created_at DESC"""
+        )
+        return cur.fetchall()
+
+
+def create_buyer_need(conn, need, criteria, fub_person_id, match_count):
+    with conn.cursor() as cur:
+        cur.execute(
+            """INSERT INTO buyer_needs
+               (buyer_name, buyer_email, buyer_phone, buyer_source, agent_name,
+                agent_brokerage, agent_contact, criteria, fub_person_id,
+                last_match_count, last_matched_at)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now()) RETURNING id""",
+            (need["buyer_name"], need["buyer_email"], need["buyer_phone"], need["buyer_source"],
+             need["agent_name"], need["agent_brokerage"], need["agent_contact"],
+             psycopg2.extras.Json(criteria), fub_person_id, match_count),
+        )
+        new_id = cur.fetchone()[0]
+    conn.commit()
+    return new_id
+
+
+def update_buyer_need_match(conn, need_id, match_count):
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE buyer_needs SET last_match_count = %s, last_matched_at = now(), updated_at = now() WHERE id = %s",
+            (match_count, need_id),
+        )
+    conn.commit()
+
+
+def toggle_buyer_need_active(conn, need_id):
+    with conn.cursor() as cur:
+        cur.execute("UPDATE buyer_needs SET active = NOT active, updated_at = now() WHERE id = %s", (need_id,))
+    conn.commit()
+
+
+def parse_buyer_criteria(data):
+    """Normalize the raw Buyer Match form fields into the criteria dict stored
+    in buyer_needs.criteria and consumed by run_buyer_match / score_buyer_match."""
+    def numf(key):
+        return _num(data.get(key)) if str(data.get(key) or "").strip() else None
+
+    def listf(key):
+        return [clean(x, 60) for x in re.split(r"[,\n;]+", str(data.get(key) or "")) if clean(x, 60)][:20]
+
+    return {
+        "price_min": numf("price_min"),
+        "price_max": numf("price_max"),
+        "beds": numf("beds"),
+        "baths": numf("baths"),
+        "sqft": numf("sqft"),
+        "areas": listf("areas"),
+        "types": listf("types"),
+        "timeline": clean(data.get("timeline"), 120),
+        "notes": clean(data.get("notes"), 1000),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 -- backfill blank property fields on FollowUpBoss contacts from the
+# LA County Assessor's public parcel data. Opt-in, batched (a full sweep
+# can't finish in one request), and only ever *fills* a blank field -- it
+# never overwrites data already in FollowUpBoss.
+# ---------------------------------------------------------------------------
+def _http_get_json(url, params, timeout=15):
+    """Plain GET -> parsed JSON, or None. For the keyless LA County service."""
+    full = url + "?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(full, method="GET", headers={"Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read().decode("utf-8", errors="replace"))
+    except Exception as e:
+        print(f"portal(enrich): GET {url} failed: {e}")
+        return None
+
+
+def _split_street_address(raw):
+    """'123 N Grand View Blvd Apt 4' -> ('123 N GRAND VIEW BLVD', house_no='123').
+    Returns (normalized_street, house_no) or (None, None) if no leading number."""
+    s = re.sub(r"\s+", " ", str(raw or "").strip().upper())
+    s = _UNIT_RE.sub("", s).strip().rstrip(",")
+    m = re.match(r"^(\d+)\s+(.*)$", s)
+    if not m:
+        return (None, None)
+    return (f"{m.group(1)} {m.group(2)}".strip(), m.group(1))
+
+
+def _arcgis_esc(v):
+    return str(v).replace("'", "''")
+
+
+def _coalesce_building_attrs(attrs):
+    """Sum/rollup the 1..5 building columns LA County uses for multi-structure parcels."""
+    def nums(prefix):
+        out = []
+        for i in range(1, 6):
+            v = _num(attrs.get(f"{prefix}{i}"))
+            if v:
+                out.append(v)
+        return out
+
+    beds = nums("Bedrooms")
+    baths = nums("Bathrooms")
+    sqft = nums("SQFTmain")
+    years = nums("YearBuilt")
+    land = _num(attrs.get("Roll_LandValue")) or 0
+    imp = _num(attrs.get("Roll_ImpValue")) or 0
+    return {
+        "beds": sum(beds) if beds else None,
+        "baths": sum(baths) if baths else None,
+        "sqft": sum(sqft) if sqft else None,
+        "year_built": max(years) if years else None,
+        "property_type": _clean_str(attrs.get("UseType") or attrs.get("UseDescription")),
+        "assessed_value": (land + imp) or None,
+        "matched_address": _clean_str(attrs.get("SitusFullAddress") or attrs.get("SitusAddress")),
+    }
+
+
+_LACOUNTY_OUT_FIELDS = (
+    "AIN,SitusHouseNo,SitusStreet,SitusAddress,SitusFullAddress,SitusCity,SitusZIP,"
+    "UseType,UseDescription,"
+    "YearBuilt1,YearBuilt2,YearBuilt3,YearBuilt4,YearBuilt5,"
+    "Bedrooms1,Bedrooms2,Bedrooms3,Bedrooms4,Bedrooms5,"
+    "Bathrooms1,Bathrooms2,Bathrooms3,Bathrooms4,Bathrooms5,"
+    "SQFTmain1,SQFTmain2,SQFTmain3,SQFTmain4,SQFTmain5,"
+    "Roll_LandValue,Roll_ImpValue"
+)
+
+
+def _lacounty_query(where):
+    """Run one where-clause against the parcel layer. -> features list, or None
+    on transport/query error (distinct from an empty [] = 'no such parcel')."""
+    body = _http_get_json(LACOUNTY_PARCEL_URL, {
+        "where": where, "outFields": _LACOUNTY_OUT_FIELDS,
+        "returnGeometry": "false", "resultRecordCount": 8, "f": "json",
+    })
+    if body is None:
+        return None
+    if body.get("error"):
+        print(f"portal(enrich): LA County query error for [{where}]: {body['error']}")
+        return None
+    return body.get("features") or []
+
+
+def lacounty_lookup(street, city, zip_code):
+    """Look one property up in the LA County parcel layer. -> attrs dict or None."""
+    norm, house = _split_street_address(street)
+    if not norm or not house:
+        return None
+    rest = _LEADING_DIR_RE.sub("", norm[len(house):].strip())
+    core = re.sub(r"\s+", " ", _STREET_SUFFIX_RE.sub("", rest)).strip().rstrip(".").strip() or rest
+    z = re.sub(r"\D", "", str(zip_code or ""))[:5]
+    loc = ""
+    if z:
+        loc = f" AND SitusZIP LIKE '{z}%'"          # SitusZIP is ZIP+4, so prefix-match
+    elif city:
+        loc = f" AND UPPER(SitusCity) LIKE '{_arcgis_esc(str(city).strip().upper())}%'"  # SitusCity is "CITY ST"
+
+    he = _arcgis_esc(house)
+    # 1) exact house number + loose street-name match (best precision)
+    feats = _lacounty_query(f"SitusHouseNo = '{he}' AND UPPER(SitusStreet) LIKE '%{_arcgis_esc(core.upper())}%'{loc}")
+    if not feats:
+        # 2) prefix match on the full situs address -- anchored so "905 X" never
+        #    matches "1905 X" the way a leading-wildcard LIKE would
+        feats = _lacounty_query(f"UPPER(SitusAddress) LIKE '{_arcgis_esc(norm)}%'{loc}")
+    if not feats:
+        return None
+    best = feats[0]
+    if z:
+        best = next((f for f in feats if str(f.get("attributes", {}).get("SitusZIP", "")).startswith(z)), feats[0])
+    return _coalesce_building_attrs(best.get("attributes", {}))
+
+
+def fub_fill_blank_person_fields(person, fieldmap, found):
+    """PUT only the standard custom fields that are currently blank on `person`.
+    -> (updated_field_labels list, error_or_None). Never overwrites."""
+    src = {
+        "Bedrooms": found.get("beds"),
+        "Bathrooms": found.get("baths"),
+        "SqFt": found.get("sqft"),
+        "YearBuilt": found.get("year_built"),
+        "PropertyType": found.get("property_type"),
+        "AskingPrice": None,  # never write a value guess into AskingPrice
+    }
+    payload = {}
+    filled = []
+    for label, value in src.items():
+        if value in (None, "", 0):
+            continue
+        name = fieldmap.get(label)
+        if not name:
+            continue
+        current = person.get(name)
+        if current not in (None, "", 0, "0"):
+            continue  # already has data -- leave it
+        payload[name] = value
+        filled.append(label)
+    if not payload:
+        return ([], None)
+    existing_tags = person.get("tags") or []
+    if "Enriched: LA County Assessor" not in existing_tags:
+        payload["tags"] = existing_tags + ["Enriched: LA County Assessor"]
+    _status, body, err = _fub_request("PUT", f"{FUB_API_BASE}/people/{person['id']}", payload)
+    if body is None:
+        return ([], err or "update failed")
+    return (filled, None)
+
+
+def fetch_enrich_state(conn):
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute("SELECT * FROM fub_enrich_state WHERE id = 1")
+        row = cur.fetchone()
+        if not row:
+            cur.execute("INSERT INTO fub_enrich_state (id) VALUES (1) RETURNING *")
+            row = cur.fetchone()
+            conn.commit()
+        return row
+
+
+def save_enrich_state(conn, next_offset, seen_inc, updated_inc, nomatch_inc, wrapped):
+    with conn.cursor() as cur:
+        if wrapped:
+            cur.execute(
+                """UPDATE fub_enrich_state
+                   SET next_offset = 0, last_run_at = now(), passes = passes + 1,
+                       total_seen = total_seen + %s, total_updated = total_updated + %s,
+                       total_no_match = total_no_match + %s
+                   WHERE id = 1""",
+                (seen_inc, updated_inc, nomatch_inc),
+            )
+        else:
+            cur.execute(
+                """UPDATE fub_enrich_state
+                   SET next_offset = %s, last_run_at = now(),
+                       total_seen = total_seen + %s, total_updated = total_updated + %s,
+                       total_no_match = total_no_match + %s
+                   WHERE id = 1""",
+                (next_offset, seen_inc, updated_inc, nomatch_inc),
+            )
+    conn.commit()
+
+
+def reset_enrich_state(conn):
+    with conn.cursor() as cur:
+        cur.execute(
+            """UPDATE fub_enrich_state
+               SET next_offset = 0, passes = 0, total_seen = 0, total_updated = 0,
+                   total_no_match = 0, last_run_at = NULL WHERE id = 1"""
+        )
+    conn.commit()
+
+
+def run_enrich_batch(conn, batch_size):
+    """Process one page of FollowUpBoss contacts: for each with a street address
+    but a blank bed/bath/sqft/year/type, look it up in LA County and fill the
+    gaps. Returns a summary dict; the caller loops until done=True."""
+    state = fetch_enrich_state(conn)
+    offset = state["next_offset"] or 0
+    stage = os.environ.get("FUB_ENRICH_STAGE", "").strip()
+    params = {"limit": batch_size, "offset": offset, "fields": "allFields,allCustom", "includeTrash": "false"}
+    if stage:
+        params["stage"] = stage
+    _status, body, err = _fub_request("GET", f"{FUB_API_BASE}/people?{urllib.parse.urlencode(params)}")
+    if not body:
+        return {"ok": False, "error": err or "FollowUpBoss request failed."}
+    people = body.get("people") or []
+    total = (body.get("_metadata") or {}).get("total")
+    fieldmap = _fub_fieldmap()
+
+    updated, no_match, no_address, filled_examples = 0, 0, 0, []
+    for p in people:
+        prof = fub_prop_profile(p, fieldmap)
+        if prof["beds"] and prof["baths"] and prof["sqft"] and prof["year_built"] and prof["property_type"]:
+            continue  # already complete
+        addrs = p.get("addresses") or []
+        a0 = addrs[0] if isinstance(addrs, list) and addrs and isinstance(addrs[0], dict) else {}
+        street = a0.get("street") or ""
+        if not _split_street_address(street)[0]:
+            no_address += 1
+            continue
+        found = lacounty_lookup(street, a0.get("city"), a0.get("code"))
+        if not found:
+            no_match += 1
+            continue
+        filled, _e = fub_fill_blank_person_fields(p, fieldmap, found)
+        if filled:
+            updated += 1
+            if len(filled_examples) < 5:
+                filled_examples.append({"name": _clean_str(p.get("name")) or f"#{p.get('id')}",
+                                        "filled": filled, "matched": found.get("matched_address")})
+
+    got = len(people)
+    wrapped = got < batch_size or (total is not None and offset + got >= total)
+    save_enrich_state(conn, offset + got, got, updated, no_match, wrapped)
+    return {
+        "ok": True, "processed": got, "updated": updated, "no_match": no_match,
+        "no_address": no_address, "offset": offset, "next_offset": 0 if wrapped else offset + got,
+        "total": total, "done": wrapped, "examples": filled_examples,
+    }
 
 
 def fetch_client_by_email(conn, email):
@@ -1437,7 +2410,153 @@ def _offmarket_listing_admin_html(listing):
   </details>"""
 
 
-def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listings):
+_BUYER_MATCH_CSS = """<style>
+  .bm-wrap .adm-inline-form{margin-bottom:8px}
+  .bm-grid{display:flex;flex-wrap:wrap;gap:10px}
+  .bm-grid .om-field{flex:1 1 150px}
+  .bm-note{font-size:.85rem;color:var(--g5,#666);margin:10px 0 4px}
+  .bm-note-warn{color:#b45309}
+  .bm-results-title{font-size:.9rem;margin:16px 0 8px}
+  .bm-match{border:1px solid var(--g2,#e5e5e5);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+  .bm-match-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .bm-score{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:26px;
+    border-radius:6px;background:#111;color:#fff;font-weight:700;font-size:.8rem}
+  .bm-match-name{font-weight:600}
+  .bm-match-meta{color:var(--g5,#666);font-size:.85rem}
+  .bm-chips{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+  .bm-chip{font-size:.72rem;padding:2px 8px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+  .bm-chip-hit{background:#dcfce7;border-color:#86efac;color:#166534}
+  .bm-chip-miss{background:#fee2e2;border-color:#fca5a5;color:#991b1b}
+  .bm-chip-unknown{background:#f3f4f6;border-color:#d1d5db;color:#4b5563}
+  #bm-agent-fields{border-left:2px solid var(--g2,#e5e5e5);padding-left:12px;margin:4px 0}
+</style>"""
+
+
+def _buyer_need_row_html(n):
+    crit = n.get("criteria") or {}
+    src = "My client" if n.get("buyer_source") != "other_agent" else f"Agent: {html.escape(n.get('agent_name') or '—')}"
+    band = _budget_band(crit.get("price_min"), crit.get("price_max")) or "—"
+    areas = ", ".join(crit.get("areas") or []) or "—"
+    when = n["last_matched_at"].strftime("%b %-d") if n.get("last_matched_at") else "never"
+    toggle = "Archive" if n.get("active") else "Restore"
+    return f"""
+  <details class="adm-client">
+    <summary>
+      <span class="adm-client-email">{html.escape(n.get('buyer_name') or f"Need #{n['id']}")}</span>
+      <span class="adm-client-name">{src} · {html.escape(band)} · {html.escape(areas)}</span>
+      <span class="om-status">{n.get('last_match_count', 0)} match(es), {when}</span>
+    </summary>
+    <div class="adm-client-body">
+      <p class="bm-note">Requirements: {html.escape(_criteria_sentence(crit))}</p>
+      <button type="button" class="om-logout adm-toggle-active" data-action="toggle_buyer_need_active" data-id="{n['id']}">{toggle} this buyer need</button>
+    </div>
+  </details>"""
+
+
+def _enrich_state_line(st):
+    if not st:
+        return "Not run yet."
+    return (f"Resume at contact #{st['next_offset']} · {st['passes']} full pass(es) done · "
+            f"{st['total_updated']} contacts filled / {st['total_seen']} scanned · "
+            f"{st['total_no_match']} with no LA County match")
+
+
+def _buyer_match_admin_html(buyer_needs, enrich_state=None):
+    active_needs = [n for n in buyer_needs if n.get("active")]
+    history_needs = [n for n in buyer_needs if not n.get("active")]
+    needs_html = "".join(_buyer_need_row_html(n) for n in active_needs) or '<p class="db-empty-note">No saved buyer needs yet -- add one above.</p>'
+    history_html = "".join(_buyer_need_row_html(n) for n in history_needs) or '<p class="db-empty-note">Nothing archived.</p>'
+    enrich_stage = os.environ.get("FUB_ENRICH_STAGE", "").strip()
+    enrich_scope = f'the <strong>{html.escape(enrich_stage)}</strong> stage' if enrich_stage else "your whole FollowUpBoss database"
+    return f"""
+    {_BUYER_MATCH_CSS}
+    <h2 class="db-section-title" style="font-size:.9rem;margin:40px 0 16px">Buyer Match — prospect for listings</h2>
+    <p class="adm-tagline" style="margin-bottom:16px">Enter what a buyer wants (yours or another agent's). The tool saves the buyer to FollowUpBoss and scans your <strong>{html.escape(os.environ.get('FUB_NURTURE_STAGE', 'Nurture'))}</strong> stage for prospects whose property fits — the ones to call with an "I have a buyer" pitch. Matching reads standard property custom fields; run setup once so they exist.</p>
+    <div class="bm-wrap">
+      <div class="adm-panel">
+        <div class="db-section-title">FollowUpBoss property fields</div>
+        <button type="button" class="btn-primary adm-btn-sm" id="bm-fub-setup">Check / set up FollowUpBoss fields</button>
+        <div id="bm-fub-setup-result"></div>
+      </div>
+
+      <div class="adm-panel">
+        <div class="db-section-title">Add a buyer need &amp; find prospects</div>
+        <form id="bm-need-form" class="adm-inline-form" novalidate>
+          <label class="om-field"><span class="om-field-label">Buyer name</span>
+            <input type="text" name="buyer_name" class="om-input" required></label>
+          <label class="om-field"><span class="om-field-label">Buyer email</span>
+            <input type="email" name="buyer_email" class="om-input" autocomplete="off"></label>
+          <label class="om-field"><span class="om-field-label">Buyer phone</span>
+            <input type="text" name="buyer_phone" class="om-input" autocomplete="off"></label>
+          <label class="om-field"><span class="om-field-label">Buyer is</span>
+            <select name="buyer_source" class="om-input">
+              <option value="self">My own buyer</option>
+              <option value="other_agent">Represented by another agent</option>
+            </select></label>
+          <div id="bm-agent-fields" style="flex-basis:100%">
+            <div class="bm-grid">
+              <label class="om-field"><span class="om-field-label">Agent name</span>
+                <input type="text" name="agent_name" class="om-input"></label>
+              <label class="om-field"><span class="om-field-label">Agent brokerage</span>
+                <input type="text" name="agent_brokerage" class="om-input"></label>
+              <label class="om-field"><span class="om-field-label">Agent contact</span>
+                <input type="text" name="agent_contact" class="om-input"></label>
+            </div>
+          </div>
+          <div class="bm-grid" style="flex-basis:100%">
+            <label class="om-field"><span class="om-field-label">Price min</span>
+              <input type="text" name="price_min" class="om-input" placeholder="e.g. 1.5M"></label>
+            <label class="om-field"><span class="om-field-label">Price max</span>
+              <input type="text" name="price_max" class="om-input" placeholder="e.g. 3M"></label>
+            <label class="om-field"><span class="om-field-label">Min beds</span>
+              <input type="text" name="beds" class="om-input" placeholder="3"></label>
+            <label class="om-field"><span class="om-field-label">Min baths</span>
+              <input type="text" name="baths" class="om-input" placeholder="2"></label>
+            <label class="om-field"><span class="om-field-label">Min sq ft</span>
+              <input type="text" name="sqft" class="om-input" placeholder="1800"></label>
+          </div>
+          <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Areas / cities (comma-separated)</span>
+            <input type="text" name="areas" class="om-input" placeholder="Santa Monica, Venice, Mar Vista"></label>
+          <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Property type(s) (comma-separated)</span>
+            <input type="text" name="types" class="om-input" placeholder="Single Family, Condo"></label>
+          <label class="om-field"><span class="om-field-label">Timeline</span>
+            <input type="text" name="timeline" class="om-input" placeholder="e.g. 60–90 days"></label>
+          <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Must-haves / notes</span>
+            <textarea name="notes" class="om-input" rows="2" style="width:100%;font-family:inherit;resize:vertical"></textarea></label>
+          <label class="db-checkbox" style="flex-basis:100%">
+            <input type="checkbox" name="log_matches" value="on">
+            Log each match as a note on the prospect in FollowUpBoss
+          </label>
+          <button type="submit" class="btn-primary adm-btn-sm">Save buyer &amp; find prospects</button>
+        </form>
+        <div id="bm-need-result"></div>
+      </div>
+
+      <div class="adm-panel">
+        <div class="db-section-title">Saved buyer needs</div>
+        <button type="button" class="btn-primary adm-btn-sm" id="bm-rematch-all">Re-match all against the pipeline</button>
+        <div id="bm-rematch-result" style="margin-top:10px"></div>
+        <div id="bm-saved-needs" class="adm-clients" style="margin-top:14px">{needs_html}</div>
+        <details class="adm-history"><summary>Archived buyer needs</summary>
+          <div class="adm-clients">{history_html}</div>
+        </details>
+      </div>
+
+      <div class="adm-panel">
+        <div class="db-section-title">Fill missing property data from public records</div>
+        <p class="adm-tagline" style="margin:0 0 12px">Sweeps {enrich_scope} in small batches and, for any contact with a street address but blank beds / baths / sq ft / year / type, looks the parcel up in the <strong>LA County Assessor</strong> public records and fills the gaps in FollowUpBoss. It only fills blanks — it never overwrites data you already have — and tags each contact it touches <em>Enriched: LA County Assessor</em>. LA County only.</p>
+        <p class="bm-note" id="bm-enrich-state">{html.escape(_enrich_state_line(enrich_state))}</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button type="button" class="btn-primary adm-btn-sm" id="bm-enrich-start">Start / resume sweep</button>
+          <button type="button" class="om-logout" id="bm-enrich-stop" style="display:none">Stop</button>
+          <button type="button" class="om-logout" id="bm-enrich-reset">Reset progress</button>
+        </div>
+        <div id="bm-enrich-result" style="margin-top:10px"></div>
+      </div>
+    </div>"""
+
+
+def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listings, buyer_needs=None, enrich_state=None):
     active_clients = [c for c in clients if c["active"]]
     history_clients = [c for c in clients if not c["active"]]
 
@@ -1456,6 +2575,8 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
     offmarket_buyers_html = "".join(_offmarket_buyer_admin_html(b) for b in active_offmarket_buyers) or '<div class="om-empty">No active buyers -- add one below.</div>'
     history_offmarket_buyers_html = "".join(_offmarket_buyer_admin_html(b) for b in history_offmarket_buyers) or '<div class="om-empty">No deactivated buyers.</div>'
     offmarket_listings_html = "".join(_offmarket_listing_admin_html(l) for l in offmarket_listings) or '<p class="db-empty-note">No off-market listings yet -- add one below.</p>'
+
+    buyer_match_section = _buyer_match_admin_html(buyer_needs or [], enrich_state)
 
     body = f"""
 <section class="section" style="padding-top:120px">
@@ -1559,7 +2680,7 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
       </form>
     </div>
     <div class="adm-clients">{offmarket_listings_html}</div>
-
+{buyer_match_section}
     <div style="text-align:center;margin-top:36px"><a href="/admin?logout=1" class="om-logout">Log out</a></div>
   </div>
 </section>
@@ -1733,6 +2854,7 @@ document.querySelectorAll('.adm-rte-editor').forEach(function (editor) {{
 }});
 </script>
 <script>{DB_TABS_SCRIPT}</script>
+<script>{BUYER_MATCH_SCRIPT}</script>
 """
     return render_page(body, "Admin | Simone Marzullo")
 
@@ -1789,6 +2911,21 @@ class handler(BaseHTTPRequestHandler):
                 toolbox_links = fetch_all_toolbox_links(conn)
                 offmarket_buyers = fetch_all_offmarket_buyers(conn)
                 offmarket_listings = fetch_all_offmarket_listings(conn)
+                # Buyer Match tables (buyer_needs / fub_enrich_state) may not exist
+                # yet on a deploy that hasn't had db/schema.sql re-run -- don't let
+                # that 503 the whole admin panel.
+                try:
+                    buyer_needs = fetch_all_buyer_needs(conn)
+                except Exception as e:
+                    conn.rollback()
+                    print(f"portal(admin): buyer_needs unavailable (run db/schema.sql?): {e}")
+                    buyer_needs = []
+                try:
+                    enrich_state = fetch_enrich_state(conn)
+                except Exception as e:
+                    conn.rollback()
+                    print(f"portal(admin): enrich state unavailable (run db/schema.sql?): {e}")
+                    enrich_state = None
             except Exception as e:
                 print(f"portal(admin): failed to load data: {e}")
                 self._send_html(503, build_error_html("Something went wrong loading the admin panel.", "Admin | Simone Marzullo"))
@@ -1796,7 +2933,7 @@ class handler(BaseHTTPRequestHandler):
             finally:
                 if conn:
                     conn.close()
-            self._send_html(200, build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listings))
+            self._send_html(200, build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listings, buyer_needs, enrich_state))
             return
 
         # Default: client dashboard (section == "dashboard" or unset)
@@ -2206,6 +3343,94 @@ class handler(BaseHTTPRequestHandler):
 
             if action == "delete_offmarket_listing":
                 delete_offmarket_listing(conn, int(data.get("id")))
+                self._send_json(200, {"ok": True})
+                return
+
+            # --- Buyer Match prospecting tool ---------------------------------
+            if action == "fub_setup_fields":
+                self._send_json(200, {"ok": True, "summary": fub_setup_custom_fields()})
+                return
+
+            if action == "buyer_need_run":
+                buyer_name = clean(data.get("buyer_name"), 120)
+                if not buyer_name:
+                    self._send_json(400, {"ok": False, "error": "Buyer name is required."})
+                    return
+                source = clean(data.get("buyer_source"), 20)
+                if source not in ("self", "other_agent"):
+                    source = "self"
+                buyer_email = clean(data.get("buyer_email"), 200).lower()
+                if buyer_email and not EMAIL_RE.match(buyer_email):
+                    self._send_json(400, {"ok": False, "error": "That buyer email doesn't look valid."})
+                    return
+                need = {
+                    "buyer_name": buyer_name,
+                    "buyer_email": buyer_email,
+                    "buyer_phone": clean(data.get("buyer_phone"), 40),
+                    "buyer_source": source,
+                    "agent_name": clean(data.get("agent_name"), 120) if source == "other_agent" else "",
+                    "agent_brokerage": clean(data.get("agent_brokerage"), 120) if source == "other_agent" else "",
+                    "agent_contact": clean(data.get("agent_contact"), 200) if source == "other_agent" else "",
+                }
+                criteria = parse_buyer_criteria(data)
+                if not any([criteria["price_min"], criteria["price_max"], criteria["beds"],
+                            criteria["baths"], criteria["sqft"], criteria["areas"], criteria["types"]]):
+                    self._send_json(400, {"ok": False, "error": "Enter at least one buyer requirement (price, beds, area, ...)."})
+                    return
+                fub_person_id, save_note = push_buyer_need_to_fub(need, criteria)
+                match = run_buyer_match(criteria)
+                new_id = create_buyer_need(conn, need, criteria, fub_person_id, len(match["matches"]))
+                notice = f"FollowUpBoss scan issue: {match['error']}" if match["error"] else None
+                if data.get("log_matches") and fub_person_id:
+                    line = _criteria_sentence(criteria)
+                    label = buyer_name + ("" if source == "self" else f" (via {need['agent_name'] or 'another agent'})")
+                    logged = sum(1 for m in match["matches"] if log_match_to_fub(m["fub_id"], line, label))
+                    if logged:
+                        save_note += f" Logged the match on {logged} prospect(s) in FollowUpBoss."
+                self._send_json(200, {
+                    "ok": True, "id": new_id, "fub_person_id": fub_person_id,
+                    "save_note": save_note, "notice": notice,
+                    "scanned": match["scanned"], "matches": match["matches"],
+                })
+                return
+
+            if action == "rematch_buyer_needs":
+                report = []
+                for n in fetch_all_buyer_needs(conn):
+                    if not n["active"]:
+                        continue
+                    res = run_buyer_match(n["criteria"] or {})
+                    update_buyer_need_match(conn, n["id"], len(res["matches"]))
+                    report.append({
+                        "buyer_name": n["buyer_name"] or f"Need #{n['id']}",
+                        "match_count": len(res["matches"]),
+                        "matches": res["matches"],
+                    })
+                self._send_json(200, {"ok": True, "report": report})
+                return
+
+            if action == "toggle_buyer_need_active":
+                toggle_buyer_need_active(conn, int(data.get("id")))
+                self._send_json(200, {"ok": True})
+                return
+
+            if action == "fub_enrich_run":
+                try:
+                    batch = int(data.get("batch") or _ENRICH_BATCH_DEFAULT)
+                except (TypeError, ValueError):
+                    batch = _ENRICH_BATCH_DEFAULT
+                batch = max(1, min(batch, 40))
+                result = run_enrich_batch(conn, batch)
+                state = fetch_enrich_state(conn)
+                result["totals"] = {
+                    "passes": state["passes"], "seen": state["total_seen"],
+                    "updated": state["total_updated"], "no_match": state["total_no_match"],
+                }
+                self._send_json(200 if result.get("ok") else 502, {"ok": result.get("ok", False), **result})
+                return
+
+            if action == "fub_enrich_reset":
+                reset_enrich_state(conn)
                 self._send_json(200, {"ok": True})
                 return
 
