@@ -336,12 +336,16 @@ def main():
         (p.scheme, p.netloc, p.path, urllib.parse.urlencode(q, doseq=True), p.fragment)),
         connect_timeout=10)
 
-    next_link, counted, _passes = pg_get_state(pg)
+    # A dry run reads + reports only -- it never reads/advances the shared
+    # fub_enrich_state cursor, so it can't make a later real run skip contacts.
+    next_link, counted = (None, 0) if dry_run else pg_get_state(pg)[:2]
     first_qs = urllib.parse.urlencode(
         {"limit": 100, "fields": "allFields,allCustom", "includeTrash": "false",
          **({"stage": stage} if stage else {})})
     url = next_link if (next_link or "").startswith(f"{FUB_API}/people") else f"{FUB_API}/people?{first_qs}"
-    if next_link:
+    if dry_run:
+        log("DRY RUN -- reading + matching only, no writes to FollowUpBoss or the progress row.")
+    elif next_link:
         log(f"Resuming FollowUpBoss walk (~{counted:,} contacts done this pass).")
     else:
         log("Starting a fresh FollowUpBoss walk.")
@@ -388,10 +392,11 @@ def main():
 
         done = not page_new_link and len(people) < 100
         counted = 0 if done else counted + len(people)
-        pg_save(pg, None if done else page_new_link, counted,
-                len(people), page_upd, page_nomatch, total, done)
-        log(f"page: +{page_upd} filled, {page_nomatch} no-match, {page_noaddr} no-addr, "
-            f"{page_skip} already-done · running total filled {upd:,}{dry}")
+        if not dry_run:
+            pg_save(pg, None if done else page_new_link, counted,
+                    len(people), page_upd, page_nomatch, total, done)
+        log(f"page: +{page_upd} {'would fill' if dry_run else 'filled'}, {page_nomatch} no-match, "
+            f"{page_noaddr} no-addr, {page_skip} already-done · running total {upd:,}{dry}")
 
         if done:
             log("Reached the end of the list -- full pass complete.")
