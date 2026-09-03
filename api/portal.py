@@ -570,7 +570,7 @@ MATCH_PAGE_CSS = """<style>
 
   .mt-scope,.mt-scope *{box-sizing:border-box}
   .mt-scope{
-    position:fixed;inset:0;z-index:2147483000;overflow:hidden;
+    position:fixed;inset:0;height:100%;z-index:2147483000;overflow:hidden;
     background:var(--ground);color:var(--ink);
     font-family:var(--sans);font-size:15px;line-height:1.5;
     -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;
@@ -582,7 +582,7 @@ MATCH_PAGE_CSS = """<style>
   .mt-scope .rule{display:inline-block;width:34px;height:1px;background:var(--accent);vertical-align:middle;margin-right:12px}
 
   /* shell */
-  .mt-scope .shell{display:grid;grid-template-columns:1fr;height:100dvh;overflow:hidden}
+  .mt-scope .shell{display:grid;grid-template-columns:1fr;height:100%;overflow:hidden}
   @media (min-width:900px){ .mt-scope .shell{grid-template-columns:minmax(380px,44%) 1fr} }
 
   /* brand column */
@@ -630,7 +630,7 @@ MATCH_PAGE_CSS = """<style>
   .mt-scope .theme button{width:30px;height:30px;display:grid;place-items:center;color:var(--ink-dim);border-radius:999px}
   .mt-scope .theme button[aria-pressed="true"]{background:var(--accent);color:#fff}
 
-  .mt-scope .fc-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:clamp(20px,4vw,40px) clamp(20px,4vw,44px) 40px}
+  .mt-scope .fc-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:clamp(20px,4vw,40px) clamp(20px,4vw,44px) calc(48px + env(safe-area-inset-bottom))}
   .mt-scope .inner{max-width:560px;margin:0 auto}
   .mt-scope .step[hidden]{display:none}
   .mt-scope .step{animation:mt-fade .18s ease}
