@@ -539,9 +539,15 @@ BUYER_MATCH_SCRIPT = r"""
 
 # --- Public /match page: styles + client script (single braces) ----------
 MATCH_PAGE_CSS = """<style>
-  /* /match -- calm, roomy redesign. Everything scoped under .mt-scope, a
-     fixed full-viewport scroll layer that covers the site nav + footer. */
-  html,body{overflow:hidden!important}
+  /* /match -- calm, roomy redesign. The site nav/footer/FAB are hidden on
+     this route and .mt-scope is a normal-flow full-height block, so the page
+     just scrolls -- no fixed-overlay viewport games. */
+  #nav,#nav-mobile,body > footer,#mcf{display:none!important}
+  /* areas.css puts overflow-x:hidden on <body>, which makes the body its own
+     scroll container (the other axis computes to auto) and breaks window
+     scrolling on this page -- force plain viewport scrolling instead. */
+  html,body{margin:0!important;overflow:visible!important;height:auto!important;background:#F4F2EE}
+  @media (prefers-color-scheme:dark){ html,body{background:#100F0E} }
 
   .mt-scope{
     --ground:#F4F2EE; --paper:#FFFFFF; --paper-2:#FAF8F5;
@@ -575,8 +581,7 @@ MATCH_PAGE_CSS = """<style>
 
   .mt-scope,.mt-scope *{box-sizing:border-box}
   .mt-scope{
-    position:fixed;inset:0;height:100%;z-index:2147483000;
-    overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+    position:relative;min-height:100dvh;
     background:var(--ground);color:var(--ink);
     font-family:var(--sans);font-size:15px;line-height:1.5;
     -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;
@@ -586,7 +591,7 @@ MATCH_PAGE_CSS = """<style>
   .mt-scope select{font:inherit}
   .mt-scope :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
 
-  .mt-scope .wrap{max-width:520px;margin:0 auto;min-height:100%;background:var(--paper);
+  .mt-scope .wrap{max-width:520px;margin:0 auto;min-height:100dvh;background:var(--paper);
     box-shadow:0 1px 2px rgba(26,22,19,.05),0 8px 30px -12px rgba(26,22,19,.16);position:relative}
   @media (min-width:560px){ .mt-scope .wrap{margin:22px auto 64px;min-height:0;border-radius:22px;overflow:hidden} }
 
@@ -658,7 +663,7 @@ MATCH_PAGE_CSS = """<style>
   .mt-scope #mt-agent[hidden]{display:none}
   .mt-scope #mt-agent{margin-top:13px}
 
-  .mt-scope .bar{position:fixed;left:0;right:0;bottom:0;z-index:2147483001;pointer-events:none}
+  .mt-scope .bar{position:fixed;left:0;right:0;bottom:0;z-index:60;pointer-events:none}
   .mt-scope .bar-inner{max-width:520px;margin:0 auto;padding:14px 18px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,var(--paper) 34%);pointer-events:auto}
   @media (min-width:560px){ .mt-scope .bar-inner{padding-bottom:18px} }
   .mt-scope .cta{width:100%;min-height:56px;border-radius:999px;background:var(--accent);color:#fff;font-size:.92rem;font-weight:600;letter-spacing:.02em;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 24px -8px rgba(176,18,42,.45);transition:background .14s,transform .1s}
@@ -804,7 +809,7 @@ MATCH_PAGE_SCRIPT = r"""
     steps.forEach(function (s) { s.hidden = String(s.dataset.step) !== String(i); });
     var done = i === 'result' ? rail.length - 1 : +i;
     rail.forEach(function (r, idx) { r.classList.toggle('on', idx <= done); });
-    scope.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+    try { window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
     $('mt-back').hidden = (i !== 1);
     $('mt-bar').hidden = (i === 'result');
     if (i === 0) { $('mt-head').textContent = 'Tell us what you’re looking for.'; $('mt-subhead').textContent = 'Approximate is fine — you can refine the details with Simone later.'; $('mt-cta-label').textContent = 'Continue'; }
@@ -2053,10 +2058,6 @@ def _match_options(steps, placeholder):
     opts = [f'<option value="">{placeholder}</option>']
     opts += [f'<option value="{v}">{lbl}</option>' for v, lbl in steps]
     return "".join(opts)
-
-
-def _match_price_options(placeholder):
-    return _match_options(_MATCH_PRICE_STEPS, placeholder)
 
 
 _MT_ICON_HOUSE = ('<svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>'
