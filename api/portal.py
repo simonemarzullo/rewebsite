@@ -1259,8 +1259,13 @@ def _criteria_sentence(c):
         bits.append(f"{c['beds']:g}+ bd")
     if c.get("baths"):
         bits.append(f"{c['baths']:g}+ ba")
-    if c.get("sqft"):
-        bits.append(f"{c['sqft']:g}+ sqft")
+    sq_lo, sq_hi = c.get("sqft"), c.get("sqft_max")
+    if sq_lo and sq_hi:
+        bits.append(f"{sq_lo:g}-{sq_hi:g} sqft")
+    elif sq_lo:
+        bits.append(f"{sq_lo:g}+ sqft")
+    elif sq_hi:
+        bits.append(f"up to {sq_hi:g} sqft")
     if c.get("types"):
         bits.append("/".join(c["types"]))
     band = _budget_band(c.get("price_min"), c.get("price_max"))
@@ -1300,7 +1305,7 @@ def score_buyer_match(criteria, prof):
             add(f"Price ${ask:,.0f}", "miss", 3, 0)
             gate_ok = False
 
-    for label, key, w in (("Beds", "beds", 2.0), ("Baths", "baths", 1.5), ("Sq ft", "sqft", 1.5)):
+    for label, key, w in (("Beds", "beds", 2.0), ("Baths", "baths", 1.5)):
         want = criteria.get(key)
         if not want:
             continue
@@ -1311,6 +1316,19 @@ def score_buyer_match(criteria, prof):
             add(f"{label} {got_val:g}+", "hit", w, 1.0)
         else:
             add(f"{label} {got_val:g} (< {want:g})", "miss", w, 0)
+            gate_ok = False
+
+    sq_min, sq_max = criteria.get("sqft"), criteria.get("sqft_max")
+    if sq_min or sq_max:
+        sq = prof.get("sqft")
+        if sq is None:
+            add("Sq ft (no data)", "unknown", 1.5, 0)
+        elif (sq_min or 0) - 1 <= sq <= (sq_max or float("inf")) + 1:
+            lbl = f"{sq:,.0f} sq ft"
+            add(lbl, "hit", 1.5, 1.0)
+        else:
+            bound = f"< {sq_min:,.0f}" if (sq_min and sq < sq_min) else f"> {sq_max:,.0f}"
+            add(f"{sq:,.0f} sq ft ({bound})", "miss", 1.5, 0)
             gate_ok = False
 
     areas = criteria.get("areas") or []
@@ -1344,17 +1362,20 @@ def score_buyer_match(criteria, prof):
         else:
             add("Area (unclear)", "unknown", 3, 0)
 
+    # Property type is a soft nudge only -- never gates a row. LA County's
+    # type data is fuzzy (condo vs SFR especially), so beds + area + sq ft
+    # carry the match; a type mismatch just trims the score a little.
     types = criteria.get("types") or []
     if types:
         pt_raw = (prof.get("property_type") or "").strip()
         pt = norm_buyer_type(pt_raw)
         want = {norm_buyer_type(t) for t in types}
         if not pt_raw or pt_raw.lower() in PROP_TYPE_STALE:
-            add("Type (no data)", "unknown", 1, 0)
+            pass  # unknown -> ignore entirely
         elif pt in want or any(w and (w.lower() in pt.lower() or pt.lower() in w.lower()) for w in want):
             add(f"Type: {pt_raw}", "hit", 1, 1.0)
         else:
-            add("Type mismatch", "miss", 1, 0)
+            add(f"Type: {pt_raw} (wanted {'/'.join(sorted(want))})", "miss", 1, 0)
 
     notes = (criteria.get("notes") or "").lower()
     if notes:
@@ -1529,7 +1550,8 @@ def parse_buyer_criteria(data):
         "price_max": numf("price_max"),
         "beds": numf("beds"),
         "baths": numf("baths"),
-        "sqft": numf("sqft"),
+        "sqft": numf("sqft"),          # min
+        "sqft_max": numf("sqft_max"),
         "areas": listf("areas"),
         "types": listf("types"),
         "timeline": clean(data.get("timeline"), 120),
@@ -3112,14 +3134,16 @@ def _buyer_match_panels_html(buyer_needs):
               <input type="text" name="baths" class="om-input" placeholder="2"></label>
             <label class="om-field"><span class="om-field-label">Min sq ft</span>
               <input type="text" name="sqft" class="om-input" placeholder="1800"></label>
+            <label class="om-field"><span class="om-field-label">Max sq ft</span>
+              <input type="text" name="sqft_max" class="om-input" placeholder="3500"></label>
           </div>
           <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Markets &amp; ZIP codes (comma-separated)</span>
             <input type="text" name="areas" class="om-input" list="bm-market-list" autocomplete="off"
                    placeholder="e.g. Santa Monica, 90291, Mar Vista — a market name matches every ZIP it covers">
             <datalist id="bm-market-list">{_market_datalist_options()}</datalist></label>
-          <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Property type(s) (comma-separated)</span>
+          <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Property type(s) — optional, comma-separated</span>
             <input type="text" name="types" class="om-input" list="bm-type-list" autocomplete="off"
-                   placeholder="Single Family Home, Condo/Townhome, Multifamily — leave blank for any">
+                   placeholder="Optional. Single Family Home, Condo/Townhome, Multifamily — a nudge only, never hides a match">
             <datalist id="bm-type-list">{_prop_type_datalist_options()}</datalist></label>
           <label class="om-field"><span class="om-field-label">Timeline</span>
             <input type="text" name="timeline" class="om-input" placeholder="e.g. 60–90 days"></label>
@@ -4116,7 +4140,8 @@ class handler(BaseHTTPRequestHandler):
                 }
                 criteria = parse_buyer_criteria(data)
                 if not any([criteria["price_min"], criteria["price_max"], criteria["beds"],
-                            criteria["baths"], criteria["sqft"], criteria["areas"], criteria["types"]]):
+                            criteria["baths"], criteria["sqft"], criteria["sqft_max"],
+                            criteria["areas"], criteria["types"]]):
                     self._send_json(400, {"ok": False, "error": "Enter at least one buyer requirement (price, beds, area, ...)."})
                     return
                 fub_person_id, save_note = push_buyer_need_to_fub(need, criteria)
