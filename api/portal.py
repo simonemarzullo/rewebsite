@@ -2962,6 +2962,13 @@ def _enrichment_panel_html(enrich_state):
           <button type="button" class="om-logout" id="bm-enrich-reset">Reset progress</button>
         </div>
         <div id="bm-enrich-result" style="margin-top:10px"></div>
+        <p class="bm-note" style="margin-top:14px;border-top:1px solid var(--g3);padding-top:12px">
+          This runs only while this tab is open. For a large database, run it hands-off instead:
+          GitHub &rarr; the repo &rarr; <strong>Actions</strong> tab &rarr; <strong>enrich-sweep</strong> &rarr;
+          <strong>Run workflow</strong>. That version downloads the whole county parcel roll once and
+          finishes tens of thousands of contacts in one ~2-hour run, with your computer off. The
+          progress shown above updates either way.
+        </p>
       </div>"""
 
 

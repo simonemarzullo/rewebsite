@@ -1,0 +1,77 @@
+name: enrich-sweep
+
+# Bulk "fill missing property data from LA County" run for the /admin Buyer
+# Match tool. Manual only -- open the Actions tab, pick "enrich-sweep",
+# "Run workflow". It downloads the county parcel roll once (cached ~weekly),
+# then walks every FollowUpBoss contact and fills blank
+# Bedrooms/Bathrooms/SqFt/YearBuilt/PropertyType. Writes to the same
+# fub_enrich_state row the dashboard shows, so progress appears there too.
+#
+# One-time setup -- add these repo secrets (Settings -> Secrets and
+# variables -> Actions):
+#   POSTGRES_URL   (required)  the site's Postgres URL, from Vercel -> Storage
+#   FUB_API_KEY    (required)  account-owner FollowUpBoss API key
+#   FUB_SYSTEM      (optional) X-System header value, if you use system registration
+#   FUB_SYSTEM_KEY  (optional) X-System-Key header value
+#   FUB_ENRICH_STAGE (optional) limit the walk to one stage; leave unset for all
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (scan + match, but do NOT write to FollowUpBoss)"
+        type: boolean
+        default: false
+      max_minutes:
+        description: "Hard stop after N minutes (GitHub job limit is 360)"
+        default: "300"
+      rebuild_index:
+        description: "Force-rebuild the parcel index even if the cache is fresh"
+        type: boolean
+        default: false
+
+concurrency:
+  group: enrich-sweep
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install "psycopg2-binary==2.9.9"
+
+      - name: Restore parcel index cache
+        uses: actions/cache@v4
+        with:
+          path: parcels.sqlite
+          # weekly key -- the roll updates monthly, a week-old copy is fine
+          key: parcels-${{ github.run_id }}
+          restore-keys: |
+            parcels-
+
+      - name: Run sweep
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+          FUB_API_KEY: ${{ secrets.FUB_API_KEY }}
+          FUB_SYSTEM: ${{ secrets.FUB_SYSTEM }}
+          FUB_SYSTEM_KEY: ${{ secrets.FUB_SYSTEM_KEY }}
+          FUB_ENRICH_STAGE: ${{ secrets.FUB_ENRICH_STAGE }}
+          ENRICH_MAX_MINUTES: ${{ github.event.inputs.max_minutes }}
+          ENRICH_DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
+          ENRICH_REBUILD_INDEX: ${{ github.event.inputs.rebuild_index == 'true' && '1' || '0' }}
+          ENRICH_PARCEL_DB: parcels.sqlite
+        run: python3 scripts/enrich_sweep.py
+
+      - name: Save parcel index cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: parcels.sqlite
+          key: parcels-${{ github.run_id }}

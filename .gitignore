@@ -1,6 +1,9 @@
 __pycache__/
 *.pyc
 .vercel
+# local parcel cache written by scripts/enrich_sweep.py
+parcels.sqlite
+parcels.sqlite-*
 .env
 .env.local
 .DS_Store
