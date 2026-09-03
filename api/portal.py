@@ -3615,6 +3615,10 @@ _ADMIN_CSS = """<style>
     padding:14px;box-shadow:var(--ac-shadow)}
   .ac-toolbox-manage[open] .adm-tiles .adm-inline-form{gap:8px}
   .ac-toolbox-manage[open] .adm-tiles .adm-inline-form + .adm-inline-form{margin-top:12px;border-top:1px solid var(--ac-line-2);padding-top:12px}
+  .ac-tiles-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--ac-line);position:sticky;top:-14px;background:var(--ac-panel)}
+  .ac-tiles-head span{font-family:var(--ac-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ac-dim)}
+  .ac-tiles-x{width:26px;height:26px;flex:none;display:grid;place-items:center;border:1px solid var(--ac-line);border-radius:var(--ac-r-xs);color:var(--ac-ink-2);font-size:.82rem;line-height:1}
+  .ac-tiles-x:hover{color:var(--red);border-color:var(--red)}
 
   .ac-view[hidden]{display:none}
   .ac-view{animation:acfade .16s ease}
@@ -3806,6 +3810,14 @@ _ADMIN_SHELL_JS = r"""
   // ---- Quick-action buttons on Overview jump to a section ----
   document.querySelectorAll('[data-goto]').forEach(function (b) {
     b.addEventListener('click', function () { go(b.dataset.goto); });
+  });
+
+  // ---- Escape closes the Toolbox "Manage" panel ----
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      var d = document.querySelector('.ac-toolbox-manage[open]');
+      if (d) d.open = false;
+    }
   });
 })();
 """
@@ -4087,7 +4099,11 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
       <span class="ac-eyebrow">Toolbox</span>
       <button type="button" class="adm-toolbox-add-btn" id="adm-toolbox-add-btn" aria-label="Add a tool" title="Add a tool">+</button>
       {toolbox_buttons_html}
-      <details class="ac-toolbox-manage"><summary>Manage</summary><div class="adm-tiles">{toolbox_manage_html}</div></details>
+      <details class="ac-toolbox-manage"><summary>Manage</summary><div class="adm-tiles">
+        <div class="ac-tiles-head"><span>Toolbox links</span>
+          <button type="button" class="ac-tiles-x" aria-label="Close" onclick="this.closest('details').open=false">&#10005;</button></div>
+        {toolbox_manage_html}
+      </div></details>
     </div>
 
     <div class="adm-modal-overlay" id="adm-toolbox-modal-overlay" onclick="if(event.target===this)closeToolboxModal()">
