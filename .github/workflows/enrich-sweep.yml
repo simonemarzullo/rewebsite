@@ -3,9 +3,10 @@ name: enrich-sweep
 # Bulk "fill missing property data from LA County" run for the /admin Buyer
 # Match tool. Manual only -- open the Actions tab, pick "enrich-sweep",
 # "Run workflow". It downloads the county parcel roll once (cached ~weekly),
-# then walks every FollowUpBoss contact and fills blank
-# Bedrooms/Bathrooms/SqFt/YearBuilt/PropertyType. Writes to the same
-# fub_enrich_state row the dashboard shows, so progress appears there too.
+# standardises each contact's address through the free US Census batch
+# geocoder (cached in the same file), then walks every FollowUpBoss contact
+# and fills blank Bedrooms/Bathrooms/SqFt/YearBuilt/PropertyType. Writes to
+# the same fub_enrich_state row the dashboard shows, so progress appears there.
 #
 # One-time setup -- add these repo secrets (Settings -> Secrets and
 # variables -> Actions):
@@ -27,6 +28,10 @@ on:
         default: "300"
       rebuild_index:
         description: "Force-rebuild the parcel index even if the cache is fresh"
+        type: boolean
+        default: false
+      skip_geocode:
+        description: "Skip Census address standardisation (use raw addresses only)"
         type: boolean
         default: false
 
@@ -66,6 +71,7 @@ jobs:
           ENRICH_MAX_MINUTES: ${{ github.event.inputs.max_minutes }}
           ENRICH_DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
           ENRICH_REBUILD_INDEX: ${{ github.event.inputs.rebuild_index == 'true' && '1' || '0' }}
+          ENRICH_SKIP_GEOCODE: ${{ github.event.inputs.skip_geocode == 'true' && '1' || '0' }}
           ENRICH_PARCEL_DB: parcels.sqlite
         run: python3 scripts/enrich_sweep.py
 
