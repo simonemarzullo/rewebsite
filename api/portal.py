@@ -791,8 +791,9 @@ MATCH_PAGE_SCRIPT = r"""
 
   // ---- min/max dropdowns keep min <= max
   var roomIds = ['mt-beds-min', 'mt-beds-max', 'mt-baths-min', 'mt-baths-max'];
-  ['mt-beds', 'mt-baths'].forEach(function (grp) {
+  ['mt-price', 'mt-beds', 'mt-baths'].forEach(function (grp) {
     var lo = $(grp + '-min'), hi = $(grp + '-max');
+    if (!lo || !hi) return;
     function couple(changed) {
       var a = +lo.value || 0, b = +hi.value || 0;
       if (a && b && a > b) { (changed === lo ? hi : lo).value = (changed === lo ? lo : hi).value; }
@@ -803,7 +804,7 @@ MATCH_PAGE_SCRIPT = r"""
   function anyRoom() { return roomIds.some(function (id) { return $(id).value; }); }
 
   // ---- numeric inputs: normalize on blur (accepts 1.5M / 850k / commas)
-  ['mt-price-min', 'mt-price-max', 'mt-sqft-min', 'mt-sqft-max', 'mt-lot-min', 'mt-lot-max'].forEach(function (id) {
+  ['mt-sqft-min', 'mt-sqft-max', 'mt-lot-min', 'mt-lot-max'].forEach(function (id) {
     var el = $(id); if (!el) return;
     el.addEventListener('blur', function () {
       var m = /^\$?\s*([\d,.]+)\s*([mMkK])?$/.exec(el.value.trim());
@@ -964,7 +965,7 @@ MATCH_PAGE_SCRIPT = r"""
     if (repNo) repNo.setAttribute('aria-checked', 'true');
     if (repYes) repYes.setAttribute('aria-checked', 'false');
     $('mt-agent').hidden = true;
-    roomIds.forEach(function (id) { $(id).value = ''; });
+    ['mt-price-min', 'mt-price-max'].concat(roomIds).forEach(function (id) { $(id).value = ''; });
     $('mt-message').disabled = false;
     $('mt-send-msg').style.display = '';
     $('mt-send-msg').textContent = 'Send message';
@@ -2105,8 +2106,25 @@ def push_match_message_to_fub(lead, message):
     return body is not None
 
 
+_MATCH_PRICE_STEPS = [
+    (500_000, "$500K"), (750_000, "$750K"), (1_000_000, "$1M"), (1_250_000, "$1.25M"),
+    (1_500_000, "$1.5M"), (1_750_000, "$1.75M"), (2_000_000, "$2M"), (2_500_000, "$2.5M"),
+    (3_000_000, "$3M"), (3_500_000, "$3.5M"), (4_000_000, "$4M"), (5_000_000, "$5M"),
+    (6_000_000, "$6M"), (7_500_000, "$7.5M"), (10_000_000, "$10M"), (15_000_000, "$15M"),
+    (20_000_000, "$20M+"),
+]
+
+
+def _match_price_options(placeholder):
+    opts = [f'<option value="">{placeholder}</option>']
+    opts += [f'<option value="{v}">{lbl}</option>' for v, lbl in _MATCH_PRICE_STEPS]
+    return "".join(opts)
+
+
 def build_match_page_html(oh=""):
     oh_pill = f'<div class="oh">Open House · {html.escape(oh)}</div>' if oh else ""
+    price_min_opts = _match_price_options("No min")
+    price_max_opts = _match_price_options("No max")
     body = f"""
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 {MATCH_PAGE_CSS}
@@ -2162,11 +2180,13 @@ def build_match_page_html(oh=""):
 
               <div class="field">
                 <span class="legend">Price range</span>
-                <div class="two">
-                  <div class="money"><span>$</span><input id="mt-price-min" inputmode="numeric" placeholder="Min"></div>
-                  <div class="money"><span>$</span><input id="mt-price-max" inputmode="numeric" placeholder="Max"></div>
+                <div class="mm">
+                  <label class="sel"><span>Min</span>
+                    <select id="mt-price-min" aria-label="Minimum price">{price_min_opts}</select></label>
+                  <label class="sel"><span>Max</span>
+                    <select id="mt-price-max" aria-label="Maximum price">{price_max_opts}</select></label>
                 </div>
-                <p class="help">Enter figures or shorthand — 1.5M, 850k. Leave a side blank for open-ended.</p>
+                <p class="help">Leave a side open-ended if there's no firm limit.</p>
               </div>
 
               <div class="field">
