@@ -539,203 +539,160 @@ BUYER_MATCH_SCRIPT = r"""
 
 # --- Public /match page: styles + client script (single braces) ----------
 MATCH_PAGE_CSS = """<style>
-  /* /match is a full-screen takeover -- the site chrome sits behind the overlay */
+  /* /match -- calm, roomy redesign. Everything scoped under .mt-scope, a
+     fixed full-viewport scroll layer that covers the site nav + footer. */
   html,body{overflow:hidden!important}
-  /* tokens: dark-first, mirroring marzullore.com */
+
   .mt-scope{
-    --ground:#0B0B0C; --panel:#141416; --panel-2:#1C1C1F; --line:#2C2C2E;
-    --ink:#FCFAF7; --ink-2:#C6C1B8; --ink-dim:#948E85;
-    --accent:#C8102E; --accent-press:#A50D24; --accent-wash:rgba(200,16,46,.13);
-    --serif:'EB Garamond',Georgia,serif;
-    --sans:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
-    --radius:3px;
+    --ground:#F4F2EE; --paper:#FFFFFF; --paper-2:#FAF8F5;
+    --ink:#1A1613; --ink-2:#726A60; --ink-dim:#9A9187;
+    --line:#E7E2DA; --line-2:#EFEBE4;
+    --accent:#B0122A; --accent-press:#8E0E22; --accent-wash:#FBEBED; --ok:#1E7A54;
+    --serif:'EB Garamond',Georgia,'Times New Roman',serif;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --radius:14px; --radius-sm:11px;
   }
-  @media (prefers-color-scheme:light){
-    .mt-scope:not([data-mt-theme="dark"]){
-      --ground:#F4F1EC; --panel:#FFFFFF; --panel-2:#F0ECE3; --line:#E2DBCD;
-      --ink:#171310; --ink-2:#413B33; --ink-dim:#6B655C;
-      --accent:#C8102E; --accent-press:#A50D24; --accent-wash:rgba(200,16,46,.10);
+  @media (prefers-color-scheme:dark){
+    .mt-scope:not([data-mt-theme="light"]){
+      --ground:#100F0E; --paper:#1A1918; --paper-2:#211F1D;
+      --ink:#F6F3EE; --ink-2:#B7AFA4; --ink-dim:#867E73;
+      --line:#302D2A; --line-2:#292623;
+      --accent:#E8394F; --accent-press:#C82339; --accent-wash:#2A1719; --ok:#3FBE88;
     }
   }
-  .mt-scope[data-mt-theme="light"]{
-    --ground:#F4F1EC; --panel:#FFFFFF; --panel-2:#F0ECE3; --line:#E2DBCD;
-    --ink:#171310; --ink-2:#413B33; --ink-dim:#6B655C;
-    --accent:#C8102E; --accent-press:#A50D24; --accent-wash:rgba(200,16,46,.10);
-  }
   .mt-scope[data-mt-theme="dark"]{
-    --ground:#0B0B0C; --panel:#141416; --panel-2:#1C1C1F; --line:#2C2C2E;
-    --ink:#FCFAF7; --ink-2:#C6C1B8; --ink-dim:#948E85;
-    --accent:#C8102E; --accent-press:#A50D24; --accent-wash:rgba(200,16,46,.13);
+    --ground:#100F0E; --paper:#1A1918; --paper-2:#211F1D;
+    --ink:#F6F3EE; --ink-2:#B7AFA4; --ink-dim:#867E73;
+    --line:#302D2A; --line-2:#292623;
+    --accent:#E8394F; --accent-press:#C82339; --accent-wash:#2A1719; --ok:#3FBE88;
+  }
+  .mt-scope[data-mt-theme="light"]{
+    --ground:#F4F2EE; --paper:#FFFFFF; --paper-2:#FAF8F5;
+    --ink:#1A1613; --ink-2:#726A60; --ink-dim:#9A9187;
+    --line:#E7E2DA; --line-2:#EFEBE4;
+    --accent:#B0122A; --accent-press:#8E0E22; --accent-wash:#FBEBED; --ok:#1E7A54;
   }
 
   .mt-scope,.mt-scope *{box-sizing:border-box}
   .mt-scope{
-    position:fixed;inset:0;height:100%;z-index:2147483000;overflow:hidden;
+    position:fixed;inset:0;height:100%;z-index:2147483000;
+    overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
     background:var(--ground);color:var(--ink);
     font-family:var(--sans);font-size:15px;line-height:1.5;
     -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;
   }
   @media (prefers-reduced-motion:reduce){.mt-scope *{animation:none!important;transition:none!important}}
-  .mt-scope button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
-  .mt-scope :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
-  .mt-scope .eyebrow{font-size:.63rem;letter-spacing:.24em;text-transform:uppercase;font-weight:500;color:var(--ink-dim)}
-  .mt-scope .rule{display:inline-block;width:34px;height:1px;background:var(--accent);vertical-align:middle;margin-right:12px}
+  .mt-scope button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .mt-scope select{font:inherit}
+  .mt-scope :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
 
-  /* shell */
-  .mt-scope .shell{display:grid;grid-template-columns:1fr;height:100%;overflow:hidden}
-  @media (min-width:900px){ .mt-scope .shell{grid-template-columns:minmax(380px,44%) 1fr} }
+  .mt-scope .wrap{max-width:520px;margin:0 auto;min-height:100%;background:var(--paper);
+    box-shadow:0 1px 2px rgba(26,22,19,.05),0 8px 30px -12px rgba(26,22,19,.16);position:relative}
+  @media (min-width:560px){ .mt-scope .wrap{margin:22px auto 64px;min-height:0;border-radius:22px;overflow:hidden} }
 
-  /* brand column */
-  .mt-scope .brand{position:relative;overflow:hidden;min-height:0;background:#0a0a0c}
-  @media (max-width:899px){ .mt-scope .brand{display:none} }
-  .mt-scope .sky{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;object-position:50% 55%;
-    animation:mt-kenburns 40s ease-in-out infinite alternate}
-  @keyframes mt-kenburns{from{transform:scale(1.04) translate(-1%,0)}to{transform:scale(1.11) translate(1%,-1.5%)}}
-  @media (prefers-reduced-motion:reduce){ .mt-scope .sky{animation:none;transform:scale(1.04)} }
-  .mt-scope .brand-scrim{position:absolute;inset:0;background:
-     linear-gradient(180deg,rgba(8,8,10,.35) 0%,rgba(8,8,10,.15) 40%,rgba(8,8,10,.78) 100%)}
-  .mt-scope .brand-inner{
-    position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;
-    gap:18px;padding:34px clamp(22px,4vw,52px) clamp(26px,4vw,46px);color:#F6F2EC;
-  }
-  .mt-scope .brand-inner .eyebrow{color:rgba(246,242,236,.72)}
-  .mt-scope .brand h1{
-    font-family:var(--serif);font-weight:400;line-height:1.06;letter-spacing:.005em;
-    font-size:clamp(1.9rem,4.4vw,3.15rem);margin:0;text-wrap:balance;max-width:15ch;
-    animation:mt-rise .7s cubic-bezier(.2,.7,.2,1) both;
-  }
-  .mt-scope .brand p{
-    font-size:.92rem;line-height:1.72;color:rgba(246,242,236,.78);max-width:34ch;margin:0;font-weight:300;
-    animation:mt-rise .7s .06s cubic-bezier(.2,.7,.2,1) both;
-  }
-  @keyframes mt-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-  .mt-scope .oh{display:inline-block;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;
-    color:rgba(246,242,236,.8);border:1px solid rgba(246,242,236,.3);padding:6px 11px;border-radius:999px}
-  .mt-scope .sig{display:flex;flex-direction:column;gap:3px;border-top:1px solid rgba(246,242,236,.18);padding-top:16px}
-  .mt-scope .sig b{font-family:var(--serif);font-weight:400;font-size:1.12rem;letter-spacing:.02em}
-  .mt-scope .sig span{font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(246,242,236,.6)}
-  .mt-scope .trust{font-size:.72rem;color:rgba(246,242,236,.6);letter-spacing:.02em}
-  .mt-scope .trust b{color:rgba(246,242,236,.92);font-weight:600}
-
-  /* form column */
-  .mt-scope .form-col{background:var(--panel);border-left:1px solid var(--line);min-width:0;min-height:0;overflow:hidden;
-    display:flex;flex-direction:column;position:relative}
-  @media (max-width:899px){ .mt-scope .form-col{border-left:none} }
-  .mt-scope .fc-top{display:flex;align-items:center;justify-content:space-between;
-    padding:20px clamp(20px,4vw,44px) 0}
-  .mt-scope .rail{display:flex;gap:6px;flex:1;max-width:220px}
-  .mt-scope .rail i{height:3px;flex:1;background:var(--line);border-radius:2px;transition:background .3s}
-  .mt-scope .rail i.on{background:var(--accent)}
-  .mt-scope .theme{display:inline-flex;border:1px solid var(--line);border-radius:999px}
+  .mt-scope header{padding:22px 22px 0;position:relative}
+  .mt-scope .kick{display:flex;align-items:center;gap:9px;font-size:.6rem;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-dim)}
+  .mt-scope .kick::before{content:"";width:22px;height:1px;background:var(--accent)}
+  .mt-scope h1{font-family:var(--serif);font-weight:500;font-size:1.72rem;line-height:1.12;letter-spacing:.005em;margin:12px 0 6px;text-wrap:balance}
+  .mt-scope .sub{color:var(--ink-2);font-size:.9rem;margin:0}
+  .mt-scope .mt-oh-pill{display:inline-block;margin-top:13px;font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:6px 12px}
+  .mt-scope .theme{position:absolute;top:20px;right:18px;display:inline-flex;border:1px solid var(--line);border-radius:999px;background:var(--paper)}
   .mt-scope .theme button{width:30px;height:30px;display:grid;place-items:center;color:var(--ink-dim);border-radius:999px}
   .mt-scope .theme button[aria-pressed="true"]{background:var(--accent);color:#fff}
+  .mt-scope .rail{display:flex;gap:6px;margin:18px 0 0}
+  .mt-scope .rail i{height:3px;flex:1;border-radius:2px;background:var(--line);transition:background .3s}
+  .mt-scope .rail i.on{background:var(--accent)}
 
-  .mt-scope .fc-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:clamp(20px,4vw,40px) clamp(20px,4vw,44px) calc(48px + env(safe-area-inset-bottom))}
-  .mt-scope .inner{max-width:560px;margin:0 auto}
-  .mt-scope .step[hidden]{display:none}
-  .mt-scope .step{animation:mt-fade .18s ease}
-  @keyframes mt-fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .mt-scope .body{padding:6px 0 132px}
+  .mt-scope .sec{padding:24px 22px}
+  .mt-scope .sec + .sec{border-top:1px solid var(--line-2)}
+  .mt-scope .sec h2{font-size:1.06rem;font-weight:600;letter-spacing:-.01em;margin:0 0 3px}
+  .mt-scope .sec .hint{font-size:.8rem;color:var(--ink-dim);margin:0 0 15px}
+  .mt-scope .sec h2 + .grp,.mt-scope .sec h2 + .seg,.mt-scope .sec h2 + .field,.mt-scope .sec h2 + .mm,.mt-scope .sec h2 + .grid,.mt-scope .sec h2 + .pills,.mt-scope .sec h2 + .in{margin-top:15px}
+  .mt-scope .opt{font-size:.72rem;color:var(--ink-dim);font-weight:450;letter-spacing:0}
 
-  .mt-scope .step-h{font-family:var(--serif);font-weight:400;font-size:clamp(1.5rem,3.2vw,2rem);margin:14px 0 4px;letter-spacing:.01em}
-  .mt-scope .step-sub{color:var(--ink-dim);font-size:.86rem;margin:0 0 26px}
+  .mt-scope .seg{display:flex;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;background:var(--paper)}
+  .mt-scope .seg button{flex:1;min-width:0;padding:14px 4px;font-size:.95rem;font-weight:500;font-variant-numeric:tabular-nums;color:var(--ink-2);border-right:1px solid var(--line);transition:background .12s,color .12s;position:relative}
+  .mt-scope .seg button:last-child{border-right:0}
+  .mt-scope .seg button[aria-pressed="true"]{background:var(--accent-wash);color:var(--accent);font-weight:600}
+  .mt-scope .seg button.edge{box-shadow:inset 0 0 0 1.5px var(--accent);z-index:1;border-radius:2px}
+  .mt-scope .seg-val{margin-top:9px;font-size:.82rem;color:var(--ink-2)}
+  .mt-scope .seg-val b{color:var(--ink);font-weight:600}
 
-  .mt-scope .field{margin-bottom:22px}
-  .mt-scope .field > label,.mt-scope .legend{display:block;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--ink-dim);margin-bottom:9px}
-  .mt-scope .in{
-    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
-    font:inherit;font-size:1rem;padding:15px 16px;border-radius:var(--radius);transition:border-color .15s;
-  }
-  .mt-scope .in::placeholder{color:var(--ink-dim)}
-  .mt-scope .in:focus{outline:none;border-color:var(--accent)}
-  .mt-scope .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .mt-scope .two > *{min-width:0}
-  .mt-scope .help{font-size:.76rem;color:var(--ink-dim);margin-top:8px;line-height:1.6}
+  .mt-scope .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mt-scope .tile{display:flex;flex-direction:column;align-items:center;gap:9px;padding:18px 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);font-size:.86rem;font-weight:500;color:var(--ink-2);transition:border-color .12s,background .12s,color .12s}
+  .mt-scope .tile svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.6}
+  .mt-scope .tile[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-wash);color:var(--accent)}
 
-  .mt-scope .money{display:flex;align-items:center;min-width:0;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius)}
-  .mt-scope .money:focus-within{border-color:var(--accent)}
-  .mt-scope .money > span{flex:0 0 auto;padding:0 2px 0 16px;color:var(--ink-dim);font-size:1rem}
-  .mt-scope .money input{flex:1;min-width:0;width:100%;background:none;border:none;color:var(--ink);font:inherit;font-size:1rem;
-    padding:15px 16px 15px 6px;outline:none;font-variant-numeric:tabular-nums}
-  .mt-scope .money input::placeholder{color:var(--ink-dim)}
+  .mt-scope .pills{display:flex;flex-wrap:wrap;gap:9px}
+  .mt-scope .pill{padding:11px 16px;border:1px solid var(--line);border-radius:999px;background:var(--paper);font-size:.88rem;font-weight:500;color:var(--ink-2);transition:border-color .12s,background .12s,color .12s}
+  .mt-scope .pill[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-wash);color:var(--accent)}
 
-  /* min/max dropdowns (beds, baths) -- Min beside Max at every width */
-  .mt-scope .mm{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .mt-scope .mm > *{min-width:0}
-  .mt-scope .sel{display:flex;align-items:center;gap:8px;min-width:0;border:1px solid var(--line);background:var(--panel-2);
-    border-radius:var(--radius);padding:0 11px 0 13px;cursor:pointer}
-  .mt-scope .sel:focus-within{border-color:var(--accent)}
-  .mt-scope .sel > span{flex:0 0 auto;font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
-  .mt-scope .sel select{flex:1;min-width:0;appearance:none;-webkit-appearance:none;background:none;border:none;
-    color:var(--ink);font-family:var(--serif);font-size:1.08rem;padding:15px 0;outline:none;cursor:pointer;text-align:left}
-  .mt-scope .sel::after{content:"";flex:0 0 auto;width:7px;height:7px;
-    border-right:1.6px solid var(--ink-dim);border-bottom:1.6px solid var(--ink-dim);
-    transform:rotate(45deg) translateY(-2px);transition:border-color .15s}
-  .mt-scope .sel:focus-within::after{border-color:var(--accent)}
+  .mt-scope .mm{display:grid;grid-template-columns:1fr 14px 1fr;align-items:center;gap:9px}
+  .mt-scope .mm .dash{text-align:center;color:var(--ink-dim)}
+  .mt-scope .selbox{position:relative}
+  .mt-scope .selbox select{width:100%;appearance:none;-webkit-appearance:none;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);color:var(--ink);font-size:.95rem;padding:14px 34px 14px 14px;outline:none}
+  .mt-scope .selbox select:focus{border-color:var(--accent)}
+  .mt-scope .selbox::after{content:"";position:absolute;right:15px;top:50%;width:7px;height:7px;border-right:1.6px solid var(--ink-dim);border-bottom:1.6px solid var(--ink-dim);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+  .mt-scope .grp{display:flex;flex-direction:column;gap:16px}
+  .mt-scope .grp .lbl{font-size:.82rem;color:var(--ink-2);margin-bottom:8px;display:block}
 
-  /* pill rows -- the touch-first quick picks */
-  .mt-scope .pills{display:flex;flex-wrap:wrap;gap:8px}
-  .mt-scope .pill{
-    min-height:48px;padding:0 18px;display:inline-flex;align-items:center;justify-content:center;
-    border:1px solid var(--line);border-radius:999px;background:var(--panel-2);color:var(--ink-2);
-    font-size:.92rem;font-weight:500;transition:all .14s;
-  }
-  .mt-scope .pill:hover{border-color:var(--ink-dim)}
-  .mt-scope .pill[aria-pressed="true"],.mt-scope .pill[aria-checked="true"]{background:var(--accent-wash);border-color:var(--accent);color:var(--ink)}
-  .mt-scope .pill.wide{flex:1 1 auto}
-
-  /* area chip picker */
-  .mt-scope .chips-wrap{border:1px solid var(--line);background:var(--panel-2);border-radius:var(--radius);padding:7px 8px}
-  .mt-scope .chips-wrap:focus-within{border-color:var(--accent)}
+  .mt-scope .field{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);padding:8px 9px}
+  .mt-scope .field:focus-within{border-color:var(--accent)}
   .mt-scope .chips{display:flex;flex-wrap:wrap;gap:7px}
   .mt-scope .chips:empty{display:none}
-  .mt-scope .chip{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);
-    color:var(--ink);font-size:.88rem;padding:8px 8px 8px 13px;border-radius:999px}
-  .mt-scope .chip button{color:var(--ink-dim);font-size:1.05rem;line-height:1;padding:0 2px}
+  .mt-scope .chip{display:inline-flex;align-items:center;gap:7px;background:var(--paper-2);border:1px solid var(--line);color:var(--ink);font-size:.85rem;padding:7px 8px 7px 12px;border-radius:999px}
+  .mt-scope .chip button{color:var(--ink-dim);font-size:1rem;line-height:1;padding:0 2px}
   .mt-scope .chip button:hover{color:var(--accent)}
-  .mt-scope #mt-area-in{width:100%;min-width:0;background:none;border:none;color:var(--ink);font:inherit;font-size:1rem;padding:12px 8px;outline:none}
+  .mt-scope #mt-area-in{width:100%;min-width:0;border:0;background:none;color:var(--ink);font:inherit;font-size:.95rem;padding:11px 8px;outline:none}
   .mt-scope #mt-area-in::placeholder{color:var(--ink-dim)}
+  .mt-scope .in{width:100%;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);color:var(--ink);font:inherit;font-size:.95rem;padding:14px;outline:none;resize:vertical}
+  .mt-scope .in:focus{border-color:var(--accent)}
 
-  .mt-scope .rep{border:1px solid var(--line);border-radius:var(--radius);padding:18px}
-  .mt-scope .rep-q{font-size:.95rem;margin-bottom:14px}
-  .mt-scope .rep .pills{margin-bottom:0}
+  .mt-scope .contact .field-row{margin-bottom:16px}
+  .mt-scope label.cap{display:block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:8px}
+  .mt-scope .rep{border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px}
+  .mt-scope .rep-q{font-size:.92rem;margin-bottom:12px}
+  .mt-scope .rep .seg{max-width:220px}
   .mt-scope #mt-agent[hidden]{display:none}
-  .mt-scope #mt-agent{margin-top:14px}
+  .mt-scope #mt-agent{margin-top:13px}
 
-  .mt-scope .nav{display:flex;gap:12px;margin-top:14px}
-  .mt-scope .btn{flex:0 0 auto;min-height:54px;padding:0 26px;display:inline-flex;align-items:center;justify-content:center;
-    border-radius:var(--radius);border:1px solid var(--line);color:var(--ink);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;font-weight:600}
-  .mt-scope .btn:hover{border-color:var(--ink-dim)}
-  .mt-scope .btn.primary{flex:1;background:var(--accent);border-color:var(--accent);color:#fff}
-  .mt-scope .btn.primary:hover{background:var(--accent-press)}
-  .mt-scope .btn[disabled]{opacity:.55;pointer-events:none}
+  .mt-scope .bar{position:fixed;left:0;right:0;bottom:0;z-index:2147483001;pointer-events:none}
+  .mt-scope .bar-inner{max-width:520px;margin:0 auto;padding:14px 18px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,var(--paper) 34%);pointer-events:auto}
+  @media (min-width:560px){ .mt-scope .bar-inner{padding-bottom:18px} }
+  .mt-scope .cta{width:100%;min-height:56px;border-radius:999px;background:var(--accent);color:#fff;font-size:.92rem;font-weight:600;letter-spacing:.02em;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 24px -8px rgba(176,18,42,.45);transition:background .14s,transform .1s}
+  .mt-scope .cta:active{transform:translateY(1px)}
+  .mt-scope .cta:hover{background:var(--accent-press)}
+  .mt-scope .cta[disabled]{opacity:.6;pointer-events:none}
+  .mt-scope .ghost{width:100%;min-height:52px;border-radius:999px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font-weight:600;font-size:.86rem;letter-spacing:.04em;display:flex;align-items:center;justify-content:center;margin-bottom:9px}
+  .mt-scope .err{color:var(--accent);font-size:.84rem;margin:12px 22px 0;display:none}
 
-  .mt-scope .err{color:var(--accent);font-size:.85rem;margin-top:14px;display:none}
-
-  /* result view */
-  .mt-scope .result{text-align:center;padding:24px 0 8px;animation:mt-fade .3s ease}
-  .mt-scope .count{font-family:var(--serif);font-weight:500;font-variant-numeric:tabular-nums;
-    font-size:clamp(3.6rem,13vw,6rem);line-height:1;color:var(--accent)}
-  .mt-scope .result h2{font-family:var(--serif);font-weight:400;font-size:clamp(1.3rem,3vw,1.7rem);margin:8px 0 10px;color:var(--ink)}
-  .mt-scope .result p{color:var(--ink-dim);font-size:.92rem;line-height:1.7;max-width:40ch;margin:0 auto}
-  .mt-scope .msg{margin-top:30px;border-top:1px solid var(--line);padding-top:26px;text-align:left}
-  .mt-scope .sent{color:var(--accent);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;margin-top:14px;display:none}
-  .mt-scope .reset{display:block;margin:28px auto 0;font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim)}
-  .mt-scope .reset:hover{color:var(--ink)}
+  .mt-scope .result{padding:44px 26px}
+  .mt-scope .result{text-align:center}
+  .mt-scope .count{font-family:var(--serif);font-weight:500;font-size:clamp(3.4rem,17vw,5rem);line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+  .mt-scope .result h2{font-family:var(--serif);font-weight:400;font-size:1.35rem;margin:10px 0 10px}
+  .mt-scope .result p{color:var(--ink-2);font-size:.92rem;line-height:1.7;max-width:38ch;margin:0 auto}
+  .mt-scope .msg{margin:26px auto 0;text-align:left;border-top:1px solid var(--line-2);padding-top:22px}
+  .mt-scope .msg .lbl{font-size:.88rem;color:var(--ink-2);margin-bottom:9px;display:block}
+  .mt-scope .sent{display:none;margin-top:12px;color:var(--ok);font-size:.78rem;letter-spacing:.1em;text-transform:uppercase}
+  .mt-scope .restart{display:block;margin:26px auto 0;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim)}
+  .mt-scope .restart:hover{color:var(--ink)}
+  .mt-scope [hidden]{display:none!important}
   .mt-scope #mt-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
 </style>"""
 
 MATCH_PAGE_SCRIPT = r"""
 (function () {
-  var scope = document.getElementById('mt-scope');
-  var wiz = document.getElementById('mt-form');
+  var $ = function (id) { return document.getElementById(id); };
+  var scope = $('mt-scope'), wiz = $('mt-form');
   if (!scope || !wiz) return;
-  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  wiz.addEventListener('submit', function (e) { e.preventDefault(); });
   var steps = [].slice.call(wiz.querySelectorAll('.step'));
   var rail = [].slice.call(scope.querySelectorAll('.rail i'));
-  var fcBody = scope.querySelector('.fc-body');
-  var idleTimer, lead = {};
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var cur = 0, idleTimer, lead = {};
 
-  function $(id) { return document.getElementById(id); }
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
       return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c];
@@ -743,257 +700,225 @@ MATCH_PAGE_SCRIPT = r"""
   }
   function val(id) { var el = $(id); return el ? el.value.trim() : ''; }
 
-  function show(i) {
-    steps.forEach(function (s) { s.hidden = String(s.dataset.step) !== String(i); });
-    var done = i === 'result' ? rail.length - 1 : +i;
-    rail.forEach(function (r, idx) { r.classList.toggle('on', idx <= done); });
-    if (fcBody) fcBody.scrollTo({top: 0, behavior: reduce ? 'auto' : 'smooth'});
-    if (i === 'result') armIdle();
-  }
-  function armIdle() { clearTimeout(idleTimer); idleTimer = setTimeout(resetAll, 120000); }
-
-  // datalist -> plain array, for exact-match auto-add
-  var MARKETS = [];
   var mlist = $('mt-markets');
-  if (mlist) MARKETS = [].map.call(mlist.options, function (o) { return o.value; });
+  var MARKETS = mlist ? [].map.call(mlist.options, function (o) { return o.value; }) : [];
 
-  // ---- pill groups
-  function radio(groupId, cb) {
-    var g = $(groupId); if (!g) return;
-    g.addEventListener('click', function (e) {
-      var p = e.target.closest('.pill'); if (!p) return;
-      [].forEach.call(g.querySelectorAll('.pill'), function (x) {
-        x.setAttribute('aria-checked', x === p ? 'true' : 'false');
-      });
-      cb && cb(p);
-    });
+  /* ---- min <= max coupling for the select pairs ---- */
+  function coupleSel(loId, hiId) {
+    var lo = $(loId), hi = $(hiId);
+    function fix(ch) { var a = +lo.value || 0, b = +hi.value || 0; if (a && b && a > b) { (ch === lo ? hi : lo).value = (ch === lo ? lo : hi).value; } }
+    lo.addEventListener('change', function () { fix(lo); });
+    hi.addEventListener('change', function () { fix(hi); });
   }
-  function multi(groupId) {
-    var g = $(groupId); if (!g) return;
-    g.addEventListener('click', function (e) {
-      var p = e.target.closest('.pill'); if (!p) return;
-      p.setAttribute('aria-pressed', p.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
-    });
-  }
-  function pillValues(groupId) {
-    var g = $(groupId); if (!g) return [];
-    return [].filter.call(g.querySelectorAll('.pill'), function (p) {
-      return p.getAttribute('aria-pressed') === 'true';
-    }).map(function (p) { return p.dataset.v; });
-  }
-  function repValue() {
-    var p = $('mt-rep-pills').querySelector('.pill[aria-checked="true"]');
-    return p ? p.dataset.v : 'no';
-  }
-  radio('mt-rep-pills', function (p) { $('mt-agent').hidden = p.dataset.v !== 'yes'; });
-  multi('mt-type-pills');
-  multi('mt-cond-pills');
+  coupleSel('mt-price-min', 'mt-price-max');
+  coupleSel('mt-sqft-min', 'mt-sqft-max');
+  coupleSel('mt-lot-min', 'mt-lot-max');
 
-  // ---- min/max dropdowns keep min <= max
-  var roomIds = ['mt-beds-min', 'mt-beds-max', 'mt-baths-min', 'mt-baths-max'];
-  ['mt-price', 'mt-beds', 'mt-baths'].forEach(function (grp) {
-    var lo = $(grp + '-min'), hi = $(grp + '-max');
-    if (!lo || !hi) return;
-    function couple(changed) {
-      var a = +lo.value || 0, b = +hi.value || 0;
-      if (a && b && a > b) { (changed === lo ? hi : lo).value = (changed === lo ? lo : hi).value; }
+  /* ---- segmented range control (beds / baths) ---- */
+  function rangeSeg(groupId, valId, noun) {
+    var g = $(groupId), out = $(valId);
+    var btns = [].slice.call(g.querySelectorAll('button'));
+    var nums = btns.filter(function (b) { return b.dataset.v !== 'any'; });
+    var a = null, b = null;
+    function idx(v) { return nums.findIndex(function (x) { return x.dataset.v === v; }); }
+    function paint() {
+      btns.forEach(function (x) { x.setAttribute('aria-pressed', 'false'); x.classList.remove('edge'); });
+      if (a == null) { g.querySelector('[data-v="any"]').setAttribute('aria-pressed', 'true'); out.textContent = 'Any number of ' + noun; return; }
+      var lo = a, hi = b == null ? a : b;
+      var li = idx(lo), hii = idx(hi);
+      if (li > hii) { var t = li; li = hii; hii = t; }
+      nums.forEach(function (x, i) { if (i >= li && i <= hii) x.setAttribute('aria-pressed', 'true'); });
+      nums[li].classList.add('edge'); nums[hii].classList.add('edge');
+      var loLbl = nums[li].textContent.replace('+', ''), hiLbl = nums[hii].textContent;
+      if (b == null) { out.innerHTML = '<b>' + loLbl + '+</b> ' + noun; }
+      else if (li === hii) { out.innerHTML = '<b>' + hiLbl + '</b> ' + noun; }
+      else { out.innerHTML = '<b>' + loLbl + '–' + hiLbl + '</b> ' + noun; }
     }
-    lo.addEventListener('change', function () { couple(lo); });
-    hi.addEventListener('change', function () { couple(hi); });
-  });
-  function anyRoom() { return roomIds.some(function (id) { return $(id).value; }); }
-
-  // ---- numeric inputs: normalize on blur (accepts 1.5M / 850k / commas)
-  ['mt-sqft-min', 'mt-sqft-max', 'mt-lot-min', 'mt-lot-max'].forEach(function (id) {
-    var el = $(id); if (!el) return;
-    el.addEventListener('blur', function () {
-      var m = /^\$?\s*([\d,.]+)\s*([mMkK])?$/.exec(el.value.trim());
-      if (!m) return;
-      var n = parseFloat(m[1].replace(/,/g, ''));
-      if (!isFinite(n)) return;
-      if (/[mM]/.test(m[2] || '')) n *= 1e6; else if (/[kK]/.test(m[2] || '')) n *= 1e3;
-      el.value = Math.round(n).toLocaleString('en-US');
+    g.addEventListener('click', function (e) {
+      var btn = e.target.closest('button'); if (!btn) return;
+      var v = btn.dataset.v;
+      if (v === 'any') { a = b = null; paint(); return; }
+      if (a == null) { a = v; b = null; }
+      else if (b == null) { if (v === a) { a = b = null; } else { b = v; } }
+      else { a = v; b = null; }
+      paint();
     });
-  });
+    return {
+      get: function () {
+        if (a == null) return { min: '', max: '' };
+        var li = idx(a), hii = b == null ? li : idx(b);
+        if (li > hii) { var t = li; li = hii; hii = t; }
+        return { min: nums[li].dataset.v, max: b == null ? '' : nums[hii].dataset.v };
+      },
+      reset: function () { a = b = null; paint(); }
+    };
+  }
+  var bedsCtl = rangeSeg('mt-beds', 'mt-beds-val', 'bedrooms');
+  var bathsCtl = rangeSeg('mt-baths', 'mt-baths-val', 'bathrooms');
 
-  // ---- area chip picker
+  /* ---- multi-select pill groups ---- */
+  function multi(groupId) {
+    $(groupId).addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+    });
+  }
+  multi('mt-types'); multi('mt-cond');
+  function pillValues(id) {
+    return [].slice.call($(id).querySelectorAll('[aria-pressed="true"]')).map(function (b) { return b.dataset.v; });
+  }
+  $('mt-rep').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    [].forEach.call(this.querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+    $('mt-agent').hidden = b.dataset.v !== 'yes';
+  });
+  function repVal() { var b = $('mt-rep').querySelector('[aria-pressed="true"]'); return b ? b.dataset.v : 'no'; }
+
+  /* ---- area chips ---- */
   var chips = [], chipsEl = $('mt-chips'), areaIn = $('mt-area-in');
   function renderChips() {
     chipsEl.innerHTML = chips.map(function (a, i) {
-      return '<span class="chip">' + esc(a)
-        + '<button type="button" data-i="' + i + '" aria-label="Remove">×</button></span>';
+      return '<span class="chip">' + esc(a) + '<button type="button" data-i="' + i + '" aria-label="Remove">×</button></span>';
     }).join('');
   }
   function addArea(raw) {
-    String(raw || '').split(/[,;\n]+/).forEach(function (part) {
-      var v = part.trim().replace(/\s+/g, ' ');
+    String(raw || '').split(/[,;\n]+/).forEach(function (p) {
+      var v = p.trim().replace(/\s+/g, ' ');
       if (v && !chips.some(function (a) { return a.toLowerCase() === v.toLowerCase(); })) chips.push(v);
     });
     renderChips();
   }
-  if (areaIn) {
-    areaIn.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addArea(areaIn.value); areaIn.value = ''; }
-      else if (e.key === 'Backspace' && !areaIn.value && chips.length) { chips.pop(); renderChips(); }
-    });
-    areaIn.addEventListener('input', function () {
-      if (MARKETS.indexOf(areaIn.value) > -1) { addArea(areaIn.value); areaIn.value = ''; }
-    });
-    areaIn.addEventListener('blur', function () {
-      if (areaIn.value.trim()) { addArea(areaIn.value); areaIn.value = ''; }
-    });
-    chipsEl.addEventListener('click', function (e) {
-      var b = e.target.closest('button[data-i]');
-      if (b) { chips.splice(+b.dataset.i, 1); renderChips(); }
-    });
-    $('mt-chips-wrap').addEventListener('click', function (e) {
-      if (e.target === e.currentTarget || e.target === chipsEl) areaIn.focus();
-    });
-  }
+  areaIn.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addArea(areaIn.value); areaIn.value = ''; }
+    else if (e.key === 'Backspace' && !areaIn.value && chips.length) { chips.pop(); renderChips(); }
+  });
+  areaIn.addEventListener('input', function () { if (MARKETS.indexOf(areaIn.value) > -1) { addArea(areaIn.value); areaIn.value = ''; } });
+  areaIn.addEventListener('blur', function () { if (areaIn.value.trim()) { addArea(areaIn.value); areaIn.value = ''; } });
+  chipsEl.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-i]'); if (b) { chips.splice(+b.dataset.i, 1); renderChips(); }
+  });
+  $('mt-chips-wrap').addEventListener('click', function (e) { if (e.target === e.currentTarget || e.target === chipsEl) areaIn.focus(); });
 
-  // ---- server round-trip
+  /* ---- steps ---- */
+  function show(i) {
+    steps.forEach(function (s) { s.hidden = String(s.dataset.step) !== String(i); });
+    var done = i === 'result' ? rail.length - 1 : +i;
+    rail.forEach(function (r, idx) { r.classList.toggle('on', idx <= done); });
+    scope.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+    $('mt-back').hidden = (i !== 1);
+    $('mt-bar').hidden = (i === 'result');
+    if (i === 0) { $('mt-head').textContent = 'Tell us what you’re looking for.'; $('mt-subhead').textContent = 'Approximate is fine — you can refine the details with Simone later.'; $('mt-cta-label').textContent = 'Continue'; }
+    if (i === 1) { $('mt-head').textContent = 'Where should Simone reach you?'; $('mt-subhead').textContent = 'Your details go straight to Simone — never shared.'; $('mt-cta-label').textContent = 'Search our network'; }
+    if (i === 'result') armIdle();
+  }
+  function armIdle() { clearTimeout(idleTimer); idleTimer = setTimeout(resetAll, 120000); }
+
+  function criteria() {
+    var bd = bedsCtl.get(), ba = bathsCtl.get();
+    return {
+      areas: chips.slice(),
+      price_min: val('mt-price-min'), price_max: val('mt-price-max'),
+      beds: bd.min, beds_max: bd.max, baths: ba.min, baths_max: ba.max,
+      sqft: val('mt-sqft-min'), sqft_max: val('mt-sqft-max'),
+      lot_min: val('mt-lot-min'), lot_max: val('mt-lot-max'),
+      types: pillValues('mt-types'), condition: pillValues('mt-cond'),
+      notes: val('mt-notes')
+    };
+  }
+  function hasCriteria() {
+    var c = criteria();
+    return !!(c.areas.length || c.price_min || c.price_max || c.beds || c.baths
+      || c.sqft || c.sqft_max || c.lot_min || c.lot_max || c.types.length || c.condition.length || c.notes);
+  }
+  function showErr(m) { var e = $('mt-err'); e.textContent = m || ''; e.style.display = m ? 'block' : 'none'; }
+
   async function post(payload) {
     var res = await fetch('/api/portal?section=match', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload),
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
     });
     var data = await res.json();
     if (!res.ok || !data.ok) throw new Error(data.error || 'Something went wrong.');
     return data;
   }
-  function criteriaPayload() {
-    return {
-      website: $('mt-hp').value,
-      oh: ($('mt-oh') || {}).value || '',
-      areas: chips.join(', '),
-      price_min: val('mt-price-min'), price_max: val('mt-price-max'),
-      beds: val('mt-beds-min'), beds_max: val('mt-beds-max'),
-      baths: val('mt-baths-min'), baths_max: val('mt-baths-max'),
-      sqft: val('mt-sqft-min'), sqft_max: val('mt-sqft-max'),
-      lot_min: val('mt-lot-min'), lot_max: val('mt-lot-max'),
-      types: pillValues('mt-type-pills').join(', '),
-      condition: pillValues('mt-cond-pills').join(', '),
-      notes: val('mt-notes'),
-    };
-  }
 
-  // ---- step nav
-  function step0valid() {
-    if ($('mt-hp').value) return true;   // bot -> silently "pass"
-    var c = criteriaPayload();
-    return !!(chips.length || c.price_min || c.price_max || anyRoom()
-      || c.sqft || c.sqft_max || c.lot_min || c.lot_max || c.types || c.condition || c.notes);
-  }
-  wiz.addEventListener('click', function (e) {
-    if (e.target.closest('[data-next]')) {
-      var ok = step0valid();
-      $('mt-err-0').style.display = ok ? 'none' : 'block';
-      if (ok) show(1);
+  $('mt-cta').addEventListener('click', async function () {
+    if (cur === 0) {
+      if (areaIn.value.trim()) { addArea(areaIn.value); areaIn.value = ''; }
+      if (!hasCriteria()) { showErr('Add at least one thing — a market, a price, or a bed / bath count.'); return; }
+      showErr(''); cur = 1; show(1); return;
     }
-    if (e.target.closest('[data-back]')) show(0);
-  });
-
-  // ---- submit
-  wiz.addEventListener('submit', async function (e) {
-    e.preventDefault();
-    if (areaIn && areaIn.value.trim()) { addArea(areaIn.value); areaIn.value = ''; }
     var name = val('mt-name'), email = val('mt-email'), phone = val('mt-phone');
-    var represented = repValue() === 'yes';
-    var agentName = represented ? val('mt-agent-name') : '';
-    var ok = name && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) && phone && (!represented || agentName);
-    var e1 = $('mt-err-1');
-    e1.textContent = 'Please enter your name, a valid email, and a phone number' + (represented ? ' — and your agent’s name.' : '.');
-    e1.style.display = ok ? 'none' : 'block';
-    if (!ok) return;
-    lead = {name: name, email: email, phone: phone};
-    var go = $('mt-go'), prev = go.textContent;
-    go.disabled = true; go.textContent = 'Checking our network…';
-    var payload = criteriaPayload();
-    payload.action = 'search';
-    payload.name = name; payload.email = email; payload.phone = phone;
-    payload.represented = represented ? 'yes' : 'no';
-    payload.agent_name = agentName;
+    var rep = repVal() === 'yes', agent = rep ? val('mt-agent-name') : '';
+    var ok = name && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) && phone && (!rep || agent);
+    if (!ok) { showErr('Please add your name, a valid email, a phone number' + (rep ? ', and your agent’s name.' : '.')); return; }
+    showErr('');
+    lead = { name: name, email: email, phone: phone };
+    var c = criteria();
+    var payload = {
+      action: 'search', website: $('mt-hp').value, oh: ($('mt-oh') || {}).value || '',
+      name: name, email: email, phone: phone,
+      represented: rep ? 'yes' : 'no', agent_name: agent,
+      areas: c.areas.join(', '),
+      price_min: c.price_min, price_max: c.price_max,
+      beds: c.beds, beds_max: c.beds_max, baths: c.baths, baths_max: c.baths_max,
+      sqft: c.sqft, sqft_max: c.sqft_max, lot_min: c.lot_min, lot_max: c.lot_max,
+      types: c.types.join(', '), condition: c.condition.join(', '), notes: c.notes
+    };
+    var cta = $('mt-cta'); cta.disabled = true; $('mt-cta-label').textContent = 'Checking our network…';
     try {
       var data = await post(payload);
-      var n = data.count || 0;
-      var first = name.split(' ')[0];
+      var n = data.count || 0, first = name.split(' ')[0];
       if (n > 0) {
-        $('mt-count').style.display = '';
-        $('mt-count').textContent = n;
+        $('mt-count').style.display = ''; $('mt-count').textContent = n;
         $('mt-result-h').textContent = (n === 1 ? 'home in our network matches' : 'homes in our network match') + ' your search';
-        $('mt-result-p').textContent = "These aren’t listed publicly. Contact Simone directly for details — or send a note below and he’ll be in touch.";
+        $('mt-result-p').textContent = 'These aren’t listed publicly. Contact Simone directly for details — or send a note below and he’ll be in touch.';
       } else {
         $('mt-count').style.display = 'none';
         $('mt-result-h').textContent = 'Thank you' + (first ? ', ' + first : '') + '.';
-        $('mt-result-p').textContent = "Your search is saved. Simone will reach out as soon as a new opportunity comes up that fits what you’re looking for — or send him a note below.";
+        $('mt-result-p').textContent = 'Your search is saved. Simone will reach out as soon as a new opportunity comes up that fits what you’re looking for — or send him a note below.';
       }
-      show('result');
+      cur = 'result'; show('result');
     } catch (err) {
-      e1.textContent = err.message; e1.style.display = 'block';
+      showErr(err.message);
     } finally {
-      go.disabled = false; go.textContent = prev;
+      cta.disabled = false; $('mt-cta-label').textContent = 'Search our network';
     }
   });
+  $('mt-back').addEventListener('click', function () { showErr(''); cur = 0; show(0); });
 
-  // ---- message step
   $('mt-send-msg').addEventListener('click', async function () {
-    var m = $('mt-message');
-    if (!m.value.trim()) return;
-    var b = this;
-    b.disabled = true; b.textContent = 'Sending…';
+    var m = $('mt-message'); if (!m.value.trim()) return;
+    var b = this; b.disabled = true; b.textContent = 'Sending…';
     try {
-      await post({action: 'message', name: lead.name, email: lead.email, phone: lead.phone, message: m.value.trim()});
-      m.disabled = true; b.style.display = 'none';
-      $('mt-sent').style.display = 'block';
-      armIdle();
+      await post({ action: 'message', name: lead.name, email: lead.email, phone: lead.phone, message: m.value.trim() });
+      m.disabled = true; b.style.display = 'none'; $('mt-sent').style.display = 'block'; armIdle();
     } catch (err) {
-      b.disabled = false; b.textContent = 'Send message';
-      alert(err.message);
+      b.disabled = false; b.textContent = 'Send message'; alert(err.message);
     }
   });
 
-  // ---- reset
   function resetAll() {
     clearTimeout(idleTimer);
     wiz.reset();
     chips = []; renderChips();
-    [].forEach.call(scope.querySelectorAll('.pill'), function (p) {
-      if (p.hasAttribute('aria-pressed')) p.setAttribute('aria-pressed', 'false');
-    });
-    var repNo = $('mt-rep-pills').querySelector('.pill[data-v="no"]');
-    var repYes = $('mt-rep-pills').querySelector('.pill[data-v="yes"]');
-    if (repNo) repNo.setAttribute('aria-checked', 'true');
-    if (repYes) repYes.setAttribute('aria-checked', 'false');
+    bedsCtl.reset(); bathsCtl.reset();
+    [].forEach.call(scope.querySelectorAll('#mt-types [aria-pressed], #mt-cond [aria-pressed]'), function (b) { b.setAttribute('aria-pressed', 'false'); });
+    $('mt-rep').querySelector('[data-v="no"]').setAttribute('aria-pressed', 'true');
+    $('mt-rep').querySelector('[data-v="yes"]').setAttribute('aria-pressed', 'false');
     $('mt-agent').hidden = true;
-    ['mt-price-min', 'mt-price-max'].concat(roomIds).forEach(function (id) { $(id).value = ''; });
-    $('mt-message').disabled = false;
-    $('mt-send-msg').style.display = '';
-    $('mt-send-msg').textContent = 'Send message';
+    ['mt-price-min', 'mt-price-max', 'mt-sqft-min', 'mt-sqft-max', 'mt-lot-min', 'mt-lot-max'].forEach(function (id) { $(id).value = ''; });
+    $('mt-message').disabled = false; $('mt-send-msg').style.display = ''; $('mt-send-msg').textContent = 'Send message';
     $('mt-sent').style.display = 'none';
-    $('mt-err-0').style.display = 'none';
-    $('mt-err-1').style.display = 'none';
-    show(0);
+    showErr(''); cur = 0; show(0);
   }
-  $('mt-reset').addEventListener('click', resetAll);
+  $('mt-restart').addEventListener('click', resetAll);
 
-  // ---- scoped theme toggle (own storage key; never touches the site theme)
+  /* ---- scoped theme toggle ---- */
   var bl = $('mt-t-light'), bd = $('mt-t-dark');
-  function syncTheme() {
-    var t = scope.getAttribute('data-mt-theme');
-    bl.setAttribute('aria-pressed', t === 'light');
-    bd.setAttribute('aria-pressed', t === 'dark');
-  }
+  function syncTheme() { var t = scope.getAttribute('data-mt-theme'); bl.setAttribute('aria-pressed', t === 'light'); bd.setAttribute('aria-pressed', t === 'dark'); }
   try { var sv = localStorage.getItem('mt-theme'); if (sv) scope.setAttribute('data-mt-theme', sv); } catch (e) {}
-  bl.addEventListener('click', function () {
-    scope.setAttribute('data-mt-theme', 'light');
-    try { localStorage.setItem('mt-theme', 'light'); } catch (e) {}
-    syncTheme();
-  });
-  bd.addEventListener('click', function () {
-    scope.setAttribute('data-mt-theme', 'dark');
-    try { localStorage.setItem('mt-theme', 'dark'); } catch (e) {}
-    syncTheme();
-  });
+  bl.addEventListener('click', function () { scope.setAttribute('data-mt-theme', 'light'); try { localStorage.setItem('mt-theme', 'light'); } catch (e) {} syncTheme(); });
+  bd.addEventListener('click', function () { scope.setAttribute('data-mt-theme', 'dark'); try { localStorage.setItem('mt-theme', 'dark'); } catch (e) {} syncTheme(); });
   syncTheme();
 })();
 """
@@ -2113,212 +2038,208 @@ _MATCH_PRICE_STEPS = [
     (6_000_000, "$6M"), (7_500_000, "$7.5M"), (10_000_000, "$10M"), (15_000_000, "$15M"),
     (20_000_000, "$20M+"),
 ]
+_MATCH_SQFT_STEPS = [
+    (750, "750"), (1_000, "1,000"), (1_250, "1,250"), (1_500, "1,500"), (2_000, "2,000"),
+    (2_500, "2,500"), (3_000, "3,000"), (4_000, "4,000"), (5_000, "5,000"), (7_500, "7,500"),
+    (10_000, "10,000"),
+]
+_MATCH_LOT_STEPS = [
+    (2_500, "2,500"), (5_000, "5,000"), (7_500, "7,500"), (10_000, "10,000"), (15_000, "15,000"),
+    (20_000, "20,000"), (43_560, "1 acre"), (87_120, "2 acres"), (217_800, "5 acres"),
+]
 
 
-def _match_price_options(placeholder):
+def _match_options(steps, placeholder):
     opts = [f'<option value="">{placeholder}</option>']
-    opts += [f'<option value="{v}">{lbl}</option>' for v, lbl in _MATCH_PRICE_STEPS]
+    opts += [f'<option value="{v}">{lbl}</option>' for v, lbl in steps]
     return "".join(opts)
 
 
+def _match_price_options(placeholder):
+    return _match_options(_MATCH_PRICE_STEPS, placeholder)
+
+
+_MT_ICON_HOUSE = ('<svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>'
+                  '<path d="M10 20v-6h4v6"/></svg>')
+_MT_ICON_CONDO = ('<svg viewBox="0 0 24 24"><path d="M4 21V6l5-3 5 3v15"/><path d="M14 21V10l6 3v8"/>'
+                  '<path d="M7 8h0M7 12h0M7 16h0"/></svg>')
+_MT_ICON_MULTI = ('<svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V5h9v16"/>'
+                  '<path d="M14 21V10h5v11"/><path d="M8 8h0M8 12h0M8 16h0"/></svg>')
+_MT_ICON_LAND = ('<svg viewBox="0 0 24 24"><path d="M12 3v10"/>'
+                 '<path d="M12 13c0-3 2-5 5-5 0 3-2 5-5 5Z"/>'
+                 '<path d="M12 13c0-3-2-5-5-5 0 3 2 5 5 5Z"/><path d="M6 21h12"/></svg>')
+_MT_SUN = ('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">'
+           '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.7v2.3M12 19v2.3M2.7 12h2.3M19 12h2.3'
+           'M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6"/></svg>')
+_MT_MOON = ('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">'
+            '<path d="M20 14.5A8 8 0 1 1 9.5 4a8 8 0 0 0 10.5 10.5Z"/></svg>')
+
+
 def build_match_page_html(oh=""):
-    oh_pill = f'<div class="oh">Open House · {html.escape(oh)}</div>' if oh else ""
-    price_min_opts = _match_price_options("No min")
-    price_max_opts = _match_price_options("No max")
+    oh_pill = f'<div class="mt-oh-pill">Open House &middot; {html.escape(oh)}</div>' if oh else ""
+    price_min_opts = _match_options(_MATCH_PRICE_STEPS, "No min")
+    price_max_opts = _match_options(_MATCH_PRICE_STEPS, "No max")
+    sqft_min_opts = _match_options(_MATCH_SQFT_STEPS, "No min")
+    sqft_max_opts = _match_options(_MATCH_SQFT_STEPS, "No max")
+    lot_min_opts = _match_options(_MATCH_LOT_STEPS, "No min")
+    lot_max_opts = _match_options(_MATCH_LOT_STEPS, "No max")
     body = f"""
-<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
 {MATCH_PAGE_CSS}
 <div class="mt-scope" id="mt-scope">
-  <div class="shell">
-    <aside class="brand">
-      <img class="sky" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk">
-      <div class="brand-scrim"></div>
-      <div class="brand-inner">
-        <div class="eyebrow"><span class="rule"></span>Private Buyer Search</div>
-        <h1>Tell us what you're looking for.</h1>
-        <p>Share your criteria and we'll tell you, on the spot, how many homes in our network fit — including properties never listed publicly.</p>
-        {oh_pill}
-        <div class="sig">
-          <b>Simone Marzullo</b>
-          <span>REALTOR&reg; · The Agency · Los Angeles</span>
-        </div>
-        <div class="trust"><b>The Agency</b> — 130+ offices across 13+ countries</div>
+  <div class="wrap">
+    <header>
+      <div class="kick">Marzullo &middot; The Agency</div>
+      <div class="theme" role="group" aria-label="Theme">
+        <button type="button" id="mt-t-light" aria-pressed="false" title="Light">{_MT_SUN}</button>
+        <button type="button" id="mt-t-dark" aria-pressed="false" title="Dark">{_MT_MOON}</button>
       </div>
-    </aside>
+      <h1 id="mt-head">Tell us what you're looking for.</h1>
+      <p class="sub" id="mt-subhead">Approximate is fine &mdash; you can refine the details with Simone later.</p>
+      {oh_pill}
+      <div class="rail" aria-hidden="true"><i class="on"></i><i></i></div>
+    </header>
 
-    <section class="form-col">
-      <div class="fc-top">
-        <div class="rail" aria-hidden="true"><i class="on" data-r="0"></i><i data-r="1"></i></div>
-        <div class="theme" role="group" aria-label="Theme">
-          <button type="button" id="mt-t-light" aria-pressed="false" title="Light">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.4M12 19v2.4M2.6 12h2.4M19 12h2.4M5.4 5.4l1.7 1.7M16.9 16.9l1.7 1.7M18.6 5.4l-1.7 1.7M7.1 16.9l-1.7 1.7"/></svg>
-          </button>
-          <button type="button" id="mt-t-dark" aria-pressed="false" title="Dark">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 14.5A8 8 0 1 1 9.5 4a8 8 0 0 0 10.5 10.5Z"/></svg>
-          </button>
+    <form id="mt-form" class="body" novalidate>
+      <input id="mt-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <input type="hidden" id="mt-oh" value="{html.escape(oh)}">
+
+      <div class="step" data-step="0">
+        <div class="sec">
+          <h2>Where</h2>
+          <p class="hint">Add as many markets or ZIP codes as you like &mdash; each market covers every ZIP inside it.</p>
+          <div class="field" id="mt-chips-wrap">
+            <div class="chips" id="mt-chips"></div>
+            <input id="mt-area-in" list="mt-markets" autocomplete="off" placeholder="Type a market or ZIP, then Enter">
+          </div>
         </div>
-      </div>
 
-      <div class="fc-body">
-        <div class="inner">
-          <form id="mt-form" novalidate>
-            <input id="mt-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-            <input type="hidden" id="mt-oh" value="{html.escape(oh)}">
+        <div class="sec">
+          <h2>Price</h2>
+          <div class="mm">
+            <div class="selbox"><select id="mt-price-min" aria-label="Minimum price">{price_min_opts}</select></div>
+            <span class="dash">&ndash;</span>
+            <div class="selbox"><select id="mt-price-max" aria-label="Maximum price">{price_max_opts}</select></div>
+          </div>
+        </div>
 
-            <div class="step" data-step="0">
-              <h2 class="step-h">What you're looking for</h2>
-              <p class="step-sub">Approximate is fine — you can refine the details later.</p>
+        <div class="sec">
+          <h2>Beds</h2>
+          <p class="hint">Tap once for a minimum, tap a second number to set a range.</p>
+          <div class="seg" id="mt-beds" role="group" aria-label="Bedrooms">
+            <button type="button" data-v="any" aria-pressed="true">Any</button>
+            <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
+            <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
+            <button type="button" data-v="5">5</button><button type="button" data-v="6">6</button>
+            <button type="button" data-v="7">7+</button>
+          </div>
+          <div class="seg-val" id="mt-beds-val">Any number of bedrooms</div>
+        </div>
 
-              <div class="field">
-                <span class="legend">Areas you'd consider — add as many as you like</span>
-                <div class="chips-wrap" id="mt-chips-wrap">
-                  <div class="chips" id="mt-chips"></div>
-                  <input id="mt-area-in" list="mt-markets" autocomplete="off" placeholder="Type a market or ZIP, then Enter — e.g. Santa Monica">
-                </div>
-                <p class="help">Each market covers every ZIP inside it. Add specific ZIPs too if you have them.</p>
+        <div class="sec">
+          <h2>Baths</h2>
+          <div class="seg" id="mt-baths" role="group" aria-label="Bathrooms">
+            <button type="button" data-v="any" aria-pressed="true">Any</button>
+            <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
+            <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
+            <button type="button" data-v="5">5</button><button type="button" data-v="6">6+</button>
+          </div>
+          <div class="seg-val" id="mt-baths-val">Any number of bathrooms</div>
+        </div>
+
+        <div class="sec">
+          <h2>Home type <span class="opt">&mdash; choose any</span></h2>
+          <div class="grid" id="mt-types" role="group" aria-label="Home type">
+            <button type="button" class="tile" data-v="Single Family Home" aria-pressed="false">{_MT_ICON_HOUSE}Single Family</button>
+            <button type="button" class="tile" data-v="Condo/Townhome" aria-pressed="false">{_MT_ICON_CONDO}Condo / Townhome</button>
+            <button type="button" class="tile" data-v="Multifamily" aria-pressed="false">{_MT_ICON_MULTI}Multifamily</button>
+            <button type="button" class="tile" data-v="Land/Lot" aria-pressed="false">{_MT_ICON_LAND}Land / Lot</button>
+          </div>
+        </div>
+
+        <div class="sec">
+          <h2>Condition <span class="opt">&mdash; choose any</span></h2>
+          <div class="pills" id="mt-cond" role="group" aria-label="Condition">
+            <button type="button" class="pill" data-v="Fixer" aria-pressed="false">Fixer</button>
+            <button type="button" class="pill" data-v="Original Condition" aria-pressed="false">Original</button>
+            <button type="button" class="pill" data-v="Well Maintained" aria-pressed="false">Well maintained</button>
+            <button type="button" class="pill" data-v="Recently Updated" aria-pressed="false">Recently updated</button>
+            <button type="button" class="pill" data-v="Newly Built" aria-pressed="false">Newly built</button>
+          </div>
+        </div>
+
+        <div class="sec">
+          <h2>Property details <span class="opt">&mdash; optional</span></h2>
+          <div class="grp">
+            <div>
+              <span class="lbl">Square feet</span>
+              <div class="mm">
+                <div class="selbox"><select id="mt-sqft-min" aria-label="Minimum square feet">{sqft_min_opts}</select></div>
+                <span class="dash">&ndash;</span>
+                <div class="selbox"><select id="mt-sqft-max" aria-label="Maximum square feet">{sqft_max_opts}</select></div>
               </div>
-
-              <div class="field">
-                <span class="legend">Price range</span>
-                <div class="mm">
-                  <label class="sel"><span>Min</span>
-                    <select id="mt-price-min" aria-label="Minimum price">{price_min_opts}</select></label>
-                  <label class="sel"><span>Max</span>
-                    <select id="mt-price-max" aria-label="Maximum price">{price_max_opts}</select></label>
-                </div>
-                <p class="help">Leave a side open-ended if there's no firm limit.</p>
-              </div>
-
-              <div class="field">
-                <span class="legend">Bedrooms</span>
-                <div class="mm">
-                  <label class="sel"><span>Min</span>
-                    <select id="mt-beds-min" aria-label="Minimum bedrooms">
-                      <option value="">Any</option><option>1</option><option>2</option><option>3</option>
-                      <option>4</option><option>5</option><option>6</option><option value="7">7+</option>
-                    </select></label>
-                  <label class="sel"><span>Max</span>
-                    <select id="mt-beds-max" aria-label="Maximum bedrooms">
-                      <option value="">Any</option><option>1</option><option>2</option><option>3</option>
-                      <option>4</option><option>5</option><option>6</option><option value="7">7+</option>
-                    </select></label>
-                </div>
-              </div>
-
-              <div class="field">
-                <span class="legend">Bathrooms</span>
-                <div class="mm">
-                  <label class="sel"><span>Min</span>
-                    <select id="mt-baths-min" aria-label="Minimum bathrooms">
-                      <option value="">Any</option><option>1</option><option>2</option><option>3</option>
-                      <option>4</option><option>5</option><option value="6">6+</option>
-                    </select></label>
-                  <label class="sel"><span>Max</span>
-                    <select id="mt-baths-max" aria-label="Maximum bathrooms">
-                      <option value="">Any</option><option>1</option><option>2</option><option>3</option>
-                      <option>4</option><option>5</option><option value="6">6+</option>
-                    </select></label>
-                </div>
-              </div>
-
-              <div class="field">
-                <span class="legend">Size — square feet <span style="text-transform:none;letter-spacing:0;color:var(--ink-dim)">(optional)</span></span>
-                <div class="two">
-                  <input class="in" id="mt-sqft-min" inputmode="numeric" placeholder="Min — e.g. 1,800">
-                  <input class="in" id="mt-sqft-max" inputmode="numeric" placeholder="Max — e.g. 3,500">
-                </div>
-              </div>
-
-              <div class="field">
-                <span class="legend">Lot size — square feet <span style="text-transform:none;letter-spacing:0;color:var(--ink-dim)">(optional)</span></span>
-                <div class="two">
-                  <input class="in" id="mt-lot-min" inputmode="numeric" placeholder="Min — e.g. 5,000">
-                  <input class="in" id="mt-lot-max" inputmode="numeric" placeholder="Max — e.g. 12,000">
-                </div>
-              </div>
-
-              <div class="field">
-                <span class="legend">Property type <span style="text-transform:none;letter-spacing:0;color:var(--ink-dim)">(optional · choose any)</span></span>
-                <div class="pills" id="mt-type-pills" role="group" aria-label="Property type">
-                  <button type="button" class="pill" aria-pressed="false" data-v="Single Family Home">Single Family</button>
-                  <button type="button" class="pill" aria-pressed="false" data-v="Condo/Townhome">Condo / Townhome</button>
-                  <button type="button" class="pill" aria-pressed="false" data-v="Multifamily">Multifamily</button>
-                </div>
-              </div>
-
-              <div class="field">
-                <span class="legend">Condition <span style="text-transform:none;letter-spacing:0;color:var(--ink-dim)">(optional · choose any)</span></span>
-                <div class="pills" id="mt-cond-pills" role="group" aria-label="Property condition">
-                  <button type="button" class="pill" aria-pressed="false" data-v="Fixer">Fixer</button>
-                  <button type="button" class="pill" aria-pressed="false" data-v="Original Condition">Original Condition</button>
-                  <button type="button" class="pill" aria-pressed="false" data-v="Well Maintained">Well Maintained</button>
-                  <button type="button" class="pill" aria-pressed="false" data-v="Recently Updated">Recently Updated</button>
-                  <button type="button" class="pill" aria-pressed="false" data-v="Newly Built">Newly Built</button>
-                </div>
-              </div>
-
-              <div class="field">
-                <label for="mt-notes">Anything else <span style="text-transform:none;letter-spacing:0;color:var(--ink-dim)">(optional)</span></label>
-                <textarea class="in" id="mt-notes" rows="3" style="resize:vertical"
-                          placeholder="Style, must-haves, a view, a school district, timing — whatever matters to you."></textarea>
-              </div>
-
-              <div class="nav">
-                <button type="button" class="btn primary" data-next>Continue</button>
-              </div>
-              <div class="err" id="mt-err-0">Add at least one area, a price, or a bedroom / bathroom count.</div>
             </div>
-
-            <div class="step" data-step="1" hidden>
-              <h2 class="step-h">Where should Simone reach you?</h2>
-              <p class="step-sub">Your details go straight to Simone — never shared.</p>
-
-              <div class="field"><label for="mt-name">Full name</label>
-                <input class="in" id="mt-name" autocomplete="name"></div>
-              <div class="field"><label for="mt-email">Email</label>
-                <input class="in" id="mt-email" type="email" inputmode="email" autocomplete="email"></div>
-              <div class="field"><label for="mt-phone">Phone</label>
-                <input class="in" id="mt-phone" type="tel" inputmode="tel" autocomplete="tel"></div>
-
-              <div class="field rep">
-                <div class="rep-q">Are you exclusively represented by a buyer's agent?</div>
-                <div class="pills" id="mt-rep-pills" role="radiogroup">
-                  <button type="button" class="pill wide" role="radio" aria-checked="true" data-v="no">No</button>
-                  <button type="button" class="pill wide" role="radio" aria-checked="false" data-v="yes">Yes</button>
-                </div>
-                <div id="mt-agent" hidden>
-                  <label for="mt-agent-name" style="display:block;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim);margin:0 0 9px">Your agent's name</label>
-                  <input class="in" id="mt-agent-name">
-                </div>
+            <div>
+              <span class="lbl">Lot size</span>
+              <div class="mm">
+                <div class="selbox"><select id="mt-lot-min" aria-label="Minimum lot size">{lot_min_opts}</select></div>
+                <span class="dash">&ndash;</span>
+                <div class="selbox"><select id="mt-lot-max" aria-label="Maximum lot size">{lot_max_opts}</select></div>
               </div>
-
-              <div class="nav">
-                <button type="button" class="btn" data-back>Back</button>
-                <button type="submit" class="btn primary" id="mt-go">Search our network</button>
-              </div>
-              <div class="err" id="mt-err-1">Please enter your name, a valid email, and a phone number.</div>
             </div>
+          </div>
+        </div>
 
-            <div class="step" data-step="result" hidden>
-              <div class="result">
-                <div class="count" id="mt-count">0</div>
-                <h2 id="mt-result-h">homes in our network match your search</h2>
-                <p id="mt-result-p"></p>
-              </div>
-              <div class="msg">
-                <label for="mt-message" style="display:block;font-size:.9rem;color:var(--ink-2);margin-bottom:9px">Feel free to leave a note or any additional information below.</label>
-                <textarea class="in" id="mt-message" rows="4" style="resize:vertical"></textarea>
-                <div class="nav"><button type="button" class="btn primary" id="mt-send-msg" style="flex:0 0 auto">Send message</button></div>
-                <div class="sent" id="mt-sent">Message sent — thank you.</div>
-              </div>
-              <button type="button" class="reset" id="mt-reset">Start a new search</button>
-            </div>
-          </form>
-
-          <datalist id="mt-markets">{_market_datalist_options()}</datalist>
+        <div class="sec">
+          <h2>Anything else <span class="opt">&mdash; optional</span></h2>
+          <textarea class="in" id="mt-notes" rows="3" placeholder="A view, a street, a school, a timeline &mdash; whatever matters to you."></textarea>
         </div>
       </div>
-    </section>
+
+      <div class="step contact" data-step="1" hidden>
+        <div class="sec">
+          <div class="field-row"><label class="cap" for="mt-name">Full name</label><input class="in" id="mt-name" autocomplete="name"></div>
+          <div class="field-row"><label class="cap" for="mt-email">Email</label><input class="in" id="mt-email" type="email" inputmode="email" autocomplete="email"></div>
+          <div class="field-row"><label class="cap" for="mt-phone">Phone</label><input class="in" id="mt-phone" type="tel" inputmode="tel" autocomplete="tel"></div>
+          <div class="rep">
+            <div class="rep-q">Are you exclusively represented by a buyer's agent?</div>
+            <div class="seg" id="mt-rep" role="group" aria-label="Represented by a buyer's agent">
+              <button type="button" data-v="no" aria-pressed="true">No</button>
+              <button type="button" data-v="yes" aria-pressed="false">Yes</button>
+            </div>
+            <div id="mt-agent" hidden>
+              <label class="cap" for="mt-agent-name" style="margin-top:13px">Your agent's name</label>
+              <input class="in" id="mt-agent-name">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step" data-step="result" hidden>
+        <div class="result">
+          <div class="count" id="mt-count">0</div>
+          <h2 id="mt-result-h">homes in our network match your search</h2>
+          <p id="mt-result-p"></p>
+          <div class="msg">
+            <label class="lbl" for="mt-message">Feel free to leave a note or any additional information below.</label>
+            <textarea class="in" id="mt-message" rows="4"></textarea>
+            <button type="button" class="ghost" id="mt-send-msg" style="margin-top:12px">Send message</button>
+            <div class="sent" id="mt-sent">Message sent &mdash; thank you.</div>
+          </div>
+          <button type="button" class="restart" id="mt-restart">Start a new search</button>
+        </div>
+      </div>
+
+      <div class="err" id="mt-err"></div>
+      <datalist id="mt-markets">{_market_datalist_options()}</datalist>
+    </form>
+
+    <div class="bar" id="mt-bar">
+      <div class="bar-inner">
+        <button type="button" class="ghost" id="mt-back" hidden>Back</button>
+        <button type="button" class="cta" id="mt-cta"><span id="mt-cta-label">Continue</span></button>
+      </div>
+    </div>
   </div>
 </div>
 <script>{MATCH_PAGE_SCRIPT}</script>
