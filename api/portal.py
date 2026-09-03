@@ -925,7 +925,7 @@ MATCH_PAGE_SCRIPT = r"""
       } else {
         $('mt-count').style.display = 'none';
         $('mt-result-h').textContent = 'Thank you' + (first ? ', ' + first : '') + '.';
-        $('mt-result-p').textContent = "Nothing in our network matches this search right now. Simone will follow up personally as soon as something fits — or send him a note below.";
+        $('mt-result-p').textContent = "Your search is saved. Simone will reach out as soon as a new opportunity comes up that fits what you’re looking for — or send him a note below.";
       }
       show('result');
     } catch (err) {
