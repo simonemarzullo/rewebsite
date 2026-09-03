@@ -50,14 +50,40 @@ FUB_API = "https://api.followupboss.com/v1"
 PARCEL_URL = ("https://public.gis.lacounty.gov/public/rest/services/"
               "LACounty_Cache/LACounty_Parcel/MapServer/0/query")
 PARCEL_FIELDS = (
-    "OBJECTID,SitusHouseNo,SitusStreet,SitusCity,SitusZIP,UseType,"
+    "OBJECTID,SitusHouseNo,SitusStreet,SitusCity,SitusZIP,UseCode,UseType,UseDescription,"
+    "Units1,Units2,Units3,Units4,Units5,"
     "YearBuilt1,YearBuilt2,YearBuilt3,YearBuilt4,YearBuilt5,"
     "Bedrooms1,Bedrooms2,Bedrooms3,Bedrooms4,Bedrooms5,"
     "Bathrooms1,Bathrooms2,Bathrooms3,Bathrooms4,Bathrooms5,"
     "SQFTmain1,SQFTmain2,SQFTmain3,SQFTmain4,SQFTmain5"
 )
 STD_FIELDS = ["Bedrooms", "Bathrooms", "SqFt", "YearBuilt", "PropertyType"]
+# "Residential" is LA County's coarse UseType -- carries no real info, so a
+# re-run should overwrite it with the fine type (see norm_property_type).
+PROP_TYPE_STALE = {"", "residential"}
 ENRICH_TAG = "Enriched: LA County Assessor"
+
+
+def norm_property_type(use_code, use_desc, units=0):
+    uc = re.sub(r"\s", "", str(use_code or "")).upper()[:2]
+    ud = str(use_desc or "").strip().lower()
+    try:
+        u = float(units or 0)
+    except (TypeError, ValueError):
+        u = 0
+    if uc in ("02", "03", "04", "05") or u >= 2 or "unit" in ud or "apartment" in ud:
+        return "Multifamily"
+    if uc == "06" or "condo" in ud or "town" in ud:
+        return "Condo/Townhome"
+    if uc == "01" or ud == "single":
+        return "Single Family Home"
+    if any(k in ud for k in ("store", "office", "warehous", "commercial", "industrial",
+                             "church", "school", "restaurant", "parking", "service station",
+                             "manf", "shop", "hotel", "motel")):
+        return "Commercial"
+    if "vacant" in ud or "land" in ud:
+        return "Land/Lot"
+    return ""
 
 _SUFFIX_RE = re.compile(
     r"\b(st|str|street|ave|av|avenue|blvd|boulevard|dr|drive|rd|road|ln|lane|ct|court|"
@@ -109,12 +135,13 @@ def _rollup(attrs):
     def nums(prefix):
         return [n for i in range(1, 6) if (n := _num(attrs.get(f"{prefix}{i}")))]
     beds, baths, sqft, yrs = nums("Bedrooms"), nums("Bathrooms"), nums("SQFTmain"), nums("YearBuilt")
+    units = max(nums("Units") or [0])
     return (
         int(sum(beds)) if beds else None,
         int(sum(baths)) if baths else None,
         int(sum(sqft)) if sqft else None,
         int(max(yrs)) if yrs else None,
-        (attrs.get("UseType") or "").strip() or None,
+        norm_property_type(attrs.get("UseCode"), attrs.get("UseDescription"), units) or None,
     )
 
 
@@ -254,8 +281,15 @@ def fub_fieldmap(headers):
     return {lbl: f"custom{lbl}" for lbl in STD_FIELDS if f"custom{lbl}" in have}
 
 
+def _is_stale(label, current):
+    """A field counts as fillable if it's empty/'0', or -- for PropertyType --
+    still holds LA County's coarse 'Residential' from an earlier run."""
+    c = str(current or "").strip()
+    return c in ("", "0") or (label == "PropertyType" and c.lower() in PROP_TYPE_STALE)
+
+
 def person_needs_work(person, fieldmap):
-    return any(str(person.get(name) or "").strip() in ("", "0") for name in fieldmap.values())
+    return any(_is_stale(lbl, person.get(name)) for lbl, name in fieldmap.items())
 
 
 def fill_person(person, fieldmap, found, headers, dry_run):
@@ -264,7 +298,7 @@ def fill_person(person, fieldmap, found, headers, dry_run):
         val = found.get(label)
         if val in (None, "", 0):
             continue
-        if str(person.get(name) or "").strip() not in ("", "0"):
+        if not _is_stale(label, person.get(name)):
             continue
         payload[name] = val
         filled.append(label)

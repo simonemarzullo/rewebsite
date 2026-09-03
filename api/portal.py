@@ -184,6 +184,61 @@ def zip_area_label(z):
 def _market_datalist_options():
     return "".join(f'<option value="{html.escape(a)}">' for a in LA_MARKETS)
 
+
+# --- Property type: one canonical set for buyer needs + enrichment --------
+# LA County's UseType is just "Residential" for every home -- useless for
+# matching. The finer split is in UseCode (01xx single, 02-05xx 2/3/4/5+
+# units, 06xx condo) and the Units count. "Residential" is treated as blank
+# so a re-enrichment run replaces it with the real type.
+PROP_TYPES = ["Single Family Home", "Condo/Townhome", "Multifamily", "Land/Lot", "Commercial"]
+PROP_TYPE_STALE = {"", "residential"}  # values a re-enrichment run should overwrite
+
+
+def norm_property_type(use_code, use_desc, units=0):
+    """LA County UseCode/UseDescription/Units -> one of PROP_TYPES, or ''."""
+    uc = re.sub(r"\s", "", str(use_code or "")).upper()[:2]
+    ud = str(use_desc or "").strip().lower()
+    try:
+        u = float(units or 0)
+    except (TypeError, ValueError):
+        u = 0
+    if uc in ("02", "03", "04", "05") or u >= 2 or "unit" in ud or "apartment" in ud:
+        return "Multifamily"
+    if uc == "06" or "condo" in ud or "town" in ud:
+        return "Condo/Townhome"
+    if uc == "01" or ud == "single":
+        return "Single Family Home"
+    if any(k in ud for k in ("store", "office", "warehous", "commercial", "industrial",
+                             "church", "school", "restaurant", "parking", "service station",
+                             "manf", "shop", "hotel", "motel")):
+        return "Commercial"
+    if "vacant" in ud or "land" in ud:
+        return "Land/Lot"
+    return ""
+
+
+def norm_buyer_type(s):
+    """A free-typed property type -> canonical PROP_TYPES value (kept as-is
+    if it matches nothing, so an odd entry still gets a loose substring test)."""
+    t = str(s or "").strip().lower()
+    if not t:
+        return ""
+    if any(k in t for k in ("condo", "town", "loft")):
+        return "Condo/Townhome"
+    if any(k in t for k in ("multi", "duplex", "triplex", "fourplex", "plex", "apartment", "income", " unit", "units")):
+        return "Multifamily"
+    if any(k in t for k in ("single", "sfr", "sfd", "detached", "house")):
+        return "Single Family Home"
+    if any(k in t for k in ("land", "lot", "vacant")):
+        return "Land/Lot"
+    if any(k in t for k in ("commercial", "retail", "office", "industrial")):
+        return "Commercial"
+    return str(s).strip()
+
+
+def _prop_type_datalist_options():
+    return "".join(f'<option value="{html.escape(t)}">' for t in PROP_TYPES)
+
 # --- Phase 2: enrich FUB contacts from LA County Assessor public records ----
 # Free, no key, official. ArcGIS REST layer, ~2.4M parcels, updated monthly.
 # Building attributes repeat 1..5 for parcels with multiple structures.
@@ -1291,11 +1346,13 @@ def score_buyer_match(criteria, prof):
 
     types = criteria.get("types") or []
     if types:
-        pt = (prof.get("property_type") or "").lower()
-        if not pt:
+        pt_raw = (prof.get("property_type") or "").strip()
+        pt = norm_buyer_type(pt_raw)
+        want = {norm_buyer_type(t) for t in types}
+        if not pt_raw or pt_raw.lower() in PROP_TYPE_STALE:
             add("Type (no data)", "unknown", 1, 0)
-        elif any(t.lower() in pt or pt in t.lower() for t in types):
-            add(f"Type: {prof.get('property_type')}", "hit", 1, 1.0)
+        elif pt in want or any(w and (w.lower() in pt.lower() or pt.lower() in w.lower()) for w in want):
+            add(f"Type: {pt_raw}", "hit", 1, 1.0)
         else:
             add("Type mismatch", "miss", 1, 0)
 
@@ -1527,6 +1584,7 @@ def _coalesce_building_attrs(attrs):
     baths = nums("Bathrooms")
     sqft = nums("SQFTmain")
     years = nums("YearBuilt")
+    units = max(nums("Units") or [0])
     land = _num(attrs.get("Roll_LandValue")) or 0
     imp = _num(attrs.get("Roll_ImpValue")) or 0
     return {
@@ -1534,7 +1592,7 @@ def _coalesce_building_attrs(attrs):
         "baths": sum(baths) if baths else None,
         "sqft": sum(sqft) if sqft else None,
         "year_built": max(years) if years else None,
-        "property_type": _clean_str(attrs.get("UseType") or attrs.get("UseDescription")),
+        "property_type": norm_property_type(attrs.get("UseCode"), attrs.get("UseDescription"), units),
         "assessed_value": (land + imp) or None,
         "matched_address": _clean_str(attrs.get("SitusFullAddress") or attrs.get("SitusAddress")),
     }
@@ -1542,7 +1600,7 @@ def _coalesce_building_attrs(attrs):
 
 _LACOUNTY_OUT_FIELDS = (
     "AIN,SitusHouseNo,SitusStreet,SitusAddress,SitusFullAddress,SitusCity,SitusZIP,"
-    "UseType,UseDescription,"
+    "UseCode,UseType,UseDescription,Units1,Units2,Units3,Units4,Units5,"
     "YearBuilt1,YearBuilt2,YearBuilt3,YearBuilt4,YearBuilt5,"
     "Bedrooms1,Bedrooms2,Bedrooms3,Bedrooms4,Bedrooms5,"
     "Bathrooms1,Bathrooms2,Bathrooms3,Bathrooms4,Bathrooms5,"
@@ -1614,9 +1672,10 @@ def fub_fill_blank_person_fields(person, fieldmap, found):
         name = fieldmap.get(label)
         if not name:
             continue
-        current = person.get(name)
-        if current not in (None, "", 0, "0"):
-            continue  # already has data -- leave it
+        current = str(person.get(name) or "").strip()
+        stale = label == "PropertyType" and current.lower() in PROP_TYPE_STALE
+        if current not in ("", "0") and not stale:
+            continue  # already has real data -- leave it
         payload[name] = value
         filled.append(label)
     if not payload:
@@ -1788,7 +1847,8 @@ def run_enrich_batch(conn, batch_size):
             break
         processed += 1
         prof = fub_prop_profile(p, fieldmap)
-        if prof["beds"] and prof["baths"] and prof["sqft"] and prof["year_built"] and prof["property_type"]:
+        if (prof["beds"] and prof["baths"] and prof["sqft"] and prof["year_built"]
+                and str(prof["property_type"] or "").lower() not in PROP_TYPE_STALE):
             continue  # already complete
         addrs = p.get("addresses") or []
         a0 = addrs[0] if isinstance(addrs, list) and addrs and isinstance(addrs[0], dict) else {}
@@ -3058,7 +3118,9 @@ def _buyer_match_panels_html(buyer_needs):
                    placeholder="e.g. Santa Monica, 90291, Mar Vista — a market name matches every ZIP it covers">
             <datalist id="bm-market-list">{_market_datalist_options()}</datalist></label>
           <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Property type(s) (comma-separated)</span>
-            <input type="text" name="types" class="om-input" placeholder="Single Family, Condo"></label>
+            <input type="text" name="types" class="om-input" list="bm-type-list" autocomplete="off"
+                   placeholder="Single Family Home, Condo/Townhome, Multifamily — leave blank for any">
+            <datalist id="bm-type-list">{_prop_type_datalist_options()}</datalist></label>
           <label class="om-field"><span class="om-field-label">Timeline</span>
             <input type="text" name="timeline" class="om-input" placeholder="e.g. 60–90 days"></label>
           <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Must-haves / notes</span>
