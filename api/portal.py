@@ -3607,8 +3607,14 @@ _ADMIN_CSS = """<style>
   .ac-toolbox-manage{flex:none;margin-left:4px}
   .ac-toolbox-manage summary{font-family:var(--ac-mono);font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ac-dim);cursor:pointer;list-style:none;white-space:nowrap}
   .ac-toolbox-manage summary::-webkit-details-marker{display:none}
-  .ac-toolbox-manage[open]{position:relative}
-  .ac-toolbox-manage[open] .adm-tiles{position:absolute;right:0;top:26px;z-index:30;width:min(90vw,420px);background:var(--ac-panel);border:1px solid var(--ac-line);border-radius:var(--ac-r-sm);padding:14px;box-shadow:var(--ac-shadow)}
+  /* the toolbox strip scrolls horizontally, which also clips a dropdown --
+     float the Manage panel out of it, fixed to the viewport instead */
+  .ac-toolbox-manage[open] .adm-tiles{position:fixed;top:calc(82px + env(safe-area-inset-top));right:16px;z-index:60;
+    width:min(92vw,440px);max-height:min(70vh,520px);overflow:auto;
+    background:var(--ac-panel);border:1px solid var(--ac-line);border-radius:var(--ac-r-sm);
+    padding:14px;box-shadow:var(--ac-shadow)}
+  .ac-toolbox-manage[open] .adm-tiles .adm-inline-form{gap:8px}
+  .ac-toolbox-manage[open] .adm-tiles .adm-inline-form + .adm-inline-form{margin-top:12px;border-top:1px solid var(--ac-line-2);padding-top:12px}
 
   .ac-view[hidden]{display:none}
   .ac-view{animation:acfade .16s ease}
