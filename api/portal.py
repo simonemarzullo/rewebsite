@@ -3678,11 +3678,6 @@ _ADMIN_CSS = """<style>
   .ac-kpi .ac-num{font-size:1.9rem;color:var(--red);display:block}
   .ac-kpi .sub{display:block;margin-top:6px;font-size:.6rem;color:var(--g5)}
 
-  .ac-actions{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:22px}
-  .ac-actions .btn-primary{padding:11px 16px;font-size:.62rem}
-  .ac-ghostbtn{border:1px solid var(--g3);background:var(--g1);color:var(--white);padding:11px 16px;font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;border-radius:4px}
-  .ac-ghostbtn:hover{border-color:var(--red)}
-
   .ac-grid2{display:grid;gap:16px}
   @media (min-width:980px){ .ac-grid2{grid-template-columns:1.3fr 1fr;align-items:start} }
 
@@ -4133,13 +4128,6 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
         <div class="ac-kpi"><span class="ac-eyebrow">OM Listings</span><span class="ac-num">{counts.get('om_listings', 0)}</span><span class="sub">{counts.get('om_available', 0)} available</span></div>
         <div class="ac-kpi"><span class="ac-eyebrow">Buyer Needs</span><span class="ac-num">{needs_active}</span><span class="sub">last scan {last_match}</span></div>
         <div class="ac-kpi"><span class="ac-eyebrow">Enriched</span><span class="ac-num">{e_filled}</span><span class="sub">of {db_total or '—'} contacts</span></div>
-      </div>
-
-      <div class="ac-actions">
-        <button type="button" class="btn-primary adm-btn-sm" data-goto="match">+ New buyer need</button>
-        <button type="button" class="ac-ghostbtn" data-goto="offmarket">+ Off-market listing</button>
-        <button type="button" class="ac-ghostbtn" data-goto="sellers">+ Seller</button>
-        <button type="button" class="ac-ghostbtn" data-goto="enrich">Run enrichment</button>
       </div>
 
       <div class="ac-grid2">
