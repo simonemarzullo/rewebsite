@@ -539,105 +539,318 @@ BUYER_MATCH_SCRIPT = r"""
 
 # --- Public /match page: styles + client script (single braces) ----------
 MATCH_PAGE_CSS = """<style>
-  .mt-wrap{max-width:600px;margin:0 auto}
-  .mt-row{display:flex;gap:14px;flex-wrap:wrap}
-  .mt-row > .om-field{flex:1 1 150px}
-  .mt-rep{border:1px solid var(--g3);padding:16px 18px;margin:6px 0}
-  .mt-rep-q{font-size:.9rem;color:var(--white);margin-bottom:10px}
-  .mt-rep label{display:inline-flex;align-items:center;gap:8px;margin-right:22px;color:var(--g6);font-size:.9rem;cursor:pointer}
-  #mt-agent{margin-top:12px}
-  #mt-agent[hidden]{display:none}
-  .mt-note{font-size:.78rem;color:var(--g5);line-height:1.65;margin-top:4px}
-  .mt-areas{border:1px solid var(--g3);background:var(--g1);padding:8px}
-  .mt-areas:focus-within{border-color:var(--red)}
-  .mt-chips{display:flex;flex-wrap:wrap;gap:6px}
-  .mt-chips:empty{display:none}
-  .mt-chip{display:inline-flex;align-items:center;gap:7px;background:var(--g2);border:1px solid var(--g3);
-    color:var(--white);font-size:.82rem;padding:5px 6px 5px 11px;border-radius:999px}
-  .mt-chip button{background:none;border:none;color:var(--g5);font-size:1rem;line-height:1;cursor:pointer;padding:0 2px}
-  .mt-chip button:hover{color:var(--red)}
-  #mt-area-input{border:none;background:none;color:var(--white);font-family:var(--sans);font-size:.95rem;
-    padding:9px 8px;width:100%;outline:none}
-  #mt-area-input::placeholder{color:var(--g5)}
-  .mt-result{text-align:center;padding:20px 0}
-  .mt-count{font-family:var(--serif);font-size:clamp(3rem,12vw,5rem);color:var(--red);line-height:1}
-  .mt-result h2{font-family:var(--serif);font-weight:400;font-size:1.4rem;color:var(--white);margin:10px 0 6px}
-  .mt-result p{color:var(--g5);font-size:.92rem;line-height:1.7;max-width:44ch;margin:0 auto}
-  .mt-msg{margin-top:26px;border-top:1px solid var(--g3);padding-top:22px;text-align:left}
-  .mt-msg .om-field-label{margin-bottom:8px}
-  .mt-thanks{color:var(--red);font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;margin-top:12px}
-  #mt-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+  /* /match is a full-screen takeover -- the site chrome sits behind the overlay */
+  html,body{overflow:hidden!important}
+  /* tokens: dark-first, mirroring marzullore.com */
+  .mt-scope{
+    --ground:#0B0B0C; --panel:#141416; --panel-2:#1C1C1F; --line:#2C2C2E;
+    --ink:#FCFAF7; --ink-2:#C6C1B8; --ink-dim:#948E85;
+    --accent:#C8102E; --accent-press:#A50D24; --accent-wash:rgba(200,16,46,.13);
+    --serif:'EB Garamond',Georgia,serif;
+    --sans:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+    --radius:3px;
+  }
+  @media (prefers-color-scheme:light){
+    .mt-scope:not([data-mt-theme="dark"]){
+      --ground:#F4F1EC; --panel:#FFFFFF; --panel-2:#F0ECE3; --line:#E2DBCD;
+      --ink:#171310; --ink-2:#413B33; --ink-dim:#6B655C;
+      --accent:#C8102E; --accent-press:#A50D24; --accent-wash:rgba(200,16,46,.10);
+    }
+  }
+  .mt-scope[data-mt-theme="light"]{
+    --ground:#F4F1EC; --panel:#FFFFFF; --panel-2:#F0ECE3; --line:#E2DBCD;
+    --ink:#171310; --ink-2:#413B33; --ink-dim:#6B655C;
+    --accent:#C8102E; --accent-press:#A50D24; --accent-wash:rgba(200,16,46,.10);
+  }
+  .mt-scope[data-mt-theme="dark"]{
+    --ground:#0B0B0C; --panel:#141416; --panel-2:#1C1C1F; --line:#2C2C2E;
+    --ink:#FCFAF7; --ink-2:#C6C1B8; --ink-dim:#948E85;
+    --accent:#C8102E; --accent-press:#A50D24; --accent-wash:rgba(200,16,46,.13);
+  }
+
+  .mt-scope,.mt-scope *{box-sizing:border-box}
+  .mt-scope{
+    position:fixed;inset:0;z-index:2147483000;overflow:hidden;
+    background:var(--ground);color:var(--ink);
+    font-family:var(--sans);font-size:15px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;
+  }
+  @media (prefers-reduced-motion:reduce){.mt-scope *{animation:none!important;transition:none!important}}
+  .mt-scope button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .mt-scope :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+  .mt-scope .eyebrow{font-size:.63rem;letter-spacing:.24em;text-transform:uppercase;font-weight:500;color:var(--ink-dim)}
+  .mt-scope .rule{display:inline-block;width:34px;height:1px;background:var(--accent);vertical-align:middle;margin-right:12px}
+
+  /* shell */
+  .mt-scope .shell{display:grid;grid-template-columns:1fr;height:100dvh;overflow:hidden}
+  @media (min-width:900px){ .mt-scope .shell{grid-template-columns:minmax(380px,44%) 1fr} }
+
+  /* brand column */
+  .mt-scope .brand{position:relative;overflow:hidden;min-height:0;background:#0a0a0c}
+  @media (max-width:899px){ .mt-scope .brand{display:none} }
+  .mt-scope .sky{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;object-position:50% 55%;
+    animation:mt-kenburns 40s ease-in-out infinite alternate}
+  @keyframes mt-kenburns{from{transform:scale(1.04) translate(-1%,0)}to{transform:scale(1.11) translate(1%,-1.5%)}}
+  @media (prefers-reduced-motion:reduce){ .mt-scope .sky{animation:none;transform:scale(1.04)} }
+  .mt-scope .brand-scrim{position:absolute;inset:0;background:
+     linear-gradient(180deg,rgba(8,8,10,.35) 0%,rgba(8,8,10,.15) 40%,rgba(8,8,10,.78) 100%)}
+  .mt-scope .brand-inner{
+    position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;
+    gap:18px;padding:34px clamp(22px,4vw,52px) clamp(26px,4vw,46px);color:#F6F2EC;
+  }
+  .mt-scope .brand-inner .eyebrow{color:rgba(246,242,236,.72)}
+  .mt-scope .brand h1{
+    font-family:var(--serif);font-weight:400;line-height:1.06;letter-spacing:.005em;
+    font-size:clamp(1.9rem,4.4vw,3.15rem);margin:0;text-wrap:balance;max-width:15ch;
+    animation:mt-rise .7s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .mt-scope .brand p{
+    font-size:.92rem;line-height:1.72;color:rgba(246,242,236,.78);max-width:34ch;margin:0;font-weight:300;
+    animation:mt-rise .7s .06s cubic-bezier(.2,.7,.2,1) both;
+  }
+  @keyframes mt-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .mt-scope .oh{display:inline-block;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;
+    color:rgba(246,242,236,.8);border:1px solid rgba(246,242,236,.3);padding:6px 11px;border-radius:999px}
+  .mt-scope .sig{display:flex;flex-direction:column;gap:3px;border-top:1px solid rgba(246,242,236,.18);padding-top:16px}
+  .mt-scope .sig b{font-family:var(--serif);font-weight:400;font-size:1.12rem;letter-spacing:.02em}
+  .mt-scope .sig span{font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(246,242,236,.6)}
+  .mt-scope .trust{font-size:.72rem;color:rgba(246,242,236,.6);letter-spacing:.02em}
+  .mt-scope .trust b{color:rgba(246,242,236,.92);font-weight:600}
+
+  /* form column */
+  .mt-scope .form-col{background:var(--panel);border-left:1px solid var(--line);min-width:0;min-height:0;overflow:hidden;
+    display:flex;flex-direction:column;position:relative}
+  @media (max-width:899px){ .mt-scope .form-col{border-left:none} }
+  .mt-scope .fc-top{display:flex;align-items:center;justify-content:space-between;
+    padding:20px clamp(20px,4vw,44px) 0}
+  .mt-scope .rail{display:flex;gap:6px;flex:1;max-width:220px}
+  .mt-scope .rail i{height:3px;flex:1;background:var(--line);border-radius:2px;transition:background .3s}
+  .mt-scope .rail i.on{background:var(--accent)}
+  .mt-scope .theme{display:inline-flex;border:1px solid var(--line);border-radius:999px}
+  .mt-scope .theme button{width:30px;height:30px;display:grid;place-items:center;color:var(--ink-dim);border-radius:999px}
+  .mt-scope .theme button[aria-pressed="true"]{background:var(--accent);color:#fff}
+
+  .mt-scope .fc-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:clamp(20px,4vw,40px) clamp(20px,4vw,44px) 40px}
+  .mt-scope .inner{max-width:560px;margin:0 auto}
+  .mt-scope .step[hidden]{display:none}
+  .mt-scope .step{animation:mt-fade .18s ease}
+  @keyframes mt-fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .mt-scope .step-h{font-family:var(--serif);font-weight:400;font-size:clamp(1.5rem,3.2vw,2rem);margin:14px 0 4px;letter-spacing:.01em}
+  .mt-scope .step-sub{color:var(--ink-dim);font-size:.86rem;margin:0 0 26px}
+
+  .mt-scope .field{margin-bottom:22px}
+  .mt-scope .field > label,.mt-scope .legend{display:block;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--ink-dim);margin-bottom:9px}
+  .mt-scope .in{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    font:inherit;font-size:1rem;padding:15px 16px;border-radius:var(--radius);transition:border-color .15s;
+  }
+  .mt-scope .in::placeholder{color:var(--ink-dim)}
+  .mt-scope .in:focus{outline:none;border-color:var(--accent)}
+  .mt-scope .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .mt-scope .two > *{min-width:0}
+  .mt-scope .help{font-size:.76rem;color:var(--ink-dim);margin-top:8px;line-height:1.6}
+
+  .mt-scope .money{display:flex;align-items:center;min-width:0;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius)}
+  .mt-scope .money:focus-within{border-color:var(--accent)}
+  .mt-scope .money > span{flex:0 0 auto;padding:0 2px 0 16px;color:var(--ink-dim);font-size:1rem}
+  .mt-scope .money input{flex:1;min-width:0;width:100%;background:none;border:none;color:var(--ink);font:inherit;font-size:1rem;
+    padding:15px 16px 15px 6px;outline:none;font-variant-numeric:tabular-nums}
+  .mt-scope .money input::placeholder{color:var(--ink-dim)}
+
+  /* min/max dropdowns (beds, baths) -- Min beside Max at every width */
+  .mt-scope .mm{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mt-scope .mm > *{min-width:0}
+  .mt-scope .sel{display:flex;align-items:center;gap:8px;min-width:0;border:1px solid var(--line);background:var(--panel-2);
+    border-radius:var(--radius);padding:0 11px 0 13px;cursor:pointer}
+  .mt-scope .sel:focus-within{border-color:var(--accent)}
+  .mt-scope .sel > span{flex:0 0 auto;font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
+  .mt-scope .sel select{flex:1;min-width:0;appearance:none;-webkit-appearance:none;background:none;border:none;
+    color:var(--ink);font-family:var(--serif);font-size:1.08rem;padding:15px 0;outline:none;cursor:pointer;text-align:left}
+  .mt-scope .sel::after{content:"";flex:0 0 auto;width:7px;height:7px;
+    border-right:1.6px solid var(--ink-dim);border-bottom:1.6px solid var(--ink-dim);
+    transform:rotate(45deg) translateY(-2px);transition:border-color .15s}
+  .mt-scope .sel:focus-within::after{border-color:var(--accent)}
+
+  /* pill rows -- the touch-first quick picks */
+  .mt-scope .pills{display:flex;flex-wrap:wrap;gap:8px}
+  .mt-scope .pill{
+    min-height:48px;padding:0 18px;display:inline-flex;align-items:center;justify-content:center;
+    border:1px solid var(--line);border-radius:999px;background:var(--panel-2);color:var(--ink-2);
+    font-size:.92rem;font-weight:500;transition:all .14s;
+  }
+  .mt-scope .pill:hover{border-color:var(--ink-dim)}
+  .mt-scope .pill[aria-pressed="true"],.mt-scope .pill[aria-checked="true"]{background:var(--accent-wash);border-color:var(--accent);color:var(--ink)}
+  .mt-scope .pill.wide{flex:1 1 auto}
+
+  /* area chip picker */
+  .mt-scope .chips-wrap{border:1px solid var(--line);background:var(--panel-2);border-radius:var(--radius);padding:7px 8px}
+  .mt-scope .chips-wrap:focus-within{border-color:var(--accent)}
+  .mt-scope .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .mt-scope .chips:empty{display:none}
+  .mt-scope .chip{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);
+    color:var(--ink);font-size:.88rem;padding:8px 8px 8px 13px;border-radius:999px}
+  .mt-scope .chip button{color:var(--ink-dim);font-size:1.05rem;line-height:1;padding:0 2px}
+  .mt-scope .chip button:hover{color:var(--accent)}
+  .mt-scope #mt-area-in{width:100%;min-width:0;background:none;border:none;color:var(--ink);font:inherit;font-size:1rem;padding:12px 8px;outline:none}
+  .mt-scope #mt-area-in::placeholder{color:var(--ink-dim)}
+
+  .mt-scope .rep{border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  .mt-scope .rep-q{font-size:.95rem;margin-bottom:14px}
+  .mt-scope .rep .pills{margin-bottom:0}
+  .mt-scope #mt-agent[hidden]{display:none}
+  .mt-scope #mt-agent{margin-top:14px}
+
+  .mt-scope .nav{display:flex;gap:12px;margin-top:14px}
+  .mt-scope .btn{flex:0 0 auto;min-height:54px;padding:0 26px;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:var(--radius);border:1px solid var(--line);color:var(--ink);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;font-weight:600}
+  .mt-scope .btn:hover{border-color:var(--ink-dim)}
+  .mt-scope .btn.primary{flex:1;background:var(--accent);border-color:var(--accent);color:#fff}
+  .mt-scope .btn.primary:hover{background:var(--accent-press)}
+  .mt-scope .btn[disabled]{opacity:.55;pointer-events:none}
+
+  .mt-scope .err{color:var(--accent);font-size:.85rem;margin-top:14px;display:none}
+
+  /* result view */
+  .mt-scope .result{text-align:center;padding:24px 0 8px;animation:mt-fade .3s ease}
+  .mt-scope .count{font-family:var(--serif);font-weight:500;font-variant-numeric:tabular-nums;
+    font-size:clamp(3.6rem,13vw,6rem);line-height:1;color:var(--accent)}
+  .mt-scope .result h2{font-family:var(--serif);font-weight:400;font-size:clamp(1.3rem,3vw,1.7rem);margin:8px 0 10px;color:var(--ink)}
+  .mt-scope .result p{color:var(--ink-dim);font-size:.92rem;line-height:1.7;max-width:40ch;margin:0 auto}
+  .mt-scope .msg{margin-top:30px;border-top:1px solid var(--line);padding-top:26px;text-align:left}
+  .mt-scope .sent{color:var(--accent);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;margin-top:14px;display:none}
+  .mt-scope .reset{display:block;margin:28px auto 0;font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim)}
+  .mt-scope .reset:hover{color:var(--ink)}
+  .mt-scope #mt-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
 </style>"""
 
 MATCH_PAGE_SCRIPT = r"""
 (function () {
-  var form = document.getElementById('mt-form');
-  if (!form) return;
-  var errEl = document.getElementById('mt-error');
-  var resultEl = document.getElementById('mt-result');
-  var agentBox = document.getElementById('mt-agent');
+  var scope = document.getElementById('mt-scope');
+  var wiz = document.getElementById('mt-form');
+  if (!scope || !wiz) return;
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var steps = [].slice.call(wiz.querySelectorAll('.step'));
+  var rail = [].slice.call(scope.querySelectorAll('.rail i'));
+  var fcBody = scope.querySelector('.fc-body');
+  var idleTimer, lead = {};
+
+  function $(id) { return document.getElementById(id); }
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
       return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c];
     });
   }
-  function syncRep() {
-    var yes = form.querySelector('input[name="represented"][value="yes"]');
-    agentBox.hidden = !(yes && yes.checked);
-  }
-  form.querySelectorAll('input[name="represented"]').forEach(function (r) {
-    r.addEventListener('change', syncRep);
-  });
-  syncRep();
+  function val(id) { var el = $(id); return el ? el.value.trim() : ''; }
 
-  // ---- multi-area chip picker ----
-  var chipsEl = document.getElementById('mt-chips');
-  var areaInput = document.getElementById('mt-area-input');
-  var areasHidden = document.getElementById('mt-areas');
-  var areas = [];
+  function show(i) {
+    steps.forEach(function (s) { s.hidden = String(s.dataset.step) !== String(i); });
+    var done = i === 'result' ? rail.length - 1 : +i;
+    rail.forEach(function (r, idx) { r.classList.toggle('on', idx <= done); });
+    if (fcBody) fcBody.scrollTo({top: 0, behavior: reduce ? 'auto' : 'smooth'});
+    if (i === 'result') armIdle();
+  }
+  function armIdle() { clearTimeout(idleTimer); idleTimer = setTimeout(resetAll, 120000); }
+
+  // datalist -> plain array, for exact-match auto-add
+  var MARKETS = [];
+  var mlist = $('mt-markets');
+  if (mlist) MARKETS = [].map.call(mlist.options, function (o) { return o.value; });
+
+  // ---- pill groups
+  function radio(groupId, cb) {
+    var g = $(groupId); if (!g) return;
+    g.addEventListener('click', function (e) {
+      var p = e.target.closest('.pill'); if (!p) return;
+      [].forEach.call(g.querySelectorAll('.pill'), function (x) {
+        x.setAttribute('aria-checked', x === p ? 'true' : 'false');
+      });
+      cb && cb(p);
+    });
+  }
+  function multi(groupId) {
+    var g = $(groupId); if (!g) return;
+    g.addEventListener('click', function (e) {
+      var p = e.target.closest('.pill'); if (!p) return;
+      p.setAttribute('aria-pressed', p.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+    });
+  }
+  function pillValues(groupId) {
+    var g = $(groupId); if (!g) return [];
+    return [].filter.call(g.querySelectorAll('.pill'), function (p) {
+      return p.getAttribute('aria-pressed') === 'true';
+    }).map(function (p) { return p.dataset.v; });
+  }
+  function repValue() {
+    var p = $('mt-rep-pills').querySelector('.pill[aria-checked="true"]');
+    return p ? p.dataset.v : 'no';
+  }
+  radio('mt-rep-pills', function (p) { $('mt-agent').hidden = p.dataset.v !== 'yes'; });
+  multi('mt-type-pills');
+  multi('mt-cond-pills');
+
+  // ---- min/max dropdowns keep min <= max
+  var roomIds = ['mt-beds-min', 'mt-beds-max', 'mt-baths-min', 'mt-baths-max'];
+  ['mt-beds', 'mt-baths'].forEach(function (grp) {
+    var lo = $(grp + '-min'), hi = $(grp + '-max');
+    function couple(changed) {
+      var a = +lo.value || 0, b = +hi.value || 0;
+      if (a && b && a > b) { (changed === lo ? hi : lo).value = (changed === lo ? lo : hi).value; }
+    }
+    lo.addEventListener('change', function () { couple(lo); });
+    hi.addEventListener('change', function () { couple(hi); });
+  });
+  function anyRoom() { return roomIds.some(function (id) { return $(id).value; }); }
+
+  // ---- numeric inputs: normalize on blur (accepts 1.5M / 850k / commas)
+  ['mt-price-min', 'mt-price-max', 'mt-sqft-min', 'mt-sqft-max', 'mt-lot-min', 'mt-lot-max'].forEach(function (id) {
+    var el = $(id); if (!el) return;
+    el.addEventListener('blur', function () {
+      var m = /^\$?\s*([\d,.]+)\s*([mMkK])?$/.exec(el.value.trim());
+      if (!m) return;
+      var n = parseFloat(m[1].replace(/,/g, ''));
+      if (!isFinite(n)) return;
+      if (/[mM]/.test(m[2] || '')) n *= 1e6; else if (/[kK]/.test(m[2] || '')) n *= 1e3;
+      el.value = Math.round(n).toLocaleString('en-US');
+    });
+  });
+
+  // ---- area chip picker
+  var chips = [], chipsEl = $('mt-chips'), areaIn = $('mt-area-in');
   function renderChips() {
-    chipsEl.innerHTML = areas.map(function (a, i) {
-      return '<span class="mt-chip">' + esc(a)
-        + '<button type="button" data-i="' + i + '" aria-label="Remove ' + esc(a) + '">×</button></span>';
+    chipsEl.innerHTML = chips.map(function (a, i) {
+      return '<span class="chip">' + esc(a)
+        + '<button type="button" data-i="' + i + '" aria-label="Remove">×</button></span>';
     }).join('');
-    areasHidden.value = areas.join(', ');
   }
   function addArea(raw) {
     String(raw || '').split(/[,;\n]+/).forEach(function (part) {
       var v = part.trim().replace(/\s+/g, ' ');
-      if (v && !areas.some(function (a) { return a.toLowerCase() === v.toLowerCase(); })) areas.push(v);
+      if (v && !chips.some(function (a) { return a.toLowerCase() === v.toLowerCase(); })) chips.push(v);
     });
     renderChips();
   }
-  if (areaInput) {
-    areaInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ',') {
-        e.preventDefault();
-        addArea(areaInput.value); areaInput.value = '';
-      } else if (e.key === 'Backspace' && !areaInput.value && areas.length) {
-        areas.pop(); renderChips();
-      }
+  if (areaIn) {
+    areaIn.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addArea(areaIn.value); areaIn.value = ''; }
+      else if (e.key === 'Backspace' && !areaIn.value && chips.length) { chips.pop(); renderChips(); }
     });
-    // picking from the datalist fires 'input' with the full option value
-    areaInput.addEventListener('input', function () {
-      var v = areaInput.value;
-      var opts = document.getElementById('match-market-list').options;
-      for (var i = 0; i < opts.length; i++) {
-        if (opts[i].value === v) { addArea(v); areaInput.value = ''; break; }
-      }
+    areaIn.addEventListener('input', function () {
+      if (MARKETS.indexOf(areaIn.value) > -1) { addArea(areaIn.value); areaIn.value = ''; }
     });
-    areaInput.addEventListener('blur', function () {
-      if (areaInput.value.trim()) { addArea(areaInput.value); areaInput.value = ''; }
+    areaIn.addEventListener('blur', function () {
+      if (areaIn.value.trim()) { addArea(areaIn.value); areaIn.value = ''; }
     });
     chipsEl.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-i]');
-      if (b) { areas.splice(+b.dataset.i, 1); renderChips(); }
+      if (b) { chips.splice(+b.dataset.i, 1); renderChips(); }
     });
-    document.querySelector('.mt-areas').addEventListener('click', function (e) {
-      if (e.target === e.currentTarget || e.target === chipsEl) areaInput.focus();
+    $('mt-chips-wrap').addEventListener('click', function (e) {
+      if (e.target === e.currentTarget || e.target === chipsEl) areaIn.focus();
     });
   }
 
+  // ---- server round-trip
   async function post(payload) {
     var res = await fetch('/api/portal?section=match', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -647,69 +860,140 @@ MATCH_PAGE_SCRIPT = r"""
     if (!res.ok || !data.ok) throw new Error(data.error || 'Something went wrong.');
     return data;
   }
+  function criteriaPayload() {
+    return {
+      website: $('mt-hp').value,
+      oh: ($('mt-oh') || {}).value || '',
+      areas: chips.join(', '),
+      price_min: val('mt-price-min'), price_max: val('mt-price-max'),
+      beds: val('mt-beds-min'), beds_max: val('mt-beds-max'),
+      baths: val('mt-baths-min'), baths_max: val('mt-baths-max'),
+      sqft: val('mt-sqft-min'), sqft_max: val('mt-sqft-max'),
+      lot_min: val('mt-lot-min'), lot_max: val('mt-lot-max'),
+      types: pillValues('mt-type-pills').join(', '),
+      condition: pillValues('mt-cond-pills').join(', '),
+      notes: val('mt-notes'),
+    };
+  }
 
-  form.addEventListener('submit', async function (e) {
+  // ---- step nav
+  function step0valid() {
+    if ($('mt-hp').value) return true;   // bot -> silently "pass"
+    var c = criteriaPayload();
+    return !!(chips.length || c.price_min || c.price_max || anyRoom()
+      || c.sqft || c.sqft_max || c.lot_min || c.lot_max || c.types || c.condition || c.notes);
+  }
+  wiz.addEventListener('click', function (e) {
+    if (e.target.closest('[data-next]')) {
+      var ok = step0valid();
+      $('mt-err-0').style.display = ok ? 'none' : 'block';
+      if (ok) show(1);
+    }
+    if (e.target.closest('[data-back]')) show(0);
+  });
+
+  // ---- submit
+  wiz.addEventListener('submit', async function (e) {
     e.preventDefault();
-    if (areaInput && areaInput.value.trim()) { addArea(areaInput.value); areaInput.value = ''; }
-    errEl.textContent = ''; errEl.style.display = 'none';
-    var fd = new FormData(form);
-    var payload = {action: 'search'};
-    fd.forEach(function (v, k) { payload[k] = v; });
-    var btn = form.querySelector('button[type="submit"]');
-    var prev = btn.textContent;
-    btn.disabled = true; btn.textContent = 'Checking our network…';
+    if (areaIn && areaIn.value.trim()) { addArea(areaIn.value); areaIn.value = ''; }
+    var name = val('mt-name'), email = val('mt-email'), phone = val('mt-phone');
+    var represented = repValue() === 'yes';
+    var agentName = represented ? val('mt-agent-name') : '';
+    var ok = name && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) && phone && (!represented || agentName);
+    var e1 = $('mt-err-1');
+    e1.textContent = 'Please enter your name, a valid email, and a phone number' + (represented ? ' — and your agent’s name.' : '.');
+    e1.style.display = ok ? 'none' : 'block';
+    if (!ok) return;
+    lead = {name: name, email: email, phone: phone};
+    var go = $('mt-go'), prev = go.textContent;
+    go.disabled = true; go.textContent = 'Checking our network…';
+    var payload = criteriaPayload();
+    payload.action = 'search';
+    payload.name = name; payload.email = email; payload.phone = phone;
+    payload.represented = represented ? 'yes' : 'no';
+    payload.agent_name = agentName;
     try {
       var data = await post(payload);
-      var first = (payload.name || '').trim().split(' ')[0];
-      var body;
-      if (data.count > 0) {
-        body = '<div class="mt-count">' + data.count + '</div>'
-          + '<h2>' + (data.count === 1 ? 'home matches' : 'homes match') + ' what you’re looking for</h2>'
-          + '<p>These aren’t listed publicly. Contact Simone Marzullo directly for details — or send a note below and he’ll be in touch.</p>';
+      var n = data.count || 0;
+      var first = name.split(' ')[0];
+      if (n > 0) {
+        $('mt-count').style.display = '';
+        $('mt-count').textContent = n;
+        $('mt-result-h').textContent = (n === 1 ? 'home in our network matches' : 'homes in our network match') + ' your search';
+        $('mt-result-p').textContent = "These aren’t listed publicly. Contact Simone directly for details — or send a note below and he’ll be in touch.";
       } else {
-        body = '<h2>Thank you' + (first ? ', ' + esc(first) : '') + '.</h2>'
-          + '<p>Nothing in our network matches this search right now. Simone will follow up personally as soon as something fits — or send him a note below.</p>';
+        $('mt-count').style.display = 'none';
+        $('mt-result-h').textContent = 'Thank you' + (first ? ', ' + first : '') + '.';
+        $('mt-result-p').textContent = "Nothing in our network matches this search right now. Simone will follow up personally as soon as something fits — or send him a note below.";
       }
-      resultEl.innerHTML = body + msgFormHtml(payload);
-      form.hidden = true;
-      resultEl.hidden = false;
-      resultEl.scrollIntoView({block: 'center', behavior: 'smooth'});
-      wireMsgForm(payload);
+      show('result');
     } catch (err) {
-      errEl.textContent = err.message; errEl.style.display = 'block';
+      e1.textContent = err.message; e1.style.display = 'block';
     } finally {
-      btn.disabled = false; btn.textContent = prev;
+      go.disabled = false; go.textContent = prev;
     }
   });
 
-  function msgFormHtml() {
-    return '<div class="mt-msg"><form id="mt-msg-form">'
-      + '<label class="om-field"><span class="om-field-label">Your message for Simone (optional)</span>'
-      + '<textarea name="message" class="om-input" rows="4" style="width:100%;font-family:inherit;resize:vertical"></textarea></label>'
-      + '<button type="submit" class="btn-primary" style="margin-top:12px">Send message</button>'
-      + '<div class="mt-thanks" id="mt-msg-done" hidden>Message sent — thank you.</div>'
-      + '</form></div>';
-  }
-  function wireMsgForm(lead) {
-    var mf = document.getElementById('mt-msg-form');
-    if (!mf) return;
-    mf.addEventListener('submit', async function (e) {
-      e.preventDefault();
-      var msg = mf.message.value.trim();
-      if (!msg) return;
-      var b = mf.querySelector('button');
-      b.disabled = true; b.textContent = 'Sending…';
-      try {
-        await post({action: 'message', name: lead.name, email: lead.email, phone: lead.phone, message: msg});
-        mf.message.disabled = true;
-        b.style.display = 'none';
-        document.getElementById('mt-msg-done').hidden = false;
-      } catch (err) {
-        b.disabled = false; b.textContent = 'Send message';
-        alert(err.message);
-      }
+  // ---- message step
+  $('mt-send-msg').addEventListener('click', async function () {
+    var m = $('mt-message');
+    if (!m.value.trim()) return;
+    var b = this;
+    b.disabled = true; b.textContent = 'Sending…';
+    try {
+      await post({action: 'message', name: lead.name, email: lead.email, phone: lead.phone, message: m.value.trim()});
+      m.disabled = true; b.style.display = 'none';
+      $('mt-sent').style.display = 'block';
+      armIdle();
+    } catch (err) {
+      b.disabled = false; b.textContent = 'Send message';
+      alert(err.message);
+    }
+  });
+
+  // ---- reset
+  function resetAll() {
+    clearTimeout(idleTimer);
+    wiz.reset();
+    chips = []; renderChips();
+    [].forEach.call(scope.querySelectorAll('.pill'), function (p) {
+      if (p.hasAttribute('aria-pressed')) p.setAttribute('aria-pressed', 'false');
     });
+    var repNo = $('mt-rep-pills').querySelector('.pill[data-v="no"]');
+    var repYes = $('mt-rep-pills').querySelector('.pill[data-v="yes"]');
+    if (repNo) repNo.setAttribute('aria-checked', 'true');
+    if (repYes) repYes.setAttribute('aria-checked', 'false');
+    $('mt-agent').hidden = true;
+    roomIds.forEach(function (id) { $(id).value = ''; });
+    $('mt-message').disabled = false;
+    $('mt-send-msg').style.display = '';
+    $('mt-send-msg').textContent = 'Send message';
+    $('mt-sent').style.display = 'none';
+    $('mt-err-0').style.display = 'none';
+    $('mt-err-1').style.display = 'none';
+    show(0);
   }
+  $('mt-reset').addEventListener('click', resetAll);
+
+  // ---- scoped theme toggle (own storage key; never touches the site theme)
+  var bl = $('mt-t-light'), bd = $('mt-t-dark');
+  function syncTheme() {
+    var t = scope.getAttribute('data-mt-theme');
+    bl.setAttribute('aria-pressed', t === 'light');
+    bd.setAttribute('aria-pressed', t === 'dark');
+  }
+  try { var sv = localStorage.getItem('mt-theme'); if (sv) scope.setAttribute('data-mt-theme', sv); } catch (e) {}
+  bl.addEventListener('click', function () {
+    scope.setAttribute('data-mt-theme', 'light');
+    try { localStorage.setItem('mt-theme', 'light'); } catch (e) {}
+    syncTheme();
+  });
+  bd.addEventListener('click', function () {
+    scope.setAttribute('data-mt-theme', 'dark');
+    try { localStorage.setItem('mt-theme', 'dark'); } catch (e) {}
+    syncTheme();
+  });
+  syncTheme();
 })();
 """
 
@@ -1442,8 +1726,17 @@ def _criteria_sentence(c):
         bits.append(f"{sq_lo:g}+ sqft")
     elif sq_hi:
         bits.append(f"up to {sq_hi:g} sqft")
+    lot_lo, lot_hi = c.get("lot_min"), c.get("lot_max")
+    if lot_lo and lot_hi:
+        bits.append(f"{lot_lo:g}-{lot_hi:g} sqft lot")
+    elif lot_lo:
+        bits.append(f"{lot_lo:g}+ sqft lot")
+    elif lot_hi:
+        bits.append(f"up to {lot_hi:g} sqft lot")
     if c.get("types"):
         bits.append("/".join(c["types"]))
+    if c.get("condition"):
+        bits.append("/".join(c["condition"]))
     band = _budget_band(c.get("price_min"), c.get("price_max"))
     if band:
         bits.append(band)
@@ -1481,17 +1774,30 @@ def score_buyer_match(criteria, prof):
             add(f"Price ${ask:,.0f}", "miss", 3, 0)
             gate_ok = False
 
-    for label, key, w in (("Beds", "beds", 2.0), ("Baths", "baths", 1.5)):
-        want = criteria.get(key)
-        if not want:
+    for label, key, kmax, w in (("Beds", "beds", "beds_max", 2.0), ("Baths", "baths", "baths_max", 1.5)):
+        lo, hi = criteria.get(key), criteria.get(kmax)
+        if not lo and not hi:
             continue
         got_val = prof.get(key)
         if got_val is None:
             add(f"{label} (no data)", "unknown", w, 0)
-        elif got_val + 1e-9 >= want:
-            add(f"{label} {got_val:g}+", "hit", w, 1.0)
+        elif (lo is None or got_val + 1e-9 >= lo) and (hi is None or got_val - 1e-9 <= hi):
+            add(f"{label} {got_val:g}", "hit", w, 1.0)
         else:
-            add(f"{label} {got_val:g} (< {want:g})", "miss", w, 0)
+            span = (f"{lo:g}-{hi:g}" if lo and hi else (f"{lo:g}+" if lo else f"<= {hi:g}"))
+            add(f"{label} {got_val:g} (wanted {span})", "miss", w, 0)
+            gate_ok = False
+
+    lot_min, lot_max = criteria.get("lot_min"), criteria.get("lot_max")
+    if lot_min or lot_max:
+        lot = prof.get("lot_size")
+        if lot is None:
+            add("Lot size (no data)", "unknown", 1.0, 0)
+        elif (lot_min or 0) - 1 <= lot <= (lot_max or float("inf")) + 1:
+            add(f"{lot:,.0f} sq ft lot", "hit", 1.0, 1.0)
+        else:
+            bound = f"< {lot_min:,.0f}" if (lot_min and lot < lot_min) else f"> {lot_max:,.0f}"
+            add(f"{lot:,.0f} sq ft lot ({bound})", "miss", 1.0, 0)
             gate_ok = False
 
     sq_min, sq_max = criteria.get("sqft"), criteria.get("sqft_max")
@@ -1552,6 +1858,16 @@ def score_buyer_match(criteria, prof):
             add(f"Type: {pt_raw}", "hit", 1, 1.0)
         else:
             add(f"Type: {pt_raw} (wanted {'/'.join(sorted(want))})", "miss", 1, 0)
+
+    # Condition is a soft nudge only -- neither off-market listings nor the
+    # LA County data carry a reliable condition flag, so a mention in the
+    # free text is a small bonus and a silence is never held against a row.
+    conds = criteria.get("condition") or []
+    if conds:
+        text = (prof.get("text") or "").lower()
+        hitc = [c for c in conds if c.lower() in text]
+        if hitc:
+            add("Condition: " + ", ".join(hitc), "hit", 0.5, 1.0)
 
     notes = (criteria.get("notes") or "").lower()
     if notes:
@@ -1680,7 +1996,8 @@ def _offmarket_profile(l):
     zm = _ZIP_RE.search(f"{l.get('address') or ''} {l.get('area') or ''}")
     return {
         "beds": _num(l.get("beds")), "baths": _num(l.get("baths")),
-        "sqft": _num(l.get("sqft")), "year_built": None, "property_type": "",
+        "sqft": _num(l.get("sqft")), "lot_size": _num(l.get("lot_size")),
+        "year_built": None, "property_type": "",
         "asking_price": _num(l.get("price")),
         "area": l.get("area") or "", "city": l.get("area") or "",
         "zip": zm.group(1) if zm else "",
@@ -1789,82 +2106,201 @@ def push_match_message_to_fub(lead, message):
 
 
 def build_match_page_html(oh=""):
-    oh_tag = (f'<span class="area-tag" style="margin-top:14px;display:inline-block">Open House · {html.escape(oh)}</span>'
-              if oh else "")
+    oh_pill = f'<div class="oh">Open House · {html.escape(oh)}</div>' if oh else ""
     body = f"""
-<section class="area-hero" style="min-height:60vh">
-  <img class="area-hero-img" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk" loading="eager" style="object-position:50% 55%">
-  <div class="area-hero-scrim"></div>
-  <div class="area-hero-content">
-    <div class="area-eyebrow"><span class="area-eyebrow-line"></span><span class="area-eyebrow-text">Private Buyer Search</span></div>
-    <h1 class="area-h1">Tell us what you're looking for</h1>
-    <p class="area-tagline">Share your criteria and we'll tell you, on the spot, how many homes in our network match — including properties never listed publicly.</p>
-    {oh_tag}
-  </div>
-</section>
-
-<section class="section">
-  <div class="wrap mt-wrap">
-    {MATCH_PAGE_CSS}
-    <form id="mt-form" class="om-form" novalidate>
-      <input id="mt-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-      <input type="hidden" name="oh" value="{html.escape(oh)}">
-      <div class="mt-row">
-        <label class="om-field"><span class="om-field-label">Full name</span>
-          <input type="text" name="name" class="om-input" required autocomplete="name"></label>
-        <label class="om-field"><span class="om-field-label">Email</span>
-          <input type="email" name="email" class="om-input" required autocomplete="email"></label>
-        <label class="om-field"><span class="om-field-label">Phone</span>
-          <input type="tel" name="phone" class="om-input" required autocomplete="tel"></label>
-      </div>
-
-      <div class="mt-rep">
-        <div class="mt-rep-q">Are you exclusively represented by a buyer's agent?</div>
-        <label><input type="radio" name="represented" value="no" checked> No</label>
-        <label><input type="radio" name="represented" value="yes"> Yes</label>
-        <label class="om-field" id="mt-agent" hidden><span class="om-field-label">Your agent's name</span>
-          <input type="text" name="agent_name" class="om-input"></label>
-      </div>
-
-      <div class="om-field"><span class="om-field-label">Areas you'd consider — add as many as you like</span>
-        <div class="mt-areas">
-          <div class="mt-chips" id="mt-chips"></div>
-          <input type="text" id="mt-area-input" list="match-market-list" autocomplete="off"
-                 placeholder="Type a market or ZIP, then Enter — e.g. Santa Monica">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+{MATCH_PAGE_CSS}
+<div class="mt-scope" id="mt-scope">
+  <div class="shell">
+    <aside class="brand">
+      <img class="sky" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk">
+      <div class="brand-scrim"></div>
+      <div class="brand-inner">
+        <div class="eyebrow"><span class="rule"></span>Private Buyer Search</div>
+        <h1>Tell us what you're looking for.</h1>
+        <p>Share your criteria and we'll tell you, on the spot, how many homes in our network fit — including properties never listed publicly.</p>
+        {oh_pill}
+        <div class="sig">
+          <b>Simone Marzullo</b>
+          <span>REALTOR&reg; · The Agency · Los Angeles</span>
         </div>
-        <input type="hidden" name="areas" id="mt-areas">
-        <span class="mt-note">Each area covers every ZIP inside it. Add specific ZIPs too if you have them.</span>
+        <div class="trust"><b>The Agency</b> — 130+ offices across 13+ countries</div>
+      </div>
+    </aside>
+
+    <section class="form-col">
+      <div class="fc-top">
+        <div class="rail" aria-hidden="true"><i class="on" data-r="0"></i><i data-r="1"></i></div>
+        <div class="theme" role="group" aria-label="Theme">
+          <button type="button" id="mt-t-light" aria-pressed="false" title="Light">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.4M12 19v2.4M2.6 12h2.4M19 12h2.4M5.4 5.4l1.7 1.7M16.9 16.9l1.7 1.7M18.6 5.4l-1.7 1.7M7.1 16.9l-1.7 1.7"/></svg>
+          </button>
+          <button type="button" id="mt-t-dark" aria-pressed="false" title="Dark">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 14.5A8 8 0 1 1 9.5 4a8 8 0 0 0 10.5 10.5Z"/></svg>
+          </button>
+        </div>
       </div>
 
-      <div class="mt-row">
-        <label class="om-field"><span class="om-field-label">Price min</span>
-          <input type="text" name="price_min" class="om-input" placeholder="e.g. 1.5M"></label>
-        <label class="om-field"><span class="om-field-label">Price max</span>
-          <input type="text" name="price_max" class="om-input" placeholder="e.g. 3M"></label>
+      <div class="fc-body">
+        <div class="inner">
+          <form id="mt-form" novalidate>
+            <input id="mt-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <input type="hidden" id="mt-oh" value="{html.escape(oh)}">
+
+            <div class="step" data-step="0">
+              <h2 class="step-h">What you're looking for</h2>
+              <p class="step-sub">Approximate is fine — you can refine the details later.</p>
+
+              <div class="field">
+                <span class="legend">Areas you'd consider — add as many as you like</span>
+                <div class="chips-wrap" id="mt-chips-wrap">
+                  <div class="chips" id="mt-chips"></div>
+                  <input id="mt-area-in" list="mt-markets" autocomplete="off" placeholder="Type a market or ZIP, then Enter — e.g. Santa Monica">
+                </div>
+                <p class="help">Each market covers every ZIP inside it. Add specific ZIPs too if you have them.</p>
+              </div>
+
+              <div class="field">
+                <span class="legend">Price range</span>
+                <div class="two">
+                  <div class="money"><span>$</span><input id="mt-price-min" inputmode="numeric" placeholder="Min"></div>
+                  <div class="money"><span>$</span><input id="mt-price-max" inputmode="numeric" placeholder="Max"></div>
+                </div>
+                <p class="help">Enter figures or shorthand — 1.5M, 850k. Leave a side blank for open-ended.</p>
+              </div>
+
+              <div class="field">
+                <span class="legend">Bedrooms</span>
+                <div class="mm">
+                  <label class="sel"><span>Min</span>
+                    <select id="mt-beds-min" aria-label="Minimum bedrooms">
+                      <option value="">Any</option><option>1</option><option>2</option><option>3</option>
+                      <option>4</option><option>5</option><option>6</option><option value="7">7+</option>
+                    </select></label>
+                  <label class="sel"><span>Max</span>
+                    <select id="mt-beds-max" aria-label="Maximum bedrooms">
+                      <option value="">Any</option><option>1</option><option>2</option><option>3</option>
+                      <option>4</option><option>5</option><option>6</option><option value="7">7+</option>
+                    </select></label>
+                </div>
+              </div>
+
+              <div class="field">
+                <span class="legend">Bathrooms</span>
+                <div class="mm">
+                  <label class="sel"><span>Min</span>
+                    <select id="mt-baths-min" aria-label="Minimum bathrooms">
+                      <option value="">Any</option><option>1</option><option>2</option><option>3</option>
+                      <option>4</option><option>5</option><option value="6">6+</option>
+                    </select></label>
+                  <label class="sel"><span>Max</span>
+                    <select id="mt-baths-max" aria-label="Maximum bathrooms">
+                      <option value="">Any</option><option>1</option><option>2</option><option>3</option>
+                      <option>4</option><option>5</option><option value="6">6+</option>
+                    </select></label>
+                </div>
+              </div>
+
+              <div class="field">
+                <span class="legend">Size — square feet <span style="text-transform:none;letter-spacing:0;color:var(--ink-dim)">(optional)</span></span>
+                <div class="two">
+                  <input class="in" id="mt-sqft-min" inputmode="numeric" placeholder="Min — e.g. 1,800">
+                  <input class="in" id="mt-sqft-max" inputmode="numeric" placeholder="Max — e.g. 3,500">
+                </div>
+              </div>
+
+              <div class="field">
+                <span class="legend">Lot size — square feet <span style="text-transform:none;letter-spacing:0;color:var(--ink-dim)">(optional)</span></span>
+                <div class="two">
+                  <input class="in" id="mt-lot-min" inputmode="numeric" placeholder="Min — e.g. 5,000">
+                  <input class="in" id="mt-lot-max" inputmode="numeric" placeholder="Max — e.g. 12,000">
+                </div>
+              </div>
+
+              <div class="field">
+                <span class="legend">Property type <span style="text-transform:none;letter-spacing:0;color:var(--ink-dim)">(optional · choose any)</span></span>
+                <div class="pills" id="mt-type-pills" role="group" aria-label="Property type">
+                  <button type="button" class="pill" aria-pressed="false" data-v="Single Family Home">Single Family</button>
+                  <button type="button" class="pill" aria-pressed="false" data-v="Condo/Townhome">Condo / Townhome</button>
+                  <button type="button" class="pill" aria-pressed="false" data-v="Multifamily">Multifamily</button>
+                </div>
+              </div>
+
+              <div class="field">
+                <span class="legend">Condition <span style="text-transform:none;letter-spacing:0;color:var(--ink-dim)">(optional · choose any)</span></span>
+                <div class="pills" id="mt-cond-pills" role="group" aria-label="Property condition">
+                  <button type="button" class="pill" aria-pressed="false" data-v="Fixer">Fixer</button>
+                  <button type="button" class="pill" aria-pressed="false" data-v="Original Condition">Original Condition</button>
+                  <button type="button" class="pill" aria-pressed="false" data-v="Well Maintained">Well Maintained</button>
+                  <button type="button" class="pill" aria-pressed="false" data-v="Recently Updated">Recently Updated</button>
+                  <button type="button" class="pill" aria-pressed="false" data-v="Newly Built">Newly Built</button>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="mt-notes">Anything else <span style="text-transform:none;letter-spacing:0;color:var(--ink-dim)">(optional)</span></label>
+                <textarea class="in" id="mt-notes" rows="3" style="resize:vertical"
+                          placeholder="Style, must-haves, a view, a school district, timing — whatever matters to you."></textarea>
+              </div>
+
+              <div class="nav">
+                <button type="button" class="btn primary" data-next>Continue</button>
+              </div>
+              <div class="err" id="mt-err-0">Add at least one area, a price, or a bedroom / bathroom count.</div>
+            </div>
+
+            <div class="step" data-step="1" hidden>
+              <h2 class="step-h">Where should Simone reach you?</h2>
+              <p class="step-sub">Your details go straight to Simone — never shared.</p>
+
+              <div class="field"><label for="mt-name">Full name</label>
+                <input class="in" id="mt-name" autocomplete="name"></div>
+              <div class="field"><label for="mt-email">Email</label>
+                <input class="in" id="mt-email" type="email" inputmode="email" autocomplete="email"></div>
+              <div class="field"><label for="mt-phone">Phone</label>
+                <input class="in" id="mt-phone" type="tel" inputmode="tel" autocomplete="tel"></div>
+
+              <div class="field rep">
+                <div class="rep-q">Are you exclusively represented by a buyer's agent?</div>
+                <div class="pills" id="mt-rep-pills" role="radiogroup">
+                  <button type="button" class="pill wide" role="radio" aria-checked="true" data-v="no">No</button>
+                  <button type="button" class="pill wide" role="radio" aria-checked="false" data-v="yes">Yes</button>
+                </div>
+                <div id="mt-agent" hidden>
+                  <label for="mt-agent-name" style="display:block;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim);margin:0 0 9px">Your agent's name</label>
+                  <input class="in" id="mt-agent-name">
+                </div>
+              </div>
+
+              <div class="nav">
+                <button type="button" class="btn" data-back>Back</button>
+                <button type="submit" class="btn primary" id="mt-go">Search our network</button>
+              </div>
+              <div class="err" id="mt-err-1">Please enter your name, a valid email, and a phone number.</div>
+            </div>
+
+            <div class="step" data-step="result" hidden>
+              <div class="result">
+                <div class="count" id="mt-count">0</div>
+                <h2 id="mt-result-h">homes in our network match your search</h2>
+                <p id="mt-result-p"></p>
+              </div>
+              <div class="msg">
+                <label for="mt-message" style="display:block;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:9px">Your message for Simone <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+                <textarea class="in" id="mt-message" rows="4" style="resize:vertical"></textarea>
+                <div class="nav"><button type="button" class="btn primary" id="mt-send-msg" style="flex:0 0 auto">Send message</button></div>
+                <div class="sent" id="mt-sent">Message sent — thank you.</div>
+              </div>
+              <button type="button" class="reset" id="mt-reset">Start a new search</button>
+            </div>
+          </form>
+
+          <datalist id="mt-markets">{_market_datalist_options()}</datalist>
+        </div>
       </div>
-      <div class="mt-row">
-        <label class="om-field"><span class="om-field-label">Min bedrooms</span>
-          <input type="text" name="beds" class="om-input" placeholder="3"></label>
-        <label class="om-field"><span class="om-field-label">Min sq ft</span>
-          <input type="text" name="sqft" class="om-input" placeholder="1800"></label>
-        <label class="om-field"><span class="om-field-label">Max sq ft</span>
-          <input type="text" name="sqft_max" class="om-input" placeholder="3500"></label>
-      </div>
-
-      <label class="om-field"><span class="om-field-label">Property type — optional</span>
-        <input type="text" name="types" class="om-input" list="match-type-list" autocomplete="off"
-               placeholder="Single Family Home, Condo/Townhome, Multifamily"></label>
-
-      <button type="submit" class="btn-primary" style="margin-top:20px">Search our network</button>
-    </form>
-
-    <div id="mt-error" class="om-error"></div>
-    <div id="mt-result" class="mt-result" hidden></div>
-
-    <datalist id="match-market-list">{_market_datalist_options()}</datalist>
-    <datalist id="match-type-list">{_prop_type_datalist_options()}</datalist>
+    </section>
   </div>
-</section>
+</div>
 <script>{MATCH_PAGE_SCRIPT}</script>
 """
     return render_page(body, "Buyer Search | Simone Marzullo")
@@ -1925,12 +2361,17 @@ def parse_buyer_criteria(data):
     return {
         "price_min": numf("price_min"),
         "price_max": numf("price_max"),
-        "beds": numf("beds"),
-        "baths": numf("baths"),
+        "beds": numf("beds"),          # min
+        "beds_max": numf("beds_max"),
+        "baths": numf("baths"),        # min
+        "baths_max": numf("baths_max"),
         "sqft": numf("sqft"),          # min
         "sqft_max": numf("sqft_max"),
+        "lot_min": numf("lot_min"),
+        "lot_max": numf("lot_max"),
         "areas": listf("areas"),
         "types": listf("types"),
+        "condition": listf("condition"),
         "timeline": clean(data.get("timeline"), 120),
         "notes": clean(data.get("notes"), 1000),
     }
@@ -4211,8 +4652,10 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(400, {"ok": False, "error": "Please add your agent's name."})
             return
         criteria = parse_buyer_criteria(data)
-        if not any([criteria["price_min"], criteria["price_max"], criteria["beds"],
-                    criteria["sqft"], criteria["sqft_max"], criteria["areas"], criteria["types"]]):
+        if not any([criteria["price_min"], criteria["price_max"], criteria["beds"], criteria["beds_max"],
+                    criteria["baths"], criteria["baths_max"], criteria["sqft"], criteria["sqft_max"],
+                    criteria["lot_min"], criteria["lot_max"], criteria["areas"], criteria["types"],
+                    criteria["condition"]]):
             self._send_json(400, {"ok": False, "error": "Tell us at least one thing you're looking for — an area, a price, or bedrooms."})
             return
         oh = clean(data.get("oh"), 120)
