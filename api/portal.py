@@ -548,6 +548,17 @@ MATCH_PAGE_CSS = """<style>
   #mt-agent{margin-top:12px}
   #mt-agent[hidden]{display:none}
   .mt-note{font-size:.78rem;color:var(--g5);line-height:1.65;margin-top:4px}
+  .mt-areas{border:1px solid var(--g3);background:var(--g1);padding:8px}
+  .mt-areas:focus-within{border-color:var(--red)}
+  .mt-chips{display:flex;flex-wrap:wrap;gap:6px}
+  .mt-chips:empty{display:none}
+  .mt-chip{display:inline-flex;align-items:center;gap:7px;background:var(--g2);border:1px solid var(--g3);
+    color:var(--white);font-size:.82rem;padding:5px 6px 5px 11px;border-radius:999px}
+  .mt-chip button{background:none;border:none;color:var(--g5);font-size:1rem;line-height:1;cursor:pointer;padding:0 2px}
+  .mt-chip button:hover{color:var(--red)}
+  #mt-area-input{border:none;background:none;color:var(--white);font-family:var(--sans);font-size:.95rem;
+    padding:9px 8px;width:100%;outline:none}
+  #mt-area-input::placeholder{color:var(--g5)}
   .mt-result{text-align:center;padding:20px 0}
   .mt-count{font-family:var(--serif);font-size:clamp(3rem,12vw,5rem);color:var(--red);line-height:1}
   .mt-result h2{font-family:var(--serif);font-weight:400;font-size:1.4rem;color:var(--white);margin:10px 0 6px}
@@ -579,6 +590,54 @@ MATCH_PAGE_SCRIPT = r"""
   });
   syncRep();
 
+  // ---- multi-area chip picker ----
+  var chipsEl = document.getElementById('mt-chips');
+  var areaInput = document.getElementById('mt-area-input');
+  var areasHidden = document.getElementById('mt-areas');
+  var areas = [];
+  function renderChips() {
+    chipsEl.innerHTML = areas.map(function (a, i) {
+      return '<span class="mt-chip">' + esc(a)
+        + '<button type="button" data-i="' + i + '" aria-label="Remove ' + esc(a) + '">×</button></span>';
+    }).join('');
+    areasHidden.value = areas.join(', ');
+  }
+  function addArea(raw) {
+    String(raw || '').split(/[,;\n]+/).forEach(function (part) {
+      var v = part.trim().replace(/\s+/g, ' ');
+      if (v && !areas.some(function (a) { return a.toLowerCase() === v.toLowerCase(); })) areas.push(v);
+    });
+    renderChips();
+  }
+  if (areaInput) {
+    areaInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        addArea(areaInput.value); areaInput.value = '';
+      } else if (e.key === 'Backspace' && !areaInput.value && areas.length) {
+        areas.pop(); renderChips();
+      }
+    });
+    // picking from the datalist fires 'input' with the full option value
+    areaInput.addEventListener('input', function () {
+      var v = areaInput.value;
+      var opts = document.getElementById('match-market-list').options;
+      for (var i = 0; i < opts.length; i++) {
+        if (opts[i].value === v) { addArea(v); areaInput.value = ''; break; }
+      }
+    });
+    areaInput.addEventListener('blur', function () {
+      if (areaInput.value.trim()) { addArea(areaInput.value); areaInput.value = ''; }
+    });
+    chipsEl.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-i]');
+      if (b) { areas.splice(+b.dataset.i, 1); renderChips(); }
+    });
+    document.querySelector('.mt-areas').addEventListener('click', function (e) {
+      if (e.target === e.currentTarget || e.target === chipsEl) areaInput.focus();
+    });
+  }
+
   async function post(payload) {
     var res = await fetch('/api/portal?section=match', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -591,6 +650,7 @@ MATCH_PAGE_SCRIPT = r"""
 
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
+    if (areaInput && areaInput.value.trim()) { addArea(areaInput.value); areaInput.value = ''; }
     errEl.textContent = ''; errEl.style.display = 'none';
     var fd = new FormData(form);
     var payload = {action: 'search'};
@@ -1766,11 +1826,15 @@ def build_match_page_html(oh=""):
           <input type="text" name="agent_name" class="om-input"></label>
       </div>
 
-      <label class="om-field"><span class="om-field-label">Areas — markets or ZIP codes (comma-separated)</span>
-        <input type="text" name="areas" class="om-input" list="match-market-list" autocomplete="off"
-               placeholder="e.g. Santa Monica, 90291, Beverly Hills">
-        <span class="mt-note">Pick a market and it covers every ZIP inside it. Add specific ZIPs if you have them.</span>
-      </label>
+      <div class="om-field"><span class="om-field-label">Areas you'd consider — add as many as you like</span>
+        <div class="mt-areas">
+          <div class="mt-chips" id="mt-chips"></div>
+          <input type="text" id="mt-area-input" list="match-market-list" autocomplete="off"
+                 placeholder="Type a market or ZIP, then Enter — e.g. Santa Monica">
+        </div>
+        <input type="hidden" name="areas" id="mt-areas">
+        <span class="mt-note">Each area covers every ZIP inside it. Add specific ZIPs too if you have them.</span>
+      </div>
 
       <div class="mt-row">
         <label class="om-field"><span class="om-field-label">Price min</span>
