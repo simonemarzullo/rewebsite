@@ -1791,7 +1791,7 @@ def build_match_page_html(oh=""):
         <input type="text" name="types" class="om-input" list="match-type-list" autocomplete="off"
                placeholder="Single Family Home, Condo/Townhome, Multifamily"></label>
 
-      <button type="submit" class="btn-primary" style="margin-top:20px">See how many match</button>
+      <button type="submit" class="btn-primary" style="margin-top:20px">Search our network</button>
     </form>
 
     <div id="mt-error" class="om-error"></div>
