@@ -35,6 +35,7 @@
     { "source": "/news", "destination": "/api/news" },
     { "source": "/clientaccess", "destination": "/api/portal?section=dashboard" },
     { "source": "/admin", "destination": "/api/portal?section=admin" },
+    { "source": "/match", "destination": "/api/portal?section=match" },
     { "source": "/areas/santa-monica", "destination": "/api/areas?slug=santa-monica" },
     { "source": "/areas/venice", "destination": "/api/areas?slug=venice" },
     { "source": "/areas/beverly-hills", "destination": "/api/areas?slug=beverly-hills" },

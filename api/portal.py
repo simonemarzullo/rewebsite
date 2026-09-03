@@ -537,6 +537,122 @@ BUYER_MATCH_SCRIPT = r"""
 })();
 """
 
+# --- Public /match page: styles + client script (single braces) ----------
+MATCH_PAGE_CSS = """<style>
+  .mt-wrap{max-width:600px;margin:0 auto}
+  .mt-row{display:flex;gap:14px;flex-wrap:wrap}
+  .mt-row > .om-field{flex:1 1 150px}
+  .mt-rep{border:1px solid var(--g3);padding:16px 18px;margin:6px 0}
+  .mt-rep-q{font-size:.9rem;color:var(--white);margin-bottom:10px}
+  .mt-rep label{display:inline-flex;align-items:center;gap:8px;margin-right:22px;color:var(--g6);font-size:.9rem;cursor:pointer}
+  #mt-agent{margin-top:12px}
+  #mt-agent[hidden]{display:none}
+  .mt-note{font-size:.78rem;color:var(--g5);line-height:1.65;margin-top:4px}
+  .mt-result{text-align:center;padding:20px 0}
+  .mt-count{font-family:var(--serif);font-size:clamp(3rem,12vw,5rem);color:var(--red);line-height:1}
+  .mt-result h2{font-family:var(--serif);font-weight:400;font-size:1.4rem;color:var(--white);margin:10px 0 6px}
+  .mt-result p{color:var(--g5);font-size:.92rem;line-height:1.7;max-width:44ch;margin:0 auto}
+  .mt-msg{margin-top:26px;border-top:1px solid var(--g3);padding-top:22px;text-align:left}
+  .mt-msg .om-field-label{margin-bottom:8px}
+  .mt-thanks{color:var(--red);font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;margin-top:12px}
+  #mt-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+</style>"""
+
+MATCH_PAGE_SCRIPT = r"""
+(function () {
+  var form = document.getElementById('mt-form');
+  if (!form) return;
+  var errEl = document.getElementById('mt-error');
+  var resultEl = document.getElementById('mt-result');
+  var agentBox = document.getElementById('mt-agent');
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c];
+    });
+  }
+  function syncRep() {
+    var yes = form.querySelector('input[name="represented"][value="yes"]');
+    agentBox.hidden = !(yes && yes.checked);
+  }
+  form.querySelectorAll('input[name="represented"]').forEach(function (r) {
+    r.addEventListener('change', syncRep);
+  });
+  syncRep();
+
+  async function post(payload) {
+    var res = await fetch('/api/portal?section=match', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    var data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Something went wrong.');
+    return data;
+  }
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    errEl.textContent = ''; errEl.style.display = 'none';
+    var fd = new FormData(form);
+    var payload = {action: 'search'};
+    fd.forEach(function (v, k) { payload[k] = v; });
+    var btn = form.querySelector('button[type="submit"]');
+    var prev = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Checking our network…';
+    try {
+      var data = await post(payload);
+      var first = (payload.name || '').trim().split(' ')[0];
+      var body;
+      if (data.count > 0) {
+        body = '<div class="mt-count">' + data.count + '</div>'
+          + '<h2>' + (data.count === 1 ? 'home matches' : 'homes match') + ' what you’re looking for</h2>'
+          + '<p>These aren’t listed publicly. Contact Simone Marzullo directly for details — or send a note below and he’ll be in touch.</p>';
+      } else {
+        body = '<h2>Thank you' + (first ? ', ' + esc(first) : '') + '.</h2>'
+          + '<p>Nothing in our network matches this search right now. Simone will follow up personally as soon as something fits — or send him a note below.</p>';
+      }
+      resultEl.innerHTML = body + msgFormHtml(payload);
+      form.hidden = true;
+      resultEl.hidden = false;
+      resultEl.scrollIntoView({block: 'center', behavior: 'smooth'});
+      wireMsgForm(payload);
+    } catch (err) {
+      errEl.textContent = err.message; errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = prev;
+    }
+  });
+
+  function msgFormHtml() {
+    return '<div class="mt-msg"><form id="mt-msg-form">'
+      + '<label class="om-field"><span class="om-field-label">Your message for Simone (optional)</span>'
+      + '<textarea name="message" class="om-input" rows="4" style="width:100%;font-family:inherit;resize:vertical"></textarea></label>'
+      + '<button type="submit" class="btn-primary" style="margin-top:12px">Send message</button>'
+      + '<div class="mt-thanks" id="mt-msg-done" hidden>Message sent — thank you.</div>'
+      + '</form></div>';
+  }
+  function wireMsgForm(lead) {
+    var mf = document.getElementById('mt-msg-form');
+    if (!mf) return;
+    mf.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var msg = mf.message.value.trim();
+      if (!msg) return;
+      var b = mf.querySelector('button');
+      b.disabled = true; b.textContent = 'Sending…';
+      try {
+        await post({action: 'message', name: lead.name, email: lead.email, phone: lead.phone, message: msg});
+        mf.message.disabled = true;
+        b.style.display = 'none';
+        document.getElementById('mt-msg-done').hidden = false;
+      } catch (err) {
+        b.disabled = false; b.textContent = 'Send message';
+        alert(err.message);
+      }
+    });
+  }
+})();
+"""
+
 NAV_ITEMS = [
     ("AREAS", "/areas"),
     ("OFF-MARKET", "/off-market"),
@@ -1491,6 +1607,203 @@ def log_match_to_fub(person_id, criteria_line, buyer_label):
         "body": f"Possible fit for a buyer need: {criteria_line} — buyer: {buyer_label}.",
     })
     return body is not None
+
+
+# ---------------------------------------------------------------------------
+# Public buyer-search page (/match) -- a shareable link + open-house form.
+# A visitor submits contact info + what they want; we count matches across
+# the off-market listings AND the FUB Nurture pipeline, show only the count
+# (never addresses), and push the lead to FollowUpBoss.
+# ---------------------------------------------------------------------------
+def _offmarket_profile(l):
+    """Shape one offmarket_listings row like a score_buyer_match `prof`."""
+    zm = _ZIP_RE.search(f"{l.get('address') or ''} {l.get('area') or ''}")
+    return {
+        "beds": _num(l.get("beds")), "baths": _num(l.get("baths")),
+        "sqft": _num(l.get("sqft")), "year_built": None, "property_type": "",
+        "asking_price": _num(l.get("price")),
+        "area": l.get("area") or "", "city": l.get("area") or "",
+        "zip": zm.group(1) if zm else "",
+        "address": l.get("address") or "", "text": l.get("description") or "",
+    }
+
+
+def run_public_match(conn, criteria):
+    """(total_count, note_or_None). Off-market listings that clear the gate +
+    FUB Nurture prospects that clear it."""
+    total = 0
+    note = None
+    try:
+        for l in fetch_all_offmarket_listings(conn):
+            if not l.get("active"):
+                continue
+            r = score_buyer_match(criteria, _offmarket_profile(l))
+            if r["gate_ok"] and r["score"] >= BUYER_MATCH_MIN_SCORE:
+                total += 1
+    except Exception as e:
+        print(f"portal(match): off-market scan failed: {e}")
+    fub = run_buyer_match(criteria)
+    total += len(fub.get("matches") or [])
+    if fub.get("error"):
+        note = fub["error"]
+    return total, note
+
+
+def _match_lead_tags(lead, criteria, count, oh):
+    tags = ["Buyer Inquiry", "Match Tool"]
+    if oh:
+        tags += ["Open House", f"Open House: {oh}"[:100]]
+    if lead.get("represented"):
+        tags.append("Buyer - Agent Represented")
+        if lead.get("agent_name"):
+            tags.append(f"Buyer's Agent: {lead['agent_name']}"[:100])
+    else:
+        tags.append("Buyer - Unrepresented")
+    for a in (criteria.get("areas") or [])[:6]:
+        tags.append(f"Buyer Area: {a}"[:100])
+    band = _budget_band(criteria.get("price_min"), criteria.get("price_max"))
+    if band:
+        tags.append(f"Buyer Budget: {band}")
+    if count > 0:
+        tags.append("Has Inventory Match")
+    return tags
+
+
+def _match_person(lead):
+    person = {}
+    if lead.get("name"):
+        parts = lead["name"].split()
+        person["firstName"] = parts[0]
+        if len(parts) > 1:
+            person["lastName"] = " ".join(parts[1:])
+    if lead.get("email"):
+        person["emails"] = [{"value": lead["email"]}]
+    if lead.get("phone"):
+        person["phones"] = [{"value": lead["phone"]}]
+    return person
+
+
+def push_match_lead_to_fub(lead, criteria, count, oh):
+    """Create/merge the buyer as a FollowUpBoss contact. -> note string."""
+    if not os.environ.get("FUB_API_KEY"):
+        return "saved (FollowUpBoss not configured)"
+    summary = _criteria_sentence(criteria)
+    rep = (f"Exclusively represented by {lead.get('agent_name') or 'a buyer’s agent'}"
+           if lead.get("represented") else "Not exclusively represented by a buyer's agent")
+    bg = [
+        f"Buyer search via marzullore.com/match{f' (Open House: {oh})' if oh else ''}.",
+        f"Looking for: {summary}",
+        f"Matches in our network: {count}",
+        rep,
+    ]
+    person = _match_person(lead)
+    person["tags"] = _match_lead_tags(lead, criteria, count, oh)
+    person["background"] = "\n".join(bg)
+    payload = {
+        "source": os.environ.get("FUB_SOURCE", "Simone Marzullo Website"),
+        "system": os.environ.get("FUB_SYSTEM", "Simone Marzullo Website"),
+        "type": "Property Inquiry",
+        "message": f"New buyer search (/match): {summary} — {count} match(es) in our network. {rep}.",
+        "person": person,
+    }
+    _status, body, err = _fub_request("POST", FUB_EVENTS_URL, payload)
+    return "sent to FollowUpBoss" if body is not None else f"FollowUpBoss push failed ({err})"
+
+
+def push_match_message_to_fub(lead, message):
+    """A follow-up 'message Simone' note from the same buyer -- keyed by email
+    so FollowUpBoss attaches it to the contact created above."""
+    if not os.environ.get("FUB_API_KEY") or not message:
+        return False
+    person = _match_person(lead)
+    person["tags"] = ["Buyer Inquiry", "Match Tool", "Sent a Message"]
+    payload = {
+        "source": os.environ.get("FUB_SOURCE", "Simone Marzullo Website"),
+        "system": os.environ.get("FUB_SYSTEM", "Simone Marzullo Website"),
+        "type": "General Inquiry",
+        "message": f"Message from buyer search (/match): {message}",
+        "person": person,
+    }
+    _status, body, _err = _fub_request("POST", FUB_EVENTS_URL, payload)
+    return body is not None
+
+
+def build_match_page_html(oh=""):
+    oh_tag = (f'<span class="area-tag" style="margin-top:14px;display:inline-block">Open House · {html.escape(oh)}</span>'
+              if oh else "")
+    body = f"""
+<section class="area-hero" style="min-height:60vh">
+  <img class="area-hero-img" src="/assets/hero-skyline-day.jpg" alt="Los Angeles skyline at dusk" loading="eager" style="object-position:50% 55%">
+  <div class="area-hero-scrim"></div>
+  <div class="area-hero-content">
+    <div class="area-eyebrow"><span class="area-eyebrow-line"></span><span class="area-eyebrow-text">Private Buyer Search</span></div>
+    <h1 class="area-h1">Tell us what you're looking for</h1>
+    <p class="area-tagline">Share your criteria and we'll tell you, on the spot, how many homes in our network match — including properties never listed publicly.</p>
+    {oh_tag}
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap mt-wrap">
+    {MATCH_PAGE_CSS}
+    <form id="mt-form" class="om-form" novalidate>
+      <input id="mt-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <input type="hidden" name="oh" value="{html.escape(oh)}">
+      <div class="mt-row">
+        <label class="om-field"><span class="om-field-label">Full name</span>
+          <input type="text" name="name" class="om-input" required autocomplete="name"></label>
+        <label class="om-field"><span class="om-field-label">Email</span>
+          <input type="email" name="email" class="om-input" required autocomplete="email"></label>
+        <label class="om-field"><span class="om-field-label">Phone</span>
+          <input type="tel" name="phone" class="om-input" required autocomplete="tel"></label>
+      </div>
+
+      <div class="mt-rep">
+        <div class="mt-rep-q">Are you exclusively represented by a buyer's agent?</div>
+        <label><input type="radio" name="represented" value="no" checked> No</label>
+        <label><input type="radio" name="represented" value="yes"> Yes</label>
+        <label class="om-field" id="mt-agent" hidden><span class="om-field-label">Your agent's name</span>
+          <input type="text" name="agent_name" class="om-input"></label>
+      </div>
+
+      <label class="om-field"><span class="om-field-label">Areas — markets or ZIP codes (comma-separated)</span>
+        <input type="text" name="areas" class="om-input" list="match-market-list" autocomplete="off"
+               placeholder="e.g. Santa Monica, 90291, Beverly Hills">
+        <span class="mt-note">Pick a market and it covers every ZIP inside it. Add specific ZIPs if you have them.</span>
+      </label>
+
+      <div class="mt-row">
+        <label class="om-field"><span class="om-field-label">Price min</span>
+          <input type="text" name="price_min" class="om-input" placeholder="e.g. 1.5M"></label>
+        <label class="om-field"><span class="om-field-label">Price max</span>
+          <input type="text" name="price_max" class="om-input" placeholder="e.g. 3M"></label>
+      </div>
+      <div class="mt-row">
+        <label class="om-field"><span class="om-field-label">Min bedrooms</span>
+          <input type="text" name="beds" class="om-input" placeholder="3"></label>
+        <label class="om-field"><span class="om-field-label">Min sq ft</span>
+          <input type="text" name="sqft" class="om-input" placeholder="1800"></label>
+        <label class="om-field"><span class="om-field-label">Max sq ft</span>
+          <input type="text" name="sqft_max" class="om-input" placeholder="3500"></label>
+      </div>
+
+      <label class="om-field"><span class="om-field-label">Property type — optional</span>
+        <input type="text" name="types" class="om-input" list="match-type-list" autocomplete="off"
+               placeholder="Single Family Home, Condo/Townhome, Multifamily"></label>
+
+      <button type="submit" class="btn-primary" style="margin-top:20px">See how many match</button>
+    </form>
+
+    <div id="mt-error" class="om-error"></div>
+    <div id="mt-result" class="mt-result" hidden></div>
+
+    <datalist id="match-market-list">{_market_datalist_options()}</datalist>
+    <datalist id="match-type-list">{_prop_type_datalist_options()}</datalist>
+  </div>
+</section>
+<script>{MATCH_PAGE_SCRIPT}</script>
+"""
+    return render_page(body, "Buyer Search | Simone Marzullo")
 
 
 def fetch_all_buyer_needs(conn):
@@ -3650,6 +3963,11 @@ class handler(BaseHTTPRequestHandler):
         section, query = self._section()
         is_logout = "logout=1" in query
 
+        if section == "match":
+            oh = clean(urllib.parse.parse_qs(query).get("oh", [""])[0], 120)
+            self._send_html(200, build_match_page_html(oh))
+            return
+
         if section == "admin":
             if is_logout:
                 expired = f"{ADMIN_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
@@ -3756,6 +4074,10 @@ class handler(BaseHTTPRequestHandler):
             self._handle_admin_post(data)
             return
 
+        if section == "match":
+            self._handle_match_post(data)
+            return
+
         # Default: client dashboard login
         email = str(data.get("email", "")).strip().lower()
         password = str(data.get("password", ""))
@@ -3788,6 +4110,65 @@ class handler(BaseHTTPRequestHandler):
         push_dashboard_login_to_followupboss(client["email"], client["name"])
         cookie = f"{CLIENT_COOKIE_NAME}={make_session_token('client', client['id'])}; Path=/; Max-Age={SESSION_HOURS['client'] * 3600}; HttpOnly; Secure; SameSite=Lax"
         self._send_json(200, {"ok": True}, set_cookie=cookie)
+
+    def _handle_match_post(self, data):
+        """Public /match submissions -- no auth. Honeypot + field caps only."""
+        if clean(data.get("website"), 100):
+            self._send_json(200, {"ok": True, "count": 0})  # bot: pretend success
+            return
+        action = clean(data.get("action"), 20) or "search"
+        name = clean(data.get("name"), 120)
+        email = clean(data.get("email"), 200).lower()
+        phone = clean(data.get("phone"), 40)
+        if not name or not EMAIL_RE.match(email):
+            self._send_json(400, {"ok": False, "error": "Please enter your name and a valid email."})
+            return
+        lead = {"name": name, "email": email, "phone": phone}
+
+        if action == "message":
+            msg = clean(data.get("message"), 2000)
+            if not msg:
+                self._send_json(400, {"ok": False, "error": "Enter a message first."})
+                return
+            try:
+                push_match_message_to_fub(lead, msg)
+            except Exception as e:
+                print(f"portal(match): message push failed: {e}")
+            self._send_json(200, {"ok": True})
+            return
+
+        if not phone:
+            self._send_json(400, {"ok": False, "error": "Please enter a phone number."})
+            return
+        represented = clean(data.get("represented"), 8) == "yes"
+        lead["represented"] = represented
+        lead["agent_name"] = clean(data.get("agent_name"), 120) if represented else ""
+        if represented and not lead["agent_name"]:
+            self._send_json(400, {"ok": False, "error": "Please add your agent's name."})
+            return
+        criteria = parse_buyer_criteria(data)
+        if not any([criteria["price_min"], criteria["price_max"], criteria["beds"],
+                    criteria["sqft"], criteria["sqft_max"], criteria["areas"], criteria["types"]]):
+            self._send_json(400, {"ok": False, "error": "Tell us at least one thing you're looking for — an area, a price, or bedrooms."})
+            return
+        oh = clean(data.get("oh"), 120)
+
+        count = 0
+        conn = None
+        try:
+            conn = get_conn()
+            if conn is not None:
+                count, _note = run_public_match(conn, criteria)
+        except Exception as e:
+            print(f"portal(match): search failed: {e}")
+        finally:
+            if conn:
+                conn.close()
+        try:
+            push_match_lead_to_fub(lead, criteria, count, oh)
+        except Exception as e:
+            print(f"portal(match): lead push failed: {e}")
+        self._send_json(200, {"ok": True, "count": count})
 
     def _handle_admin_post(self, data):
         action = clean(data.get("action"), 40)
