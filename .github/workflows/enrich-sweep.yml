@@ -34,6 +34,10 @@ on:
         description: "Skip Census address standardisation (use raw addresses only)"
         type: boolean
         default: false
+      skip_area_tags:
+        description: "Skip the ZIP / area tagging pass"
+        type: boolean
+        default: false
 
 concurrency:
   group: enrich-sweep
@@ -72,8 +76,17 @@ jobs:
           ENRICH_DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
           ENRICH_REBUILD_INDEX: ${{ github.event.inputs.rebuild_index == 'true' && '1' || '0' }}
           ENRICH_SKIP_GEOCODE: ${{ github.event.inputs.skip_geocode == 'true' && '1' || '0' }}
+          ENRICH_SKIP_AREA_TAGS: ${{ github.event.inputs.skip_area_tags == 'true' && '1' || '0' }}
           ENRICH_PARCEL_DB: parcels.sqlite
+          ENRICH_TAG_REPORT: tag_report.txt
         run: python3 scripts/enrich_sweep.py
+
+      - name: Upload tag-change report (dry runs)
+        if: always() && hashFiles('tag_report.txt') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: tag-report
+          path: tag_report.txt
 
       - name: Save parcel index cache
         if: always()

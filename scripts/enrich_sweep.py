@@ -9,9 +9,13 @@ hundred, far too slow for ~50k. This script instead:
   2. Runs each contact's mailing address through the free US Census batch
      geocoder to standardise it (spelling, directionals, ZIP+4) so more of
      them key-match a parcel. Results are cached in the same SQLite file.
-  3. Walks every FollowUpBoss contact and, for any with a street address but a
-     blank Bedrooms/Bathrooms/SqFt/YearBuilt/PropertyType, fills the gaps from
-     the local index -- instant per contact.
+  3. Walks every FollowUpBoss contact and:
+     - fills a blank Bedrooms/Bathrooms/SqFt/YearBuilt/PropertyType from the
+       local parcel index (instant per contact);
+     - tags the contact with its ZIP ("90403") and area ("Santa Monica", or a
+       "West Los Angeles/Cheviot Hills" combo for a straddling ZIP), and
+       removes any area/ZIP tag that's provably wrong for the address. Free-
+       text tags ("Hot Lead", "Zillow", ...) are never touched.
 
 It writes to the SAME `fub_enrich_state` row the admin dashboard reads, so the
 progress ring / counters there reflect this job too. It only ever fills blank
@@ -31,6 +35,8 @@ Env:
   ENRICH_PARCEL_DB      optional -- sqlite cache path (default ./parcels.sqlite)
   ENRICH_DRY_RUN        optional -- "1" to skip every FollowUpBoss write
   ENRICH_SKIP_GEOCODE   optional -- "1" to skip Census address standardisation
+  ENRICH_SKIP_AREA_TAGS optional -- "1" to skip the ZIP / area tagging pass
+  ENRICH_TAG_REPORT     optional -- dry-run tag-change report path (default ./tag_report.txt)
   ENRICH_REBUILD_INDEX  optional -- "1" to rebuild the parcel cache even if fresh
   ENRICH_PARCEL_MAX_PAGES optional -- stop the parcel download after N pages
                           (1000 rows each); for a quick partial run / testing
@@ -49,6 +55,9 @@ import urllib.parse
 import urllib.request
 
 import psycopg2
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "api"))
+from zip_areas import ZIPS_BY_AREA  # noqa: E402  -- one source of truth, shared with api/portal.py
 
 FUB_API = "https://api.followupboss.com/v1"
 PARCEL_URL = ("https://public.gis.lacounty.gov/public/rest/services/"
@@ -205,6 +214,13 @@ def _first_addr(person):
     return addrs[0] if isinstance(addrs, list) and addrs and isinstance(addrs[0], dict) else {}
 
 
+def _person_name(person):
+    n = (person.get("name") or "").strip()
+    if n:
+        return n
+    return " ".join(x for x in (person.get("firstName"), person.get("lastName")) if x).strip() or "(no name)"
+
+
 def _addr_key(street, city, state, zip_code):
     """Stable per-address cache key from the raw FollowUpBoss parts."""
     st = _UNIT_RE.sub("", re.sub(r"\s+", " ", str(street or "").strip())).strip().upper()
@@ -316,6 +332,93 @@ def std_lookup(con, key):
     r = con.execute("SELECT house, street, city, zip FROM addr_std "
                     "WHERE raw=? AND status='Match'", (key,)).fetchone()
     return {"house": r[0], "street": r[1], "city": r[2], "zip": r[3]} if r and r[0] and r[1] else None
+
+
+# --------------------------------------------------------------------------
+# ZIP / area tagging -- give every contact a `<zip5>` tag and an area tag
+# (one market name, or a "/"-joined combo when the ZIP straddles several).
+# Only ever fixes tags that are provably inconsistent with the ZIP; never
+# touches free-text tags like "Hot Lead" or "Zillow".
+# --------------------------------------------------------------------------
+_MARKETS_FOR_ZIP = {}
+for _mkt, _zs in ZIPS_BY_AREA.items():
+    for _z in _zs:
+        _MARKETS_FOR_ZIP.setdefault(_z, []).append(_mkt)
+_MARKET_SET = set(ZIPS_BY_AREA)
+_ZIP_TAG_RE = re.compile(r"^\d{5}$")
+
+
+def _area_tag_for_zip(z):
+    m = _MARKETS_FOR_ZIP.get(z)
+    if not m:
+        return None
+    return m[0] if len(m) == 1 else "/".join(m)
+
+
+def _market_parts(tag):
+    """If `tag` is a directory market name or a '/'-combo of them, return the
+    list of parts; otherwise None (it's a free-text tag we must not touch)."""
+    parts = [p.strip() for p in str(tag).split("/")]
+    return parts if parts and all(p in _MARKET_SET for p in parts) else None
+
+
+def _area_consistent(tag, z, desired):
+    """True if `tag` (a known area tag) is geographically OK for ZIP z."""
+    if desired and tag == desired:
+        return True
+    parts = _market_parts(tag)
+    if not parts:
+        return False
+    return all(z in ZIPS_BY_AREA[p] for p in parts)
+
+
+def compute_tag_changes(person, z, allow_remove):
+    """-> (new_tags, added, removed, flagged_reason|None). new_tags is the full
+    list to PUT; equal to the current list when nothing changes."""
+    cur = [t for t in (person.get("tags") or []) if isinstance(t, str) and t.strip()]
+    desired_area = _area_tag_for_zip(z)
+
+    zip_tags = [t for t in cur if _ZIP_TAG_RE.match(t)]
+    area_tags = [t for t in cur if not _ZIP_TAG_RE.match(t) and _market_parts(t) is not None]
+    other = [t for t in cur if t not in zip_tags and t not in area_tags]
+
+    added, removed, flags = [], [], []
+
+    # --- ZIP tag ---
+    keep_zip = [z] if z in zip_tags else []
+    if not keep_zip:
+        added.append(z)
+        keep_zip = [z]
+    wrong_zips = [t for t in zip_tags if t != z]
+    if wrong_zips:
+        if len(zip_tags) == 1 and allow_remove:
+            removed += wrong_zips
+        else:
+            keep_zip += wrong_zips
+            flags.append("multiple ZIP tags")
+
+    # --- area tag ---
+    keep_area = [t for t in area_tags if _area_consistent(t, z, desired_area)]
+    bad_area = [t for t in area_tags if t not in keep_area]
+    if bad_area and allow_remove:
+        removed += bad_area
+        if len(bad_area) > 1 or keep_area:
+            flags.append("area tag(s) removed: " + ", ".join(bad_area))
+    elif bad_area:
+        keep_area += bad_area  # low-confidence ZIP -> leave them, just flag
+        flags.append("possible wrong area tag: " + ", ".join(bad_area))
+    if desired_area and not keep_area:
+        added.append(desired_area)
+        keep_area = [desired_area]
+
+    new_tags = other + keep_zip + keep_area
+    # de-dupe, preserve order
+    seen, deduped = set(), []
+    for t in new_tags:
+        if t not in seen:
+            seen.add(t)
+            deduped.append(t)
+    return deduped, added, removed, ("; ".join(flags) or None)
 
 
 # --------------------------------------------------------------------------
@@ -497,6 +600,7 @@ def main():
     con = build_parcel_index(db_path)
     ensure_addr_cache(con)
     skip_geo = os.environ.get("ENRICH_SKIP_GEOCODE") == "1"
+    skip_tags = os.environ.get("ENRICH_SKIP_AREA_TAGS") == "1"
     fieldmap = fub_fieldmap(headers)
     if not fieldmap:
         raise SystemExit("No usable FollowUpBoss custom fields -- nothing to write. Run field setup in /admin.")
@@ -524,6 +628,8 @@ def main():
         log("Starting a fresh FollowUpBoss walk.")
 
     seen = upd = nomatch = noaddr = skipped = geo_req = geo_hit = 0
+    tag_add = tag_rm = tag_flag = tag_put = 0
+    tag_report = []  # (id, name, added, removed, flag) for the dry-run write-up
     dry = " [DRY RUN]" if dry_run else ""
     while url:
         st, body, err = _http("GET", url, headers=headers)
@@ -535,13 +641,15 @@ def main():
         total = meta.get("total") if isinstance(meta.get("total"), int) else None
         page_new_link = meta.get("nextLink") or ""
 
-        # standardise this page's addresses first, so parcel_lookup gets the
-        # Census-corrected street/ZIP (cached, so re-runs skip known ones)
+        # standardise this page's addresses first, so parcel_lookup and the
+        # ZIP tag get the Census-corrected street/ZIP (cached; re-runs skip
+        # known ones). Tagging needs a ZIP for every contact, not just the
+        # ones with blank property fields.
         page_geo_req = page_geo_hit = 0
         if not skip_geo:
             pending = []
             for person in people:
-                if not person_needs_work(person, fieldmap):
+                if skip_tags and not person_needs_work(person, fieldmap):
                     continue
                 a = _first_addr(person)
                 if a.get("street"):
@@ -554,14 +662,40 @@ def main():
                 if page_geo_req:
                     time.sleep(0.3)
 
-        page_upd = page_nomatch = page_noaddr = page_skip = 0
+        page_upd = page_nomatch = page_noaddr = page_skip = page_tag = 0
         for person in people:
             seen += 1
+            a0 = _first_addr(person)
+
+            # --- ZIP / area tags (every contact, independent of property gaps) ---
+            if not skip_tags:
+                key = _addr_key(a0.get("street"), a0.get("city"), a0.get("state"), a0.get("code"))
+                std_z = std_lookup(con, key) if not skip_geo else None
+                z = (std_z["zip"] if std_z else _zip5(a0.get("code")))
+                if z:
+                    new_tags, added, removed, flag = compute_tag_changes(
+                        person, z, allow_remove=bool(std_z))
+                    if added or removed:
+                        tag_add += len(added)
+                        tag_rm += len(removed)
+                        if flag:
+                            tag_flag += 1
+                        if dry_run and len(tag_report) < 400:
+                            tag_report.append((person.get("id"), _person_name(person),
+                                               added, removed, flag))
+                        if not dry_run:
+                            st2, b2, e2 = _http("PUT", f"{FUB_API}/people/{person['id']}",
+                                                {"tags": new_tags}, headers)
+                            if b2 is not None:
+                                tag_put += 1
+                                time.sleep(0.12)
+                        person["tags"] = new_tags  # so fill_person appends to the corrected list
+                        page_tag += 1
+
             if not person_needs_work(person, fieldmap):
                 skipped += 1
                 page_skip += 1
                 continue
-            a0 = _first_addr(person)
             house = street = None
             city, zc = a0.get("city"), a0.get("code")
             if not skip_geo:
@@ -598,6 +732,7 @@ def main():
         log(f"page: +{page_upd} {'would fill' if dry_run else 'filled'}, {page_nomatch} no-match, "
             f"{page_noaddr} no-addr, {page_skip} already-done"
             + (f", geo {page_geo_hit}/{page_geo_req}" if page_geo_req else "")
+            + (f", tags {page_tag}" if page_tag else "")
             + f" · running total {upd:,}{dry}")
 
         if done:
@@ -610,10 +745,32 @@ def main():
 
     pg.close()
     con.close()
+
+    if not skip_tags:
+        log("-" * 60)
+        log(f"ZIP/area tags{dry}: {tag_add:,} added, {tag_rm:,} removed"
+            + (f", {tag_put:,} contacts updated" if not dry_run else "")
+            + (f", {tag_flag:,} flagged for review" if tag_flag else ""))
+        if dry_run and tag_report:
+            path = os.environ.get("ENRICH_TAG_REPORT", "tag_report.txt")
+            try:
+                with open(path, "w") as fh:
+                    fh.write("id\tname\tadded\tremoved\tflag\n")
+                    for pid, name, added, removed, flag in tag_report:
+                        fh.write(f"{pid}\t{name}\t{'|'.join(added)}\t{'|'.join(removed)}\t{flag or ''}\n")
+                log(f"  wrote {len(tag_report)} sample rows to {path}")
+            except Exception as e:  # noqa: BLE001
+                log(f"  couldn't write tag report: {e}")
+            shown = [r for r in tag_report if r[3]][:25]  # ones with a removal
+            for pid, name, added, removed, flag in shown:
+                log(f"  [{pid}] {name}: +[{', '.join(added)}] -[{', '.join(removed)}]"
+                    + (f"  ({flag})" if flag else ""))
+
     log("=" * 60)
     log(f"DONE{dry}. scanned {seen:,} · filled {upd:,} · already-complete {skipped:,} · "
         f"no LA County match {nomatch:,} · no street address {noaddr:,} · "
         + (f"geocoded {geo_req:,} (matched {geo_hit:,}) · " if geo_req else "")
+        + (f"tags +{tag_add:,}/-{tag_rm:,} · " if not skip_tags else "")
         + f"elapsed {(time.time()-started)/60:.1f} min")
 
 
