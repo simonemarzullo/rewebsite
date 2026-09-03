@@ -2306,7 +2306,7 @@ def build_match_page_html(oh=""):
                 <p id="mt-result-p"></p>
               </div>
               <div class="msg">
-                <label for="mt-message" style="display:block;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:9px">Your message for Simone <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+                <label for="mt-message" style="display:block;font-size:.9rem;color:var(--ink-2);margin-bottom:9px">Feel free to leave a note or any additional information below.</label>
                 <textarea class="in" id="mt-message" rows="4" style="resize:vertical"></textarea>
                 <div class="nav"><button type="button" class="btn primary" id="mt-send-msg" style="flex:0 0 auto">Send message</button></div>
                 <div class="sent" id="mt-sent">Message sent — thank you.</div>
