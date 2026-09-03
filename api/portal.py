@@ -595,21 +595,22 @@ MATCH_PAGE_CSS = """<style>
     box-shadow:0 1px 2px rgba(26,22,19,.05),0 8px 30px -12px rgba(26,22,19,.16);position:relative}
   @media (min-width:560px){ .mt-scope .wrap{margin:22px auto 64px;min-height:0;border-radius:22px;overflow:hidden} }
 
-  .mt-scope header{padding:22px 22px 0;position:relative}
+  .mt-scope header{padding:20px 22px 0}
+  .mt-scope .head-top{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:30px}
   .mt-scope .kick{display:flex;align-items:center;gap:9px;font-size:.6rem;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-dim)}
-  .mt-scope .kick::before{content:"";width:22px;height:1px;background:var(--accent)}
-  .mt-scope h1{font-family:var(--serif);font-weight:500;font-size:1.72rem;line-height:1.12;letter-spacing:.005em;margin:12px 0 6px;text-wrap:balance}
+  .mt-scope .kick::before{content:"";width:22px;height:1px;background:var(--accent);flex:0 0 auto}
+  .mt-scope h1{font-family:var(--serif);font-weight:500;font-size:1.72rem;line-height:1.12;letter-spacing:.005em;margin:14px 0 6px;text-wrap:balance}
   .mt-scope .sub{color:var(--ink-2);font-size:.9rem;margin:0}
   .mt-scope .mt-oh-pill{display:inline-block;margin-top:13px;font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;
     color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:6px 12px}
-  .mt-scope .theme{position:absolute;top:20px;right:18px;display:inline-flex;border:1px solid var(--line);border-radius:999px;background:var(--paper)}
-  .mt-scope .theme button{width:30px;height:30px;display:grid;place-items:center;color:var(--ink-dim);border-radius:999px}
+  .mt-scope .theme{flex:0 0 auto;display:inline-flex;border:1px solid var(--line);border-radius:999px;background:var(--paper);padding:2px}
+  .mt-scope .theme button{width:26px;height:26px;display:grid;place-items:center;color:var(--ink-dim);border-radius:999px}
   .mt-scope .theme button[aria-pressed="true"]{background:var(--accent);color:#fff}
-  .mt-scope .rail{display:flex;gap:6px;margin:18px 0 0}
+  .mt-scope .rail{display:flex;gap:6px;margin:20px 0 0}
   .mt-scope .rail i{height:3px;flex:1;border-radius:2px;background:var(--line);transition:background .3s}
   .mt-scope .rail i.on{background:var(--accent)}
 
-  .mt-scope .body{padding:6px 0 132px}
+  .mt-scope .body{padding:6px 0 4px}
   .mt-scope .sec{padding:24px 22px}
   .mt-scope .sec + .sec{border-top:1px solid var(--line-2)}
   .mt-scope .sec h2{font-size:1.06rem;font-weight:600;letter-spacing:-.01em;margin:0 0 3px}
@@ -663,14 +664,14 @@ MATCH_PAGE_CSS = """<style>
   .mt-scope #mt-agent[hidden]{display:none}
   .mt-scope #mt-agent{margin-top:13px}
 
-  .mt-scope .bar{position:fixed;left:0;right:0;bottom:0;z-index:60;pointer-events:none}
-  .mt-scope .bar-inner{max-width:520px;margin:0 auto;padding:14px 18px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,var(--paper) 34%);pointer-events:auto}
-  @media (min-width:560px){ .mt-scope .bar-inner{padding-bottom:18px} }
-  .mt-scope .cta{width:100%;min-height:56px;border-radius:999px;background:var(--accent);color:#fff;font-size:.92rem;font-weight:600;letter-spacing:.02em;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 24px -8px rgba(176,18,42,.45);transition:background .14s,transform .1s}
-  .mt-scope .cta:active{transform:translateY(1px)}
+  .mt-scope .bar{border-top:1px solid var(--line-2);padding:20px 22px calc(24px + env(safe-area-inset-bottom))}
+  .mt-scope .bar[hidden]{display:none!important}
+  .mt-scope .bar-inner{display:flex;gap:10px}
+  .mt-scope .cta{flex:1;min-height:54px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:.9rem;font-weight:600;letter-spacing:.03em;display:flex;align-items:center;justify-content:center;transition:background .14s}
   .mt-scope .cta:hover{background:var(--accent-press)}
   .mt-scope .cta[disabled]{opacity:.6;pointer-events:none}
-  .mt-scope .ghost{width:100%;min-height:52px;border-radius:999px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font-weight:600;font-size:.86rem;letter-spacing:.04em;display:flex;align-items:center;justify-content:center;margin-bottom:9px}
+  .mt-scope .ghost{flex:0 0 auto;min-height:54px;padding:0 24px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--paper);color:var(--ink);font-weight:600;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;justify-content:center}
+  .mt-scope .ghost[hidden]{display:none!important}
   .mt-scope .err{color:var(--accent);font-size:.84rem;margin:12px 22px 0;display:none}
 
   .mt-scope .result{padding:44px 26px}
@@ -2105,10 +2106,12 @@ def build_match_page_html(oh=""):
 <div class="mt-scope" id="mt-scope">
   <div class="wrap">
     <header>
-      <div class="kick">Marzullo &middot; The Agency</div>
-      <div class="theme" role="group" aria-label="Theme">
-        <button type="button" id="mt-t-light" aria-pressed="false" title="Light">{_MT_SUN}</button>
-        <button type="button" id="mt-t-dark" aria-pressed="false" title="Dark">{_MT_MOON}</button>
+      <div class="head-top">
+        <div class="kick">Marzullo &middot; The Agency</div>
+        <div class="theme" role="group" aria-label="Theme">
+          <button type="button" id="mt-t-light" aria-pressed="false" title="Light">{_MT_SUN}</button>
+          <button type="button" id="mt-t-dark" aria-pressed="false" title="Dark">{_MT_MOON}</button>
+        </div>
       </div>
       <h1 id="mt-head">Tell us what you're looking for.</h1>
       <p class="sub" id="mt-subhead">Approximate is fine &mdash; you can refine the details with Simone later.</p>
