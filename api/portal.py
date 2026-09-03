@@ -597,8 +597,9 @@ MATCH_PAGE_CSS = """<style>
 
   .mt-scope header{padding:20px 22px 0}
   .mt-scope .head-top{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:30px}
-  .mt-scope .kick{display:flex;align-items:center;gap:9px;font-size:.6rem;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-dim)}
-  .mt-scope .kick::before{content:"";width:22px;height:1px;background:var(--accent);flex:0 0 auto}
+  .mt-scope a.kick{display:flex;align-items:center;gap:10px;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;color:var(--ink-dim);text-decoration:none}
+  .mt-scope a.kick:hover{color:var(--ink)}
+  .mt-scope a.kick img{width:26px;height:26px;border-radius:5px;flex:0 0 auto;display:block}
   .mt-scope h1{font-family:var(--serif);font-weight:500;font-size:1.72rem;line-height:1.12;letter-spacing:.005em;margin:14px 0 6px;text-wrap:balance}
   .mt-scope .sub{color:var(--ink-2);font-size:.9rem;margin:0}
   .mt-scope .mt-oh-pill{display:inline-block;margin-top:13px;font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;
@@ -2107,7 +2108,10 @@ def build_match_page_html(oh=""):
   <div class="wrap">
     <header>
       <div class="head-top">
-        <div class="kick">Marzullo &middot; The Agency</div>
+        <a class="kick" href="/" aria-label="Simone Marzullo, The Agency &mdash; homepage">
+          <img src="/assets/agency-logo.png" alt="The Agency" onerror="this.remove()">
+          <span>Simone Marzullo</span>
+        </a>
         <div class="theme" role="group" aria-label="Theme">
           <button type="button" id="mt-t-light" aria-pressed="false" title="Light">{_MT_SUN}</button>
           <button type="button" id="mt-t-dark" aria-pressed="false" title="Dark">{_MT_MOON}</button>
