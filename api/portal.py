@@ -689,6 +689,21 @@ MATCH_PAGE_CSS = """<style>
 
 MATCH_PAGE_SCRIPT = r"""
 (function () {
+  /* iOS Safari/Chrome sometimes restore a stale scroll offset when the link
+     is opened from another app -- pin the page to the top through load,
+     but stop the moment the visitor scrolls themselves. */
+  try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (e) {}
+  var touched = false;
+  ['touchstart', 'wheel', 'keydown', 'pointerdown'].forEach(function (ev) {
+    window.addEventListener(ev, function () { touched = true; }, { passive: true, once: true });
+  });
+  var toTop = function () { if (!touched) window.scrollTo(0, 0); };
+  toTop();
+  if (window.requestAnimationFrame) requestAnimationFrame(toTop);
+  window.addEventListener('DOMContentLoaded', toTop);
+  window.addEventListener('load', function () { toTop(); setTimeout(toTop, 60); setTimeout(toTop, 250); });
+  window.addEventListener('pageshow', toTop);
+
   var $ = function (id) { return document.getElementById(id); };
   var scope = $('mt-scope'), wiz = $('mt-form');
   if (!scope || !wiz) return;
