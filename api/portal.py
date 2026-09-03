@@ -96,6 +96,93 @@ BUYER_MATCH_MIN_SCORE = 35  # rows below this are dropped from the results
 _MATCH_BEDS_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(?:\+)?\s*(?:bed|bd|br|bedroom)", re.I)
 _MATCH_BATHS_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(?:\+)?\s*(?:bath|ba|bthrm|bathroom)", re.I)
 _MATCH_SQFT_RE = re.compile(r"([\d,]{3,})\s*(?:sq\.?\s*ft|sqft|sf)\b", re.I)
+_ZIP_RE = re.compile(r"\b(9[0-3]\d{3})\b")
+
+# --- LA-area market -> ZIP directory --------------------------------------
+# Ported 2026-09-03 from Agent Circle (src/lib/constants.ts + locations.ts,
+# extracted 2026-08-24). Buyer needs and FUB prospects match on location by
+# resolving BOTH sides to a set of ZIPs (a market name expands to all its
+# ZIPs; a bare 5-digit token is itself) and testing for overlap -- so
+# "Santa Monica" on a buyer need matches a prospect recorded only as 90403.
+ZIPS_BY_AREA = {
+    "Bel Air": ["90077", "90049"], "Beverly Hills": ["90210", "90211", "90212"],
+    "Brentwood": ["90049"], "Pacific Palisades": ["90272"],
+    "Santa Monica": ["90401", "90402", "90403", "90404", "90405"],
+    "Venice": ["90291", "90292"], "Marina del Rey": ["90292"],
+    "Playa Vista": ["90094"], "Playa del Rey": ["90293"], "Mar Vista": ["90066"],
+    "Del Rey": ["90230", "90066"], "Culver City": ["90230", "90232"],
+    "West Los Angeles": ["90025", "90064"], "Century City": ["90067"],
+    "Westwood": ["90024", "90095"], "Holmby Hills": ["90024"],
+    "Cheviot Hills": ["90034", "90064"], "Rancho Park": ["90064"],
+    "Beverlywood": ["90034", "90035"], "Palms": ["90034"],
+    "West Hollywood": ["90046", "90048", "90069"],
+    "Hancock Park": ["90004", "90020", "90036"], "Miracle Mile": ["90036"],
+    "Beverly Grove": ["90036", "90048"],
+    "Mid-Wilshire": ["90010", "90019", "90020", "90036"],
+    "Fairfax": ["90036", "90046", "90048"], "Carthay": ["90035"],
+    "Pico-Robertson": ["90035"], "Hollywood": ["90028", "90038", "90068"],
+    "Hollywood Hills": ["90046", "90068", "90069"], "Los Feliz": ["90027"],
+    "Silver Lake": ["90026", "90039"], "Echo Park": ["90026"],
+    "Studio City": ["91602", "91604", "91607"],
+    "Sherman Oaks": ["91403", "91411", "91423"], "Valley Village": ["91607"],
+    "Toluca Lake": ["91602"],
+    "North Hollywood": ["91601", "91602", "91605", "91606", "91607"],
+    "Encino": ["91316", "91436"], "Tarzana": ["91356"],
+    "Woodland Hills": ["91364", "91367"], "Calabasas": ["91302"],
+    "Hidden Hills": ["91302"], "Porter Ranch": ["91326"],
+    "Granada Hills": ["91344"], "Northridge": ["91324", "91325"],
+    "Burbank": ["91501", "91502", "91504", "91505", "91506"],
+    "Glendale": ["91201", "91202", "91203", "91204", "91205", "91206", "91207", "91208", "91210"],
+    "Pasadena": ["91101", "91103", "91104", "91105", "91106", "91107"],
+    "South Pasadena": ["91030"], "San Marino": ["91108"],
+    "Arcadia": ["91006", "91007"], "Sierra Madre": ["91024"],
+    "Monrovia": ["91016"], "San Gabriel": ["91775", "91776"],
+    "Manhattan Beach": ["90266"], "Hermosa Beach": ["90254"],
+    "Redondo Beach": ["90277", "90278"], "El Segundo": ["90245"],
+    "Torrance": ["90501", "90503", "90504", "90505", "90510"],
+    "Palos Verdes Estates": ["90274"], "Rancho Palos Verdes": ["90275"],
+    "Rolling Hills": ["90274"], "Rolling Hills Estates": ["90274"],
+    "Long Beach": ["90802", "90803", "90804", "90805", "90806", "90807", "90808", "90810", "90813", "90814", "90815"],
+    "Malibu": ["90265"], "Topanga": ["90290"], "Agoura Hills": ["91301"],
+    "Westlake Village": ["91361", "91362"],
+}
+LA_MARKETS = list(ZIPS_BY_AREA.keys())
+ALL_LA_ZIPS = {z for zs in ZIPS_BY_AREA.values() for z in zs}
+_AREA_BY_ZIP = {}
+for _a, _zs in ZIPS_BY_AREA.items():
+    for _z in _zs:
+        _AREA_BY_ZIP.setdefault(_z, []).append(_a)
+_MARKET_LC = {a.lower(): a for a in LA_MARKETS}
+
+
+def resolve_zips(tokens):
+    """(zips:set, texts:list) -- a recognized market name -> all its ZIPs;
+    a bare 5-digit token -> itself; anything else -> a lowercased text token
+    kept for a substring fallback."""
+    zips, texts = set(), []
+    for raw in tokens or []:
+        t = str(raw or "").strip()
+        if not t:
+            continue
+        canon = _MARKET_LC.get(t.lower())
+        if canon:
+            zips.update(ZIPS_BY_AREA[canon])
+            continue
+        m = _ZIP_RE.search(t) or re.search(r"\b(\d{5})\b", t)
+        if m and len(re.sub(r"\D", "", t)) == 5:
+            zips.add(m.group(1))
+        else:
+            texts.append(t.lower())
+    return zips, texts
+
+
+def zip_area_label(z):
+    names = _AREA_BY_ZIP.get(z)
+    return f"{names[0]} ({z})" if names else z
+
+
+def _market_datalist_options():
+    return "".join(f'<option value="{html.escape(a)}">' for a in LA_MARKETS)
 
 # --- Phase 2: enrich FUB contacts from LA County Assessor public records ----
 # Free, no key, official. ArcGIS REST layer, ~2.4M parcels, updated monthly.
@@ -1078,6 +1165,11 @@ def fub_prop_profile(person, fieldmap):
     if asking is None:
         asking = _num(person.get("price"))
 
+    zip_code = _clean_str(addr0.get("code"))
+    if not zip_code:
+        m = _ZIP_RE.search(" ".join(str(addr0.get(k) or "") for k in ("full", "value")) + " " + background)
+        zip_code = m.group(1) if m else ""
+
     return {
         "beds": beds, "baths": baths, "sqft": sqft,
         "lot_size": _num(cf("LotSize")),
@@ -1085,6 +1177,8 @@ def fub_prop_profile(person, fieldmap):
         "property_type": _clean_str(cf("PropertyType")),
         "asking_price": asking,
         "area": _clean_str(_first(cf("Area"), addr0.get("city"), addr0.get("code"))),
+        "city": _clean_str(_first(cf("Area"), addr0.get("city"))),
+        "zip": zip_code,
         "address": _clean_str(_first(addr0.get("street"), addr0.get("full"))),
         "text": background,
     }
@@ -1166,16 +1260,34 @@ def score_buyer_match(criteria, prof):
 
     areas = criteria.get("areas") or []
     if areas:
-        hay = " ".join(filter(None, [prof.get("area", ""), prof.get("address", ""), prof.get("text", "")])).lower()
-        if not hay.strip():
-            add("Area (no data)", "unknown", 3, 0)
-        else:
-            hit_area = next((a for a in areas if a.lower() in hay), None)
-            if hit_area:
-                add(f"Area: {hit_area}", "hit", 3, 1.0)
+        want_zips, want_text = resolve_zips(areas)
+        # resolve the prospect's location the same way: its market/city name +
+        # ZIP field, plus any 5-digit ZIP sitting in the address or notes.
+        have_zips, _ = resolve_zips([prof.get("city", ""), prof.get("zip", ""), prof.get("area", "")])
+        for z in _ZIP_RE.findall(" ".join([prof.get("address", ""), prof.get("text", "")])):
+            have_zips.add(z)
+        hay = " ".join(filter(None, [prof.get("area", ""), prof.get("city", ""),
+                                     prof.get("address", ""), prof.get("text", "")])).lower()
+        if want_zips and have_zips:
+            common = want_zips & have_zips
+            if common:
+                add(f"Area: {zip_area_label(sorted(common)[0])}", "hit", 3, 1.0)
             else:
-                add("Area mismatch", "miss", 3, 0)
+                add("Area mismatch (ZIP)", "miss", 3, 0)
                 gate_ok = False
+        elif want_text and hay.strip() and any(t in hay for t in want_text):
+            add(f"Area: {next(t for t in want_text if t in hay).title()}", "hit", 3, 1.0)
+        elif want_zips and hay.strip() and any(a.lower() in hay for a in areas):
+            # buyer gave a market; prospect ZIP unknown but its text names it
+            add(f"Area: {next(a for a in areas if a.lower() in hay)}", "hit", 3, 1.0)
+        elif not hay.strip() and not have_zips:
+            add("Area (no data)", "unknown", 3, 0)
+        elif want_zips or want_text:
+            # both sides have *some* location but nothing lines up
+            add("Area mismatch", "miss", 3, 0)
+            gate_ok = False
+        else:
+            add("Area (unclear)", "unknown", 3, 0)
 
     types = criteria.get("types") or []
     if types:
@@ -2941,8 +3053,10 @@ def _buyer_match_panels_html(buyer_needs):
             <label class="om-field"><span class="om-field-label">Min sq ft</span>
               <input type="text" name="sqft" class="om-input" placeholder="1800"></label>
           </div>
-          <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Areas / cities (comma-separated)</span>
-            <input type="text" name="areas" class="om-input" placeholder="Santa Monica, Venice, Mar Vista"></label>
+          <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Markets &amp; ZIP codes (comma-separated)</span>
+            <input type="text" name="areas" class="om-input" list="bm-market-list" autocomplete="off"
+                   placeholder="e.g. Santa Monica, 90291, Mar Vista — a market name matches every ZIP it covers">
+            <datalist id="bm-market-list">{_market_datalist_options()}</datalist></label>
           <label class="om-field" style="flex-basis:100%"><span class="om-field-label">Property type(s) (comma-separated)</span>
             <input type="text" name="types" class="om-input" placeholder="Single Family, Condo"></label>
           <label class="om-field"><span class="om-field-label">Timeline</span>
