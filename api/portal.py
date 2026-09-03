@@ -2557,12 +2557,15 @@ _ADMIN_CSS = """<style>
   .ac-eyebrow{font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;color:var(--g5);font-weight:500}
   .ac-num{font-family:var(--serif);font-variant-numeric:tabular-nums;line-height:1}
 
-  .ac-shell{display:grid;grid-template-columns:1fr;grid-template-rows:auto 1fr;min-height:100vh}
-  @media (min-width:900px){ .ac-shell{grid-template-columns:216px 1fr} }
+  /* rows: auto (topbar) + auto (body). No 1fr / min-height:100vh -- forcing
+     the body row to fill the viewport is what left dead space below a short
+     section on Chrome + Safari. body's own background covers any short page. */
+  .ac-shell{display:grid;grid-template-columns:1fr;grid-template-rows:auto auto}
+  @media (min-width:900px){ .ac-shell{grid-template-columns:216px 1fr;align-items:start} }
 
   .ac-top{
     grid-column:1/-1;position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;
-    padding:11px 16px;background:var(--black);border-bottom:1px solid var(--g3);
+    padding:calc(11px + env(safe-area-inset-top)) 16px 11px;background:var(--black);border-bottom:1px solid var(--g3);
   }
   @media (max-width:480px){
     .ac-top{gap:8px;padding:10px 12px}
@@ -2577,7 +2580,7 @@ _ADMIN_CSS = """<style>
   .ac-logout{font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:var(--g5);white-space:nowrap}
   .ac-logout:hover{color:var(--white)}
 
-  .ac-rail{display:none;grid-row:2;border-right:1px solid var(--g3);padding:14px 10px;position:sticky;top:53px;height:calc(100vh - 53px)}
+  .ac-rail{display:none;grid-row:2;border-right:1px solid var(--g3);padding:14px 10px;position:sticky;top:53px;align-self:start;max-height:calc(100dvh - 53px);overflow-y:auto}
   @media (min-width:900px){ .ac-rail{display:flex;flex-direction:column;gap:2px} }
   .ac-nav{
     display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 12px;border-radius:8px;
@@ -2591,7 +2594,7 @@ _ADMIN_CSS = """<style>
 
   .ac-main{grid-row:2;min-width:0;padding:20px 16px 40px;max-width:1140px;width:100%;margin:0 auto}
   @media (min-width:900px){ .ac-main{padding:24px 32px 48px} }
-  @media (max-width:899px){ .ac-main{padding-bottom:108px} }
+  @media (max-width:899px){ .ac-main{padding-bottom:calc(62px + env(safe-area-inset-bottom))} }
 
   .ac-toolbox{display:flex;align-items:center;gap:9px;overflow-x:auto;padding-bottom:16px;margin-bottom:22px;border-bottom:1px solid var(--g3);scrollbar-width:none}
   .ac-toolbox::-webkit-scrollbar{display:none}
@@ -2655,14 +2658,17 @@ _ADMIN_CSS = """<style>
   .ac-feed-empty{font-size:.8rem;color:var(--g5)}
 
   .ac-tabbar{
-    display:none;position:fixed;left:12px;right:12px;bottom:12px;z-index:50;justify-content:space-around;
-    background:var(--g1);border:1px solid var(--g3);border-radius:16px;padding:7px 4px;box-shadow:var(--ac-shadow);
+    display:none;position:fixed;left:0;right:0;bottom:0;z-index:50;justify-content:space-around;
+    background:var(--black);border-top:1px solid var(--g3);
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+    backdrop-filter:saturate(140%) blur(6px);
   }
   @media (max-width:899px){ .ac-tabbar{display:flex} }
-  .ac-tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 2px;color:var(--g5);border-radius:11px;font-family:var(--sans)}
-  .ac-tabbar button svg{width:19px;height:19px}
-  .ac-tabbar button span{font-size:.48rem;letter-spacing:.08em;text-transform:uppercase}
+  .ac-tabbar button{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px 4px;color:var(--g5);font-family:var(--sans);transition:color .15s}
+  .ac-tabbar button svg{width:20px;height:20px}
+  .ac-tabbar button span{font-size:.5rem;letter-spacing:.1em;text-transform:uppercase}
   .ac-tabbar button[aria-current="true"]{color:var(--red)}
+  .ac-tabbar button[aria-current="true"]::before{content:"";position:absolute;top:0;left:22%;right:22%;height:2px;background:var(--red)}
 
   .ac-view .db-section-title{font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;color:var(--g5);margin-bottom:12px}
   .ac-view > .db-section-title{margin-top:8px}
