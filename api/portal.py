@@ -613,7 +613,8 @@ def clean(value, max_len=MAX_FIELD_LEN):
 
 _GDRIVE_FILE_ID_RE = re.compile(r"drive\.google\.com/file/d/([a-zA-Z0-9_-]+)")
 _GDRIVE_ID_PARAM_RE = re.compile(r"[?&]id=([a-zA-Z0-9_-]+)")
-_PRICE_NUMERIC_RE = re.compile(r"^\$?[\d,]+(\.\d+)?$")
+_PRICE_NUMERIC_RE = re.compile(r"^\$?\s*[\d,]+(?:\.\d+)?\s*([mMkK])?$")
+_PRICE_RANGE_SPLIT_RE = re.compile(r"\s*(?:[–—-]|\bto\b)\s*", re.I)
 
 # Listing descriptions are edited as rich text (bold/italic/lists/alignment)
 # in the admin panel and stored as HTML, so they need a real allowlist
@@ -718,18 +719,39 @@ def _parse_photo_urls(raw):
     return [_normalize_photo_url(u) for u in urls if u][:MAX_PHOTO_URLS]
 
 
+def _normalize_one_price(part):
+    """'4995000' / '$4,995,000' / '4.5M' / '850k' -> '$4,995,000', or None
+    if it isn't a plain figure."""
+    m = _PRICE_NUMERIC_RE.match((part or "").strip())
+    if not m:
+        return None
+    body = re.sub(r"[^\d.]", "", part)
+    if not body:
+        return None
+    try:
+        n = float(body)
+    except ValueError:
+        return None
+    suffix = (m.group(1) or "").lower()
+    if suffix == "m":
+        n *= 1_000_000
+    elif suffix == "k":
+        n *= 1_000
+    return f"${n:,.0f}"
+
+
 def _normalize_price(raw):
-    """Reformats a plain number (with or without $/commas) to "$1,234,567"
-    so it always comes out the same way no matter how it was typed in.
-    Anything that isn't a plain number -- "Price upon request", a range,
-    etc. -- is left exactly as typed."""
-    raw = raw.strip()
-    if raw and _PRICE_NUMERIC_RE.match(raw):
-        try:
-            return f"${float(raw.replace('$', '').replace(',', '')):,.0f}"
-        except ValueError:
-            pass
-    return raw
+    """Reformats a plain figure ("4995000", "$4.5M", "850k") to "$1,234,567".
+    A two-part range separated by - / – / — / "to" becomes "$X – $Y". Anything
+    else ("Price upon request") is left exactly as typed."""
+    raw = (raw or "").strip()
+    if not raw:
+        return raw
+    parts = _PRICE_RANGE_SPLIT_RE.split(raw, maxsplit=1)
+    if len(parts) == 2:
+        lo, hi = _normalize_one_price(parts[0]), _normalize_one_price(parts[1])
+        return f"{lo} – {hi}" if (lo and hi) else raw
+    return _normalize_one_price(raw) or raw
 
 
 # ---------------------------------------------------------------------------
@@ -2519,7 +2541,7 @@ def _offmarket_listing_admin_html(listing):
         <label class="om-field"><span class="om-field-label">Status</span>
           <select name="status" class="om-input">{_offmarket_status_options(listing['status'])}</select>
         </label>
-        <input type="text" name="price" class="om-input" value="{html.escape(listing.get('price') or '')}" placeholder="Price (e.g. $4,995,000)">
+        <input type="text" name="price" class="om-input" value="{html.escape(listing.get('price') or '')}" placeholder="Price — one figure or a range (e.g. $4,995,000  ·  $4.5M – $5M)">
         <input type="text" name="beds" class="om-input" value="{html.escape(listing.get('beds') or '')}" placeholder="Beds" style="max-width:100px">
         <input type="text" name="baths" class="om-input" value="{html.escape(listing.get('baths') or '')}" placeholder="Baths" style="max-width:100px">
         <input type="text" name="sqft" class="om-input" value="{html.escape(listing.get('sqft') or '')}" placeholder="Sqft" style="max-width:120px">
@@ -3158,7 +3180,7 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
         <label class="om-field"><span class="om-field-label">Status</span>
           <select name="status" class="om-input">{_offmarket_status_options('Available')}</select>
         </label>
-        <input type="text" name="price" class="om-input" placeholder="Price (e.g. $4,995,000)">
+        <input type="text" name="price" class="om-input" placeholder="Price — one figure or a range (e.g. $4,995,000  ·  $4.5M – $5M)">
         <input type="text" name="beds" class="om-input" placeholder="Beds" style="max-width:100px">
         <input type="text" name="baths" class="om-input" placeholder="Baths" style="max-width:100px">
         <input type="text" name="sqft" class="om-input" placeholder="Sqft" style="max-width:120px">
