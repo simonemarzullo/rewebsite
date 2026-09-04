@@ -285,6 +285,7 @@ BUYER_MATCH_SCRIPT = r"""
   function matchRow(m) {
     var prof = m.prof || {};
     var bits = [];
+    if (prof.address) bits.push(esc(prof.address));
     if (prof.area) bits.push(esc(prof.area));
     if (prof.asking_price) bits.push('$' + Number(prof.asking_price).toLocaleString());
     var bb = [];
@@ -1816,7 +1817,8 @@ def run_buyer_match(criteria):
             "score": res["score"],
             "checks": res["checks"],
             "prof": {
-                "area": prof["area"], "asking_price": prof["asking_price"],
+                "address": prof["address"], "area": prof["area"],
+                "asking_price": prof["asking_price"],
                 "beds": prof["beds"], "baths": prof["baths"], "sqft": prof["sqft"],
                 "property_type": prof["property_type"],
             },
@@ -1890,6 +1892,45 @@ def log_match_to_fub(person_id, criteria_line, buyer_label):
         "body": f"Possible fit for a buyer need: {criteria_line} — buyer: {buyer_label}.",
     })
     return body is not None
+
+
+def _match_address_line(m):
+    """'123 Ocean Ave, Santa Monica' from a match row -- address, then area if
+    it isn't already in the address; falls back to the contact name."""
+    prof = m.get("prof") or {}
+    addr = (prof.get("address") or "").strip()
+    area = (prof.get("area") or "").strip()
+    if addr and area and area.lower() not in addr.lower():
+        return f"{addr}, {area}"
+    return addr or (m.get("name") or "").strip()
+
+
+def log_matches_on_buyer(person_id, buyer_label, criteria_line, matches):
+    """One note on the BUYER's own FollowUpBoss contact listing every matched
+    property address as a bullet. -> count written (0 on failure / nothing)."""
+    if not person_id or not matches:
+        return 0
+    lines, seen = [], set()
+    for m in matches:
+        label = _match_address_line(m)
+        key = label.lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        lines.append(f"• {label}")
+    if not lines:
+        return 0
+    today = date.today().strftime("%b %d, %Y").replace(" 0", " ")
+    body = (f"Buyer Match — {len(lines)} matching propert"
+            + ("y" if len(lines) == 1 else "ies")
+            + f" for {buyer_label} ({criteria_line}) as of {today}:\n\n"
+            + "\n".join(lines))
+    _status, resp, _err = _fub_request("POST", f"{FUB_API_BASE}/notes", {
+        "personId": person_id,
+        "subject": "Buyer Match — matching properties",
+        "body": body,
+    })
+    return len(lines) if resp is not None else 0
 
 
 # ---------------------------------------------------------------------------
@@ -5045,9 +5086,13 @@ class handler(BaseHTTPRequestHandler):
                 match = run_buyer_match(criteria)
                 new_id = create_buyer_need(conn, need, criteria, fub_person_id, len(match["matches"]))
                 notice = f"FollowUpBoss scan issue: {match['error']}" if match["error"] else None
+                line = _criteria_sentence(criteria)
+                label = buyer_name + ("" if source == "self" else f" (via {need['agent_name'] or 'another agent'})")
+                # Always: save the matched addresses as a bulleted note on the buyer's own contact.
+                saved_addrs = log_matches_on_buyer(fub_person_id, label, line, match["matches"])
+                if saved_addrs:
+                    save_note += f" Saved {saved_addrs} matching address(es) as a note on {buyer_name}'s FollowUpBoss contact."
                 if data.get("log_matches") and fub_person_id:
-                    line = _criteria_sentence(criteria)
-                    label = buyer_name + ("" if source == "self" else f" (via {need['agent_name'] or 'another agent'})")
                     logged = sum(1 for m in match["matches"] if log_match_to_fub(m["fub_id"], line, label))
                     if logged:
                         save_note += f" Logged the match on {logged} prospect(s) in FollowUpBoss."
@@ -5063,10 +5108,16 @@ class handler(BaseHTTPRequestHandler):
                 for n in fetch_all_buyer_needs(conn):
                     if not n["active"]:
                         continue
-                    res = run_buyer_match(n["criteria"] or {})
+                    crit = n["criteria"] or {}
+                    res = run_buyer_match(crit)
                     update_buyer_need_match(conn, n["id"], len(res["matches"]))
+                    bname = n["buyer_name"] or f"Need #{n['id']}"
+                    if n.get("fub_person_id") and res["matches"]:
+                        blabel = bname + ("" if n["buyer_source"] != "other_agent"
+                                          else f" (via {n['agent_name'] or 'another agent'})")
+                        log_matches_on_buyer(n["fub_person_id"], blabel, _criteria_sentence(crit), res["matches"])
                     report.append({
-                        "buyer_name": n["buyer_name"] or f"Need #{n['id']}",
+                        "buyer_name": bname,
                         "match_count": len(res["matches"]),
                         "matches": res["matches"],
                     })
