@@ -680,7 +680,9 @@ def main():
                         tag_rm += len(removed)
                         if flag:
                             tag_flag += 1
-                        if dry_run and len(tag_report) < 400:
+                        # dry-run write-up: every removal/flag (the cases worth
+                        # eyeballing) uncapped, plus a bounded add-only sample
+                        if dry_run and (removed or flag or len(tag_report) < 300):
                             tag_report.append((person.get("id"), _person_name(person),
                                                added, removed, flag))
                         if not dry_run:
@@ -758,10 +760,12 @@ def main():
                     fh.write("id\tname\tadded\tremoved\tflag\n")
                     for pid, name, added, removed, flag in tag_report:
                         fh.write(f"{pid}\t{name}\t{'|'.join(added)}\t{'|'.join(removed)}\t{flag or ''}\n")
-                log(f"  wrote {len(tag_report)} sample rows to {path}")
+                n_rm = sum(1 for r in tag_report if r[3])
+                n_fl = sum(1 for r in tag_report if r[4])
+                log(f"  wrote {len(tag_report)} rows to {path} ({n_rm} with a removal, {n_fl} flagged)")
             except Exception as e:  # noqa: BLE001
                 log(f"  couldn't write tag report: {e}")
-            shown = [r for r in tag_report if r[3]][:25]  # ones with a removal
+            shown = [r for r in tag_report if r[3] or r[4]][:30]
             for pid, name, added, removed, flag in shown:
                 log(f"  [{pid}] {name}: +[{', '.join(added)}] -[{', '.join(removed)}]"
                     + (f"  ({flag})" if flag else ""))
