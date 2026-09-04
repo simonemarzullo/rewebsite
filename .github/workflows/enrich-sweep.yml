@@ -38,6 +38,10 @@ on:
         description: "Skip the ZIP / area tagging pass"
         type: boolean
         default: false
+      tag_add_only:
+        description: "ZIP/area tags: only add, never remove or fix"
+        type: boolean
+        default: false
 
 concurrency:
   group: enrich-sweep
@@ -77,6 +81,7 @@ jobs:
           ENRICH_REBUILD_INDEX: ${{ github.event.inputs.rebuild_index == 'true' && '1' || '0' }}
           ENRICH_SKIP_GEOCODE: ${{ github.event.inputs.skip_geocode == 'true' && '1' || '0' }}
           ENRICH_SKIP_AREA_TAGS: ${{ github.event.inputs.skip_area_tags == 'true' && '1' || '0' }}
+          ENRICH_TAG_ADD_ONLY: ${{ github.event.inputs.tag_add_only == 'true' && '1' || '0' }}
           ENRICH_PARCEL_DB: parcels.sqlite
           ENRICH_TAG_REPORT: tag_report.txt
         run: python3 scripts/enrich_sweep.py

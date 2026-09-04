@@ -36,6 +36,7 @@ Env:
   ENRICH_DRY_RUN        optional -- "1" to skip every FollowUpBoss write
   ENRICH_SKIP_GEOCODE   optional -- "1" to skip Census address standardisation
   ENRICH_SKIP_AREA_TAGS optional -- "1" to skip the ZIP / area tagging pass
+  ENRICH_TAG_ADD_ONLY   optional -- "1" to only add ZIP/area tags, never remove/fix
   ENRICH_TAG_REPORT     optional -- dry-run tag-change report path (default ./tag_report.txt)
   ENRICH_REBUILD_INDEX  optional -- "1" to rebuild the parcel cache even if fresh
   ENRICH_PARCEL_MAX_PAGES optional -- stop the parcel download after N pages
@@ -345,7 +346,9 @@ for _mkt, _zs in ZIPS_BY_AREA.items():
     for _z in _zs:
         _MARKETS_FOR_ZIP.setdefault(_z, []).append(_mkt)
 _MARKET_SET = set(ZIPS_BY_AREA)
-_ZIP_TAG_RE = re.compile(r"^\d{5}$")
+# Only LA / Ventura-range 5-digit tags are ours to manage. A "12229" or
+# "10151" is almost always the owner's other-state home ZIP -- never touch it.
+_ZIP_TAG_RE = re.compile(r"^9[0-3]\d{3}$")
 
 
 def _area_tag_for_zip(z):
@@ -356,25 +359,30 @@ def _area_tag_for_zip(z):
 
 
 def _market_parts(tag):
-    """If `tag` is a directory market name or a '/'-combo of them, return the
-    list of parts; otherwise None (it's a free-text tag we must not touch)."""
+    """If `tag` is a directory market name or a '/'-combo of them (spaces around
+    the slash allowed), return the parts; otherwise None (free-text, hands off)."""
     parts = [p.strip() for p in str(tag).split("/")]
     return parts if parts and all(p in _MARKET_SET for p in parts) else None
 
 
 def _area_consistent(tag, z, desired):
-    """True if `tag` (a known area tag) is geographically OK for ZIP z."""
+    """True if `tag` (a known area tag) is geographically OK for ZIP z. A combo
+    tag ("Bel Air / Brentwood") is OK if ANY of its parts covers the ZIP -- it's
+    a broader hand label, not a wrong one."""
     if desired and tag == desired:
         return True
     parts = _market_parts(tag)
     if not parts:
         return False
-    return all(z in ZIPS_BY_AREA[p] for p in parts)
+    return any(z in ZIPS_BY_AREA[p] for p in parts)
 
 
-def compute_tag_changes(person, z, allow_remove):
+def compute_tag_changes(person, z, allow_remove, add_only=False):
     """-> (new_tags, added, removed, flagged_reason|None). new_tags is the full
-    list to PUT; equal to the current list when nothing changes."""
+    list to PUT; equal to the current list when nothing changes.
+    add_only: only ever append the ZIP/area tags -- never remove or fix."""
+    if add_only:
+        allow_remove = False
     cur = [t for t in (person.get("tags") or []) if isinstance(t, str) and t.strip()]
     desired_area = _area_tag_for_zip(z)
 
@@ -410,6 +418,9 @@ def compute_tag_changes(person, z, allow_remove):
     if desired_area and not keep_area:
         added.append(desired_area)
         keep_area = [desired_area]
+
+    if add_only:
+        removed, flags = [], []
 
     new_tags = other + keep_zip + keep_area
     # de-dupe, preserve order
@@ -601,6 +612,7 @@ def main():
     ensure_addr_cache(con)
     skip_geo = os.environ.get("ENRICH_SKIP_GEOCODE") == "1"
     skip_tags = os.environ.get("ENRICH_SKIP_AREA_TAGS") == "1"
+    add_only_tags = os.environ.get("ENRICH_TAG_ADD_ONLY") == "1"
     fieldmap = fub_fieldmap(headers)
     if not fieldmap:
         raise SystemExit("No usable FollowUpBoss custom fields -- nothing to write. Run field setup in /admin.")
@@ -674,7 +686,7 @@ def main():
                 z = (std_z["zip"] if std_z else _zip5(a0.get("code")))
                 if z:
                     new_tags, added, removed, flag = compute_tag_changes(
-                        person, z, allow_remove=bool(std_z))
+                        person, z, allow_remove=bool(std_z), add_only=add_only_tags)
                     if added or removed:
                         tag_add += len(added)
                         tag_rm += len(removed)
