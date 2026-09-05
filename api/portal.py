@@ -2571,7 +2571,7 @@ def fetch_admin_activity(conn, limit=6):
     from created_at timestamps across the main tables + the last enrich run."""
     rows = []
     picks = [
-        ("seller", "SELECT name, created_at FROM clients ORDER BY created_at DESC LIMIT 4",
+        ("seller", "SELECT name, created_at FROM clients WHERE active ORDER BY created_at DESC LIMIT 4",
          lambda r: f"New seller account — {r[0] or 'unnamed'}"),
         ("listing", "SELECT address, created_at FROM offmarket_listings ORDER BY created_at DESC LIMIT 4",
          lambda r: f"Off-market listing added — {r[0]}"),
@@ -3643,7 +3643,12 @@ _ADMIN_CSS = """<style>
   .ac-toolbox{display:flex;align-items:center;gap:9px;overflow-x:auto;padding-bottom:16px;margin-bottom:22px;border-bottom:1px solid var(--ac-line);scrollbar-width:none}
   .ac-toolbox::-webkit-scrollbar{display:none}
   .ac-toolbox .ac-eyebrow{flex:none}
-  .ac-toolbox .adm-toolbox-btn{flex:none;white-space:nowrap;padding:9px 15px;font-size:.62rem}
+  .ac-toolbox .adm-toolbox-btn{flex:none;white-space:nowrap;padding:8px 14px;font-size:.62rem;
+    display:inline-flex;align-items:center;gap:5px;background:transparent;
+    border:1px solid var(--ac-line-2);border-radius:var(--ac-r-sm);color:var(--ac-ink-2);
+    font-weight:600;letter-spacing:.02em;text-decoration:none;transition:border-color .15s,color .15s}
+  .ac-toolbox .adm-toolbox-btn:hover{border-color:var(--red);color:var(--red)}
+  .ac-toolbox .adm-toolbox-btn .adm-ext-ico{font-size:.9em;opacity:.65}
   .ac-toolbox .adm-toolbox-add-btn{width:32px;height:32px;flex:none;font-size:1.05rem;border-radius:var(--ac-r-sm)}
   .ac-toolbox-manage{flex:none;margin-left:4px}
   .ac-toolbox-manage summary{font-family:var(--ac-mono);font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ac-dim);cursor:pointer;list-style:none;white-space:nowrap}
@@ -3742,6 +3747,15 @@ _ADMIN_CSS = """<style>
   .ac-shell .db-checkbox{color:var(--ac-ink-2);font-size:.8rem}
   .ac-shell .db-empty-note,.ac-shell .om-empty{color:var(--ac-dim);font-size:.8rem}
   .ac-shell .adm-history summary{font-family:var(--ac-mono);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ac-dim)}
+  .ac-shell .adm-add-toggle{border:none;padding:0;margin:0}
+  .ac-shell .adm-add-toggle summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+    padding:9px 15px;font-size:.76rem;font-weight:600;letter-spacing:.02em;color:var(--ac-ink);
+    background:transparent;border:1px solid var(--ac-line-2);border-radius:var(--ac-r-sm)}
+  .ac-shell .adm-add-toggle summary::-webkit-details-marker{display:none}
+  .ac-shell .adm-add-toggle summary:hover{border-color:var(--red);color:var(--red)}
+  .ac-shell .adm-add-toggle summary::before{content:'+';font-weight:700}
+  .ac-shell .adm-add-toggle[open] summary::before{content:'\\2212'}
+  .ac-shell .adm-add-toggle[open] summary{margin-bottom:14px}
   .ac-shell .adm-tagline{color:var(--ac-ink-2)}
 
   /* --- Buyer Match --- */
@@ -3960,7 +3974,7 @@ def _enrich_state_line(st):
 def _buyer_match_panels_html(buyer_needs):
     active_needs = [n for n in buyer_needs if n.get("active")]
     history_needs = [n for n in buyer_needs if not n.get("active")]
-    needs_html = "".join(_buyer_need_row_html(n) for n in active_needs) or '<p class="db-empty-note">No saved buyer needs yet -- add one above.</p>'
+    needs_html = "".join(_buyer_need_row_html(n) for n in active_needs) or '<p class="db-empty-note">No saved buyer needs yet -- add one below.</p>'
     history_html = "".join(_buyer_need_row_html(n) for n in history_needs) or '<p class="db-empty-note">Nothing archived.</p>'
     return f"""
     <div class="bm-wrap">
@@ -3971,7 +3985,17 @@ def _buyer_match_panels_html(buyer_needs):
       </div>
 
       <div class="adm-panel">
-        <div class="db-section-title">Add a buyer need &amp; find prospects</div>
+        <div class="db-section-title">Saved buyer needs</div>
+        <button type="button" class="btn-primary adm-btn-sm" id="bm-rematch-all">Re-match all against the pipeline</button>
+        <div id="bm-rematch-result" style="margin-top:10px"></div>
+        <div id="bm-saved-needs" class="adm-clients" style="margin-top:14px">{needs_html}</div>
+        <details class="adm-history"><summary>Archived buyer needs</summary>
+          <div class="adm-clients">{history_html}</div>
+        </details>
+      </div>
+
+      <details class="adm-panel adm-add-toggle">
+        <summary>Add a buyer need &amp; find prospects</summary>
         <form id="bm-need-form" class="adm-inline-form" novalidate>
           <label class="om-field"><span class="om-field-label">Buyer name</span>
             <input type="text" name="buyer_name" class="om-input" required></label>
@@ -4027,17 +4051,7 @@ def _buyer_match_panels_html(buyer_needs):
           <button type="submit" class="btn-primary adm-btn-sm">Save buyer &amp; find prospects</button>
         </form>
         <div id="bm-need-result"></div>
-      </div>
-
-      <div class="adm-panel">
-        <div class="db-section-title">Saved buyer needs</div>
-        <button type="button" class="btn-primary adm-btn-sm" id="bm-rematch-all">Re-match all against the pipeline</button>
-        <div id="bm-rematch-result" style="margin-top:10px"></div>
-        <div id="bm-saved-needs" class="adm-clients" style="margin-top:14px">{needs_html}</div>
-        <details class="adm-history"><summary>Archived buyer needs</summary>
-          <div class="adm-clients">{history_html}</div>
-        </details>
-      </div>
+      </details>
     </div>"""
 
 
@@ -4075,7 +4089,7 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
 
     active_toolbox_links = [t for t in toolbox_links if t["active"]]
     toolbox_buttons_html = "".join(
-        f'<a href="{html.escape(t["url"])}" target="_blank" rel="noopener noreferrer" class="btn-primary adm-toolbox-btn">{html.escape(t["name"])}</a>'
+        f'<a href="{html.escape(t["url"])}" target="_blank" rel="noopener noreferrer" class="adm-toolbox-btn">{html.escape(t["name"])}<span class="adm-ext-ico" aria-hidden="true">&#8599;</span></a>'
         for t in active_toolbox_links
     )
     toolbox_manage_html = "".join(_toolbox_link_admin_html(t) for t in toolbox_links) or '<p class="db-empty-note">No tools yet.</p>'
@@ -4169,7 +4183,7 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
         <div class="ac-kpi"><span class="ac-eyebrow">OM Buyers</span><span class="ac-num">{counts.get('om_buyers', 0)}</span><span class="sub">active</span></div>
         <div class="ac-kpi"><span class="ac-eyebrow">OM Listings</span><span class="ac-num">{counts.get('om_listings', 0)}</span><span class="sub">{counts.get('om_available', 0)} available</span></div>
         <div class="ac-kpi"><span class="ac-eyebrow">Buyer Needs</span><span class="ac-num">{needs_active}</span><span class="sub">last scan {last_match}</span></div>
-        <div class="ac-kpi"><span class="ac-eyebrow">Enriched</span><span class="ac-num">{e_filled}</span><span class="sub">of {db_total or '—'} contacts</span></div>
+        <div class="ac-kpi"><span class="ac-eyebrow">Enriched</span><span class="ac-num">{ring_txt}</span><span class="sub">pass {passes + 1} · {db_total or '—'} contacts</span></div>
       </div>
 
       <div class="ac-grid2">
@@ -4236,8 +4250,9 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
       </details>
 
       <h2 class="db-section-title" style="margin-top:34px">Listings</h2>
-      <div class="adm-panel">
-        <div class="db-section-title">Add new listing</div>
+      <div class="adm-clients">{offmarket_listings_html}</div>
+      <details class="adm-panel adm-add-toggle" style="margin-top:14px">
+        <summary>Add Listing</summary>
         <form id="adm-create-offmarket-listing-form" class="adm-inline-form" data-action="create_offmarket_listing">
         <input type="text" name="address" class="om-input" placeholder="Address" required style="flex-basis:100%">
         <label class="db-checkbox" style="flex-basis:100%">
@@ -4269,8 +4284,7 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
         </label>
         <button type="submit" class="btn-primary adm-btn-sm">Add Listing</button>
       </form>
-    </div>
-    <div class="adm-clients">{offmarket_listings_html}</div>
+    </details>
     </section>
 
     <section class="ac-view" data-view="match" hidden>
