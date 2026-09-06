@@ -648,60 +648,87 @@ MATCH_PAGE_CSS = """<style>
   .mt-scope [hidden]{display:none!important}
   .mt-scope #mt-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
 
-  /* ---- Desktop: full-viewport two-pane console. The narrow card becomes a
-     fixed left brand rail + a scrolling work pane with a pinned action bar.
-     Pure CSS over the same markup -- the wizard JS is untouched. ---- */
-  @media (min-width:1000px){
+  /* ---- Desktop (>=1200px): full-viewport two-pane console. Fixed left brand
+     rail + a compact work pane sized to clear the fold with no page scroll.
+     The shell is exactly one viewport tall; only the form pane scrolls, and
+     only if its content genuinely overflows. Below 1200px the single-column
+     card layout above is kept. Pure CSS over the same markup. ---- */
+  @media (min-width:1200px){
     html,body{background:var(--ground)}
     .mt-scope{min-height:100vh}
     .mt-scope .wrap{
-      max-width:none;margin:0;padding:0;border-radius:0;overflow:visible;box-shadow:none;
-      min-height:100vh;background:var(--paper);
+      max-width:none;margin:0;padding:0;border-radius:0;overflow:hidden;box-shadow:none;
+      height:100vh;background:var(--paper);
       display:grid;
-      grid-template-columns:minmax(380px,480px) minmax(0,1fr);
-      grid-template-rows:1fr auto;
+      grid-template-columns:minmax(340px,400px) minmax(0,1fr);
+      grid-template-rows:minmax(0,1fr) auto;
     }
 
-    /* left rail -- brand + progress, pinned to the viewport */
+    /* left rail -- logo pinned top, headline centred, progress pinned bottom */
     .mt-scope header{
-      grid-column:1;grid-row:1 / -1;
-      position:sticky;top:0;align-self:start;
-      height:100vh;overflow-y:auto;
-      display:flex;flex-direction:column;
-      padding:56px clamp(40px,4vw,64px);
+      grid-column:1;grid-row:1 / -1;position:relative;
+      display:flex;flex-direction:column;justify-content:center;
+      padding:0 clamp(36px,3.4vw,56px);
       background:var(--paper-2);border-right:1px solid var(--line);
     }
-    .mt-scope .head-top{min-height:0}
-    .mt-scope h1{font-size:clamp(2.1rem,2.6vw,2.9rem);margin:auto 0 14px;max-width:15ch}
-    .mt-scope .sub{font-size:1rem;max-width:32ch}
-    .mt-scope .rail{margin-top:auto;padding-top:44px;max-width:260px}
+    .mt-scope .head-top{position:absolute;top:44px;left:clamp(36px,3.4vw,56px);right:clamp(36px,3.4vw,56px)}
+    .mt-scope h1{font-size:clamp(2rem,2.4vw,2.7rem);margin:0 0 12px;max-width:15ch}
+    .mt-scope .sub{font-size:.98rem;max-width:32ch}
+    .mt-scope .mt-oh-pill{margin-top:16px}
+    .mt-scope .rail{position:absolute;left:clamp(36px,3.4vw,56px);bottom:44px;width:200px;margin:0}
 
-    /* right pane -- the form, window scrolls */
-    .mt-scope .body{grid-column:2;grid-row:1;width:100%;max-width:1180px;margin-inline:auto;padding:0}
+    /* right pane -- scrolls only if it truly overflows one screen */
+    .mt-scope .body{grid-column:2;grid-row:1;min-height:0;overflow-y:auto;padding:0}
     .mt-scope .step[data-step="0"]{
       display:grid;grid-template-columns:1fr 1fr;align-content:start;
       gap:1px;background:var(--line-2);border-bottom:1px solid var(--line-2);
     }
-    .mt-scope .step[data-step="0"] .sec{background:var(--paper);padding:28px clamp(28px,3vw,44px)}
+    .mt-scope .step[data-step="0"] .sec{background:var(--paper);padding:10px clamp(22px,2.3vw,34px)}
     .mt-scope .step[data-step="0"] .sec + .sec{border-top:0}
     .mt-scope .step[data-step="0"] .sec:first-child,
     .mt-scope .step[data-step="0"] .sec:last-child{grid-column:1 / -1}
-    .mt-scope .sec h2{font-size:1.12rem}
-    .mt-scope .step.contact{max-width:600px;margin-inline:auto;padding:56px clamp(28px,3vw,44px)}
-    .mt-scope .step.contact .sec{padding:0}
-    .mt-scope .step[data-step="result"]{min-height:calc(100vh - 92px);display:grid;place-items:center;padding:56px}
-    .mt-scope .result{max-width:620px}
-    .mt-scope .result .count{font-size:clamp(4rem,7vw,7rem)}
-    .mt-scope .msg{max-width:520px}
 
-    /* action bar -- pinned to the bottom of the work pane */
+    /* tighten every control so the eight sections clear the fold */
+    .mt-scope .sec h2{font-size:1rem;margin-bottom:2px}
+    .mt-scope .sec .hint{margin-bottom:9px}
+    .mt-scope .sec h2 + .grp,.mt-scope .sec h2 + .seg,.mt-scope .sec h2 + .field,
+    .mt-scope .sec h2 + .mm,.mt-scope .sec h2 + .grid,.mt-scope .sec h2 + .pills,
+    .mt-scope .sec h2 + .in{margin-top:9px}
+    .mt-scope .seg button{padding:9px 4px;font-size:.9rem}
+    .mt-scope .seg-val{margin-top:5px;font-size:.78rem}
+    .mt-scope .grid{gap:8px}
+    .mt-scope .tile{flex-direction:row;justify-content:center;gap:8px;padding:11px 10px;font-size:.83rem}
+    .mt-scope .tile svg{width:19px;height:19px}
+    .mt-scope .pills{gap:7px}
+    .mt-scope .pill{padding:8px 13px;font-size:.83rem}
+    .mt-scope .grp{flex-direction:row;gap:16px}
+    .mt-scope .grp > div{flex:1;min-width:0}
+    .mt-scope .grp .lbl{margin-bottom:5px}
+    .mt-scope .selbox select{padding:10px 24px 10px 10px;font-size:.88rem}
+    .mt-scope .selbox::after{right:10px}
+    .mt-scope .field{padding:6px 8px}
+    .mt-scope #mt-area-in{padding:9px 8px}
+    .mt-scope #mt-notes{min-height:46px}
+    .mt-scope .in{padding:11px}
+
+    /* contact + result steps -- centred in the pane, no dead space */
+    .mt-scope .step.contact{max-width:560px;margin-inline:auto;min-height:100%;
+      display:flex;flex-direction:column;justify-content:center;padding:44px clamp(22px,2.3vw,34px)}
+    .mt-scope .step.contact .sec{padding:0}
+    .mt-scope .step.contact .field-row{margin-bottom:13px}
+    .mt-scope .step[data-step="result"]{min-height:100%;display:grid;place-items:center;padding:48px}
+    .mt-scope .result{max-width:600px}
+    .mt-scope .result .count{font-size:clamp(3.6rem,6vw,6rem)}
+    .mt-scope .msg{max-width:500px}
+
+    /* action bar */
     .mt-scope .bar{
-      grid-column:2;grid-row:2;position:sticky;bottom:0;z-index:5;
-      width:100%;max-width:1180px;margin-inline:auto;
+      grid-column:2;grid-row:2;z-index:5;
       background:var(--paper);border-top:1px solid var(--line);
-      padding:18px clamp(28px,3vw,44px) calc(18px + env(safe-area-inset-bottom));
+      padding:12px clamp(22px,2.3vw,34px) calc(12px + env(safe-area-inset-bottom));
     }
-    .mt-scope .bar-inner{max-width:560px}
+    .mt-scope .bar-inner{max-width:540px}
+    .mt-scope .cta,.mt-scope .ghost{min-height:46px}
   }
 </style>"""
 
@@ -843,6 +870,7 @@ MATCH_PAGE_SCRIPT = r"""
     var done = i === 'result' ? rail.length - 1 : +i;
     rail.forEach(function (r, idx) { r.classList.toggle('on', idx <= done); });
     try { window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
+    try { wiz.scrollTop = 0; } catch (e) {}
     $('mt-back').hidden = (i !== 1);
     $('mt-bar').hidden = (i === 'result');
     if (i === 0) { $('mt-head').textContent = 'Tell us what you’re looking for.'; $('mt-subhead').textContent = 'Approximate is fine — you can refine the details with Simone later.'; $('mt-cta-label').textContent = 'Continue'; }
@@ -2156,10 +2184,10 @@ def build_match_page_html(oh=""):
     oh_pill = f'<div class="mt-oh-pill">Open House &middot; {html.escape(oh)}</div>' if oh else ""
     price_min_opts = _match_options(_MATCH_PRICE_STEPS, "No min")
     price_max_opts = _match_options(_MATCH_PRICE_STEPS, "No max")
-    sqft_min_opts = _match_options(_MATCH_SQFT_STEPS, "No min")
-    sqft_max_opts = _match_options(_MATCH_SQFT_STEPS, "No max")
-    lot_min_opts = _match_options(_MATCH_LOT_STEPS, "No min")
-    lot_max_opts = _match_options(_MATCH_LOT_STEPS, "No max")
+    sqft_min_opts = _match_options(_MATCH_SQFT_STEPS, "Min")
+    sqft_max_opts = _match_options(_MATCH_SQFT_STEPS, "Max")
+    lot_min_opts = _match_options(_MATCH_LOT_STEPS, "Min")
+    lot_max_opts = _match_options(_MATCH_LOT_STEPS, "Max")
     body = f"""
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
 {MATCH_PAGE_CSS}
