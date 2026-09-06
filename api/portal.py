@@ -2245,6 +2245,28 @@ def build_match_page_html(oh=""):
         </div>
 
         <div class="sec">
+          <h2>Property details <span class="opt">&mdash; optional</span></h2>
+          <div class="grp">
+            <div>
+              <span class="lbl">Square feet</span>
+              <div class="mm">
+                <div class="selbox"><select id="mt-sqft-min" aria-label="Minimum square feet">{sqft_min_opts}</select></div>
+                <span class="dash">&ndash;</span>
+                <div class="selbox"><select id="mt-sqft-max" aria-label="Maximum square feet">{sqft_max_opts}</select></div>
+              </div>
+            </div>
+            <div>
+              <span class="lbl">Lot size</span>
+              <div class="mm">
+                <div class="selbox"><select id="mt-lot-min" aria-label="Minimum lot size">{lot_min_opts}</select></div>
+                <span class="dash">&ndash;</span>
+                <div class="selbox"><select id="mt-lot-max" aria-label="Maximum lot size">{lot_max_opts}</select></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec">
           <h2>Beds</h2>
           <p class="hint">Tap once for a minimum, tap a second number to set a range.</p>
           <div class="seg" id="mt-beds" role="group" aria-label="Bedrooms">
@@ -2275,28 +2297,6 @@ def build_match_page_html(oh=""):
             <button type="button" class="tile" data-v="Condo/Townhome" aria-pressed="false">{_MT_ICON_CONDO}Condo / Townhome</button>
             <button type="button" class="tile" data-v="Multifamily" aria-pressed="false">{_MT_ICON_MULTI}Multifamily</button>
             <button type="button" class="tile" data-v="Land/Lot" aria-pressed="false">{_MT_ICON_LAND}Land / Lot</button>
-          </div>
-        </div>
-
-        <div class="sec">
-          <h2>Property details <span class="opt">&mdash; optional</span></h2>
-          <div class="grp">
-            <div>
-              <span class="lbl">Square feet</span>
-              <div class="mm">
-                <div class="selbox"><select id="mt-sqft-min" aria-label="Minimum square feet">{sqft_min_opts}</select></div>
-                <span class="dash">&ndash;</span>
-                <div class="selbox"><select id="mt-sqft-max" aria-label="Maximum square feet">{sqft_max_opts}</select></div>
-              </div>
-            </div>
-            <div>
-              <span class="lbl">Lot size</span>
-              <div class="mm">
-                <div class="selbox"><select id="mt-lot-min" aria-label="Minimum lot size">{lot_min_opts}</select></div>
-                <span class="dash">&ndash;</span>
-                <div class="selbox"><select id="mt-lot-max" aria-label="Maximum lot size">{lot_max_opts}</select></div>
-              </div>
-            </div>
           </div>
         </div>
 
