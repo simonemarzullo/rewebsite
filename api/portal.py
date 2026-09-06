@@ -607,6 +607,15 @@ MATCH_PAGE_CSS = """<style>
 
   .mt-scope .field{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);padding:8px 9px}
   .mt-scope .field:focus-within{border-color:var(--accent)}
+  .mt-scope #mt-chips-wrap{position:relative}
+  /* market suggestions -- a styled dropdown anchored to the field, replacing
+     the native <datalist> popup (Safari mis-positions that one on desktop) */
+  .mt-scope .mt-ac{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:40;
+    max-height:262px;overflow-y:auto;background:var(--paper);border:1px solid var(--line);
+    border-radius:var(--radius-sm);box-shadow:0 12px 34px -14px rgba(20,16,14,.4);padding:4px}
+  .mt-scope .mt-ac button{display:block;width:100%;text-align:left;padding:10px 12px;border-radius:8px;
+    font-size:.92rem;color:var(--ink);line-height:1.25}
+  .mt-scope .mt-ac button:hover,.mt-scope .mt-ac button[aria-selected="true"]{background:var(--accent-wash);color:var(--accent)}
   .mt-scope .chips{display:flex;flex-wrap:wrap;gap:7px}
   .mt-scope .chips:empty{display:none}
   .mt-scope .chip{display:inline-flex;align-items:center;gap:7px;background:var(--paper-2);border:1px solid var(--line);color:var(--ink);font-size:.85rem;padding:7px 8px 7px 12px;border-radius:999px}
@@ -886,8 +895,8 @@ MATCH_PAGE_SCRIPT = r"""
     growNotes();
   }
 
-  /* ---- area chips ---- */
-  var chips = [], chipsEl = $('mt-chips'), areaIn = $('mt-area-in');
+  /* ---- area chips + market autocomplete ---- */
+  var chips = [], chipsEl = $('mt-chips'), areaIn = $('mt-area-in'), acEl = $('mt-ac');
   function renderChips() {
     chipsEl.innerHTML = chips.map(function (a, i) {
       return '<span class="chip">' + esc(a) + '<button type="button" data-i="' + i + '" aria-label="Remove">×</button></span>';
@@ -900,12 +909,58 @@ MATCH_PAGE_SCRIPT = r"""
     });
     renderChips();
   }
+
+  /* Custom suggestions dropdown -- the native <datalist> popup is dropped
+     because Safari mis-positions it inside the desktop scroll pane. */
+  var acItems = [], acIdx = -1;
+  function acHide() {
+    if (acEl) { acEl.hidden = true; acEl.innerHTML = ''; }
+    areaIn.setAttribute('aria-expanded', 'false');
+    acItems = []; acIdx = -1;
+  }
+  function acPaint() {
+    [].forEach.call(acEl.children, function (b, i) { b.setAttribute('aria-selected', i === acIdx ? 'true' : 'false'); });
+    if (acIdx > -1 && acEl.children[acIdx]) acEl.children[acIdx].scrollIntoView({ block: 'nearest' });
+  }
+  function acShow() {
+    if (!acEl) return;
+    var q = areaIn.value.trim().toLowerCase();
+    var taken = chips.map(function (c) { return c.toLowerCase(); });
+    acItems = MARKETS.filter(function (m) {
+      return taken.indexOf(m.toLowerCase()) < 0 && (!q || m.toLowerCase().indexOf(q) > -1);
+    }).slice(0, 8);
+    acIdx = -1;
+    if (!acItems.length) { acHide(); return; }
+    acEl.innerHTML = acItems.map(function (m) {
+      return '<button type="button" role="option" data-v="' + esc(m) + '">' + esc(m) + '</button>';
+    }).join('');
+    acEl.hidden = false;
+    areaIn.setAttribute('aria-expanded', 'true');
+  }
+  function acPick(v) { addArea(v); areaIn.value = ''; acHide(); areaIn.focus(); }
+  if (acEl) {
+    areaIn.addEventListener('focus', acShow);
+    areaIn.addEventListener('input', acShow);
+    acEl.addEventListener('pointerdown', function (e) {
+      var b = e.target.closest('button[data-v]'); if (!b) return;
+      e.preventDefault(); acPick(b.dataset.v);
+    });
+  }
+
   areaIn.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addArea(areaIn.value); areaIn.value = ''; }
-    else if (e.key === 'Backspace' && !areaIn.value && chips.length) { chips.pop(); renderChips(); }
+    if (acEl && !acEl.hidden && acItems.length) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); acIdx = (acIdx + 1) % acItems.length; acPaint(); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); acIdx = (acIdx - 1 + acItems.length) % acItems.length; acPaint(); return; }
+      if (e.key === 'Escape') { e.preventDefault(); acHide(); return; }
+      if (e.key === 'Enter' && acIdx > -1) { e.preventDefault(); acPick(acItems[acIdx]); return; }
+    }
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addArea(areaIn.value); areaIn.value = ''; acHide(); }
+    else if (e.key === 'Backspace' && !areaIn.value && chips.length) { chips.pop(); renderChips(); acShow(); }
   });
-  areaIn.addEventListener('input', function () { if (MARKETS.indexOf(areaIn.value) > -1) { addArea(areaIn.value); areaIn.value = ''; } });
-  areaIn.addEventListener('blur', function () { if (areaIn.value.trim()) { addArea(areaIn.value); areaIn.value = ''; } });
+  areaIn.addEventListener('blur', function () {
+    if (areaIn.value.trim()) { addArea(areaIn.value); areaIn.value = ''; }
+    acHide();
+  });
   chipsEl.addEventListener('click', function (e) {
     var b = e.target.closest('button[data-i]'); if (b) { chips.splice(+b.dataset.i, 1); renderChips(); }
   });
@@ -1018,6 +1073,7 @@ MATCH_PAGE_SCRIPT = r"""
     clearTimeout(idleTimer);
     wiz.reset();
     if (notes) notes.style.height = '';
+    acHide();
     chips = []; renderChips();
     bedsCtl.reset(); bathsCtl.reset();
     [].forEach.call(scope.querySelectorAll('#mt-types [aria-pressed], #mt-cond [aria-pressed]'), function (b) { b.setAttribute('aria-pressed', 'false'); });
@@ -2270,7 +2326,9 @@ def build_match_page_html(oh=""):
           <p class="hint">Add as many markets or ZIP codes as you like &mdash; each market covers every ZIP inside it.</p>
           <div class="field" id="mt-chips-wrap">
             <div class="chips" id="mt-chips"></div>
-            <input id="mt-area-in" list="mt-markets" autocomplete="off" placeholder="Type a market or ZIP, then Enter">
+            <input id="mt-area-in" autocomplete="off" placeholder="Type a market or ZIP, then Enter"
+                   role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="mt-ac">
+            <div class="mt-ac" id="mt-ac" role="listbox" aria-label="Market suggestions" hidden></div>
           </div>
         </div>
 
