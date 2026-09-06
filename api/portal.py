@@ -2195,9 +2195,9 @@ def build_match_page_html(oh=""):
   <div class="wrap">
     <header>
       <div class="head-top">
-        <a class="kick" href="/" aria-label="Simone Marzullo, The Agency &mdash; homepage">
+        <a class="kick" href="/" aria-label="Marzullo RE &mdash; homepage">
           <img src="/assets/agency-logo.png" alt="The Agency" onerror="this.remove()">
-          <span>Simone Marzullo</span>
+          <span>Marzullo RE</span>
         </a>
         <div class="theme" role="group" aria-label="Theme">
           <button type="button" id="mt-t-light" aria-pressed="false" title="Light">{_MT_SUN}</button>
