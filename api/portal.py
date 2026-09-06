@@ -616,6 +616,8 @@ MATCH_PAGE_CSS = """<style>
   .mt-scope #mt-area-in::placeholder{color:var(--ink-dim)}
   .mt-scope .in{width:100%;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);color:var(--ink);font:inherit;font-size:.95rem;padding:14px;outline:none;resize:vertical}
   .mt-scope .in:focus{border-color:var(--accent)}
+  /* "Anything else" auto-grows with the text (JS); scrolls only past a tall ceiling */
+  .mt-scope #mt-notes{resize:none;overflow-y:auto;max-height:min(60vh,540px)}
 
   .mt-scope .contact .field-row{margin-bottom:16px}
   .mt-scope label.cap{display:block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:8px}
@@ -871,6 +873,19 @@ MATCH_PAGE_SCRIPT = r"""
   });
   function repVal() { var b = $('mt-rep').querySelector('[aria-pressed="true"]'); return b ? b.dataset.v : 'no'; }
 
+  /* ---- "Anything else" grows to fit what you type ---- */
+  var notes = $('mt-notes');
+  if (notes) {
+    var ncs = getComputedStyle(notes);
+    var nBorder = (parseFloat(ncs.borderTopWidth) || 0) + (parseFloat(ncs.borderBottomWidth) || 0);
+    var growNotes = function () {
+      notes.style.height = 'auto';
+      notes.style.height = (notes.scrollHeight + nBorder) + 'px';
+    };
+    notes.addEventListener('input', growNotes);
+    growNotes();
+  }
+
   /* ---- area chips ---- */
   var chips = [], chipsEl = $('mt-chips'), areaIn = $('mt-area-in');
   function renderChips() {
@@ -1002,6 +1017,7 @@ MATCH_PAGE_SCRIPT = r"""
   function resetAll() {
     clearTimeout(idleTimer);
     wiz.reset();
+    if (notes) notes.style.height = '';
     chips = []; renderChips();
     bedsCtl.reset(); bathsCtl.reset();
     [].forEach.call(scope.querySelectorAll('#mt-types [aria-pressed], #mt-cond [aria-pressed]'), function (b) { b.setAttribute('aria-pressed', 'false'); });
