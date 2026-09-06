@@ -655,13 +655,13 @@ MATCH_PAGE_CSS = """<style>
      card layout above is kept. Pure CSS over the same markup. ---- */
   @media (min-width:1200px){
     html,body{background:var(--ground)}
-    .mt-scope{min-height:100vh}
+    .mt-scope{min-height:100dvh}
     .mt-scope .wrap{
       max-width:none;margin:0;padding:0;border-radius:0;overflow:hidden;box-shadow:none;
-      height:100vh;background:var(--paper);
+      height:100dvh;background:var(--paper);
       display:grid;
       grid-template-columns:minmax(340px,400px) minmax(0,1fr);
-      grid-template-rows:minmax(0,1fr) auto;
+      grid-template-rows:100%;
     }
 
     /* left rail -- logo pinned top, headline centred, progress pinned bottom */
@@ -677,8 +677,14 @@ MATCH_PAGE_CSS = """<style>
     .mt-scope .mt-oh-pill{margin-top:16px}
     .mt-scope .rail{position:absolute;left:clamp(36px,3.4vw,56px);bottom:44px;width:200px;margin:0}
 
-    /* right pane -- scrolls only if it truly overflows one screen */
-    .mt-scope .body{grid-column:2;grid-row:1;min-height:0;overflow-y:auto;padding:0}
+    /* right pane -- form + action bar in one column; the pane scrolls only if
+       the content truly overflows one screen. On step 0 the form keeps its
+       natural height so the button sits directly beneath it (no dead gap);
+       on the short contact / result steps the form grows to fill and centre. */
+    .mt-scope .mt-pane{grid-column:2;grid-row:1;min-height:0;overflow-y:auto;
+      display:flex;flex-direction:column}
+    .mt-scope .body{flex:1 1 auto;min-height:0;padding:0}
+    .mt-scope[data-mt-step="0"] .body{flex:0 0 auto}
     .mt-scope .step[data-step="0"]{
       display:grid;grid-template-columns:1fr 1fr;align-content:start;
       gap:1px;background:var(--line-2);border-bottom:1px solid var(--line-2);
@@ -721,14 +727,15 @@ MATCH_PAGE_CSS = """<style>
     .mt-scope .result .count{font-size:clamp(3.6rem,6vw,6rem)}
     .mt-scope .msg{max-width:500px}
 
-    /* action bar */
+    /* action bar -- flows right under the form; sticks to the bottom edge
+       only while the pane is actually scrolling (short screens / tablets) */
     .mt-scope .bar{
-      grid-column:2;grid-row:2;z-index:5;
+      position:sticky;bottom:0;z-index:5;flex:0 0 auto;
       background:var(--paper);border-top:1px solid var(--line);
-      padding:12px clamp(22px,2.3vw,34px) calc(12px + env(safe-area-inset-bottom));
+      padding:14px clamp(22px,2.3vw,34px) calc(14px + env(safe-area-inset-bottom));
     }
-    .mt-scope .bar-inner{max-width:540px}
-    .mt-scope .cta,.mt-scope .ghost{min-height:46px}
+    .mt-scope .bar-inner{max-width:560px}
+    .mt-scope .cta,.mt-scope .ghost{min-height:48px}
   }
 </style>"""
 
@@ -867,10 +874,11 @@ MATCH_PAGE_SCRIPT = r"""
   /* ---- steps ---- */
   function show(i) {
     steps.forEach(function (s) { s.hidden = String(s.dataset.step) !== String(i); });
+    try { scope.setAttribute('data-mt-step', i); } catch (e) {}
     var done = i === 'result' ? rail.length - 1 : +i;
     rail.forEach(function (r, idx) { r.classList.toggle('on', idx <= done); });
     try { window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
-    try { wiz.scrollTop = 0; } catch (e) {}
+    try { wiz.scrollTop = 0; if (wiz.parentNode && wiz.parentNode.scrollTop) wiz.parentNode.scrollTop = 0; } catch (e) {}
     $('mt-back').hidden = (i !== 1);
     $('mt-bar').hidden = (i === 'result');
     if (i === 0) { $('mt-head').textContent = 'Tell us what you’re looking for.'; $('mt-subhead').textContent = 'Approximate is fine — you can refine the details with Simone later.'; $('mt-cta-label').textContent = 'Continue'; }
@@ -2191,7 +2199,7 @@ def build_match_page_html(oh=""):
     body = f"""
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
 {MATCH_PAGE_CSS}
-<div class="mt-scope" id="mt-scope">
+<div class="mt-scope" id="mt-scope" data-mt-step="0">
   <div class="wrap">
     <header>
       <div class="head-top">
@@ -2210,6 +2218,7 @@ def build_match_page_html(oh=""):
       <div class="rail" aria-hidden="true"><i class="on"></i><i></i></div>
     </header>
 
+    <div class="mt-pane">
     <form id="mt-form" class="body" novalidate>
       <input id="mt-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
       <input type="hidden" id="mt-oh" value="{html.escape(oh)}">
@@ -2344,10 +2353,11 @@ def build_match_page_html(oh=""):
       <datalist id="mt-markets">{_market_datalist_options()}</datalist>
     </form>
 
-    <div class="bar" id="mt-bar">
-      <div class="bar-inner">
-        <button type="button" class="ghost" id="mt-back" hidden>Back</button>
-        <button type="button" class="cta" id="mt-cta"><span id="mt-cta-label">Continue</span></button>
+      <div class="bar" id="mt-bar">
+        <div class="bar-inner">
+          <button type="button" class="ghost" id="mt-back" hidden>Back</button>
+          <button type="button" class="cta" id="mt-cta"><span id="mt-cta-label">Continue</span></button>
+        </div>
       </div>
     </div>
   </div>
