@@ -734,7 +734,9 @@ MATCH_PAGE_CSS = """<style>
       background:var(--paper);border-top:1px solid var(--line);
       padding:14px clamp(22px,2.3vw,34px) calc(14px + env(safe-area-inset-bottom));
     }
-    .mt-scope .bar-inner{max-width:560px}
+    .mt-scope .bar-inner{max-width:none;justify-content:flex-end}
+    .mt-scope .bar-inner .ghost{flex:0 0 auto;margin-right:auto}
+    .mt-scope .bar-inner .cta{flex:0 0 auto;min-width:240px;padding:0 44px}
     .mt-scope .cta,.mt-scope .ghost{min-height:48px}
   }
 </style>"""
