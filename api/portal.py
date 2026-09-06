@@ -694,17 +694,17 @@ MATCH_PAGE_CSS = """<style>
     .mt-scope .step[data-step="0"] .sec:first-child,
     .mt-scope .step[data-step="0"] .sec:last-child{grid-column:1 / -1}
 
-    /* --- Re-pair the grid rows by visual weight so each row's two cells are
-       close in height: Price|Condition, Beds|Baths, Property details|Home type.
-       This is a desktop-only visual reorder (CSS order); DOM + tab order and
-       the mobile single column are unchanged. --- */
+    /* --- Desktop-only visual reorder of the grid (CSS order); DOM + tab order
+       and the mobile single column are unchanged. Reading left->right, top->
+       bottom: Where / Price | Home type / Beds | Baths / Property details |
+       Condition / Anything else. --- */
     .mt-scope .step[data-step="0"] .sec:nth-child(1){order:1}   /* Where (full) */
     .mt-scope .step[data-step="0"] .sec:nth-child(2){order:2}   /* Price */
-    .mt-scope .step[data-step="0"] .sec:nth-child(7){order:3}   /* Condition -> row 2 right */
+    .mt-scope .step[data-step="0"] .sec:nth-child(6){order:3}   /* Home type -> row 2 right */
     .mt-scope .step[data-step="0"] .sec:nth-child(4){order:4}   /* Beds */
     .mt-scope .step[data-step="0"] .sec:nth-child(5){order:5}   /* Baths -> row 3 right */
     .mt-scope .step[data-step="0"] .sec:nth-child(3){order:6}   /* Property details */
-    .mt-scope .step[data-step="0"] .sec:nth-child(6){order:7}   /* Home type -> row 4 right */
+    .mt-scope .step[data-step="0"] .sec:nth-child(7){order:7}   /* Condition -> row 4 right */
     .mt-scope .step[data-step="0"] .sec:nth-child(8){order:8}   /* Anything else (full) */
     /* no helper sentence in the compact paired cells (kept on mobile + on Where),
        and drop the "-- optional / -- choose any" tags (redundant with the subhead) */
