@@ -694,6 +694,29 @@ MATCH_PAGE_CSS = """<style>
     .mt-scope .step[data-step="0"] .sec:first-child,
     .mt-scope .step[data-step="0"] .sec:last-child{grid-column:1 / -1}
 
+    /* --- Re-pair the grid rows by visual weight so each row's two cells are
+       close in height: Price|Condition, Beds|Baths, Property details|Home type.
+       This is a desktop-only visual reorder (CSS order); DOM + tab order and
+       the mobile single column are unchanged. --- */
+    .mt-scope .step[data-step="0"] .sec:nth-child(1){order:1}   /* Where (full) */
+    .mt-scope .step[data-step="0"] .sec:nth-child(2){order:2}   /* Price */
+    .mt-scope .step[data-step="0"] .sec:nth-child(7){order:3}   /* Condition -> row 2 right */
+    .mt-scope .step[data-step="0"] .sec:nth-child(4){order:4}   /* Beds */
+    .mt-scope .step[data-step="0"] .sec:nth-child(5){order:5}   /* Baths -> row 3 right */
+    .mt-scope .step[data-step="0"] .sec:nth-child(3){order:6}   /* Property details */
+    .mt-scope .step[data-step="0"] .sec:nth-child(6){order:7}   /* Home type -> row 4 right */
+    .mt-scope .step[data-step="0"] .sec:nth-child(8){order:8}   /* Anything else (full) */
+    /* no helper sentence in the compact paired cells (kept on mobile + on Where),
+       and drop the "-- optional / -- choose any" tags (redundant with the subhead) */
+    .mt-scope .step[data-step="0"] .sec:not(:first-child):not(:last-child) .hint{display:none}
+    .mt-scope .step[data-step="0"] .sec .opt{display:none}
+    /* the hidden hint would otherwise eat the h2->control gap on Beds */
+    .mt-scope .step[data-step="0"] .sec .hint + .seg{margin-top:9px}
+    /* keep the number strips from stretching across the whole column */
+    .mt-scope .step[data-step="0"] .seg{max-width:460px}
+    /* even out the paired rows: smaller Condition pills, tighter Home-type tiles */
+    .mt-scope .step[data-step="0"] .pill{padding:7px 11px;font-size:.82rem}
+
     /* tighten every control so the eight sections clear the fold */
     .mt-scope .sec h2{font-size:1rem;margin-bottom:2px}
     .mt-scope .sec .hint{margin-bottom:9px}
@@ -703,7 +726,7 @@ MATCH_PAGE_CSS = """<style>
     .mt-scope .seg button{padding:9px 4px;font-size:.9rem}
     .mt-scope .seg-val{margin-top:5px;font-size:.78rem}
     .mt-scope .grid{gap:8px}
-    .mt-scope .tile{flex-direction:row;justify-content:center;gap:8px;padding:11px 10px;font-size:.83rem}
+    .mt-scope .tile{flex-direction:row;justify-content:center;gap:8px;padding:9px 10px;font-size:.83rem}
     .mt-scope .tile svg{width:19px;height:19px}
     .mt-scope .pills{gap:7px}
     .mt-scope .pill{padding:8px 13px;font-size:.83rem}
