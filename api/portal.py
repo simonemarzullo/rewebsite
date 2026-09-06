@@ -2279,17 +2279,6 @@ def build_match_page_html(oh=""):
         </div>
 
         <div class="sec">
-          <h2>Condition <span class="opt">&mdash; choose any</span></h2>
-          <div class="pills" id="mt-cond" role="group" aria-label="Condition">
-            <button type="button" class="pill" data-v="Fixer" aria-pressed="false">Fixer</button>
-            <button type="button" class="pill" data-v="Original Condition" aria-pressed="false">Original</button>
-            <button type="button" class="pill" data-v="Well Maintained" aria-pressed="false">Well maintained</button>
-            <button type="button" class="pill" data-v="Recently Updated" aria-pressed="false">Recently updated</button>
-            <button type="button" class="pill" data-v="Newly Built" aria-pressed="false">Newly built</button>
-          </div>
-        </div>
-
-        <div class="sec">
           <h2>Property details <span class="opt">&mdash; optional</span></h2>
           <div class="grp">
             <div>
@@ -2308,6 +2297,17 @@ def build_match_page_html(oh=""):
                 <div class="selbox"><select id="mt-lot-max" aria-label="Maximum lot size">{lot_max_opts}</select></div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <h2>Condition <span class="opt">&mdash; choose any</span></h2>
+          <div class="pills" id="mt-cond" role="group" aria-label="Condition">
+            <button type="button" class="pill" data-v="Fixer" aria-pressed="false">Fixer</button>
+            <button type="button" class="pill" data-v="Original Condition" aria-pressed="false">Original</button>
+            <button type="button" class="pill" data-v="Well Maintained" aria-pressed="false">Well maintained</button>
+            <button type="button" class="pill" data-v="Recently Updated" aria-pressed="false">Recently updated</button>
+            <button type="button" class="pill" data-v="Newly Built" aria-pressed="false">Newly built</button>
           </div>
         </div>
 
