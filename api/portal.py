@@ -647,6 +647,62 @@ MATCH_PAGE_CSS = """<style>
   .mt-scope .restart:hover{color:var(--ink)}
   .mt-scope [hidden]{display:none!important}
   .mt-scope #mt-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+
+  /* ---- Desktop: full-viewport two-pane console. The narrow card becomes a
+     fixed left brand rail + a scrolling work pane with a pinned action bar.
+     Pure CSS over the same markup -- the wizard JS is untouched. ---- */
+  @media (min-width:1000px){
+    html,body{background:var(--ground)}
+    .mt-scope{min-height:100vh}
+    .mt-scope .wrap{
+      max-width:none;margin:0;padding:0;border-radius:0;overflow:visible;box-shadow:none;
+      min-height:100vh;background:var(--paper);
+      display:grid;
+      grid-template-columns:minmax(380px,480px) minmax(0,1fr);
+      grid-template-rows:1fr auto;
+    }
+
+    /* left rail -- brand + progress, pinned to the viewport */
+    .mt-scope header{
+      grid-column:1;grid-row:1 / -1;
+      position:sticky;top:0;align-self:start;
+      height:100vh;overflow-y:auto;
+      display:flex;flex-direction:column;
+      padding:56px clamp(40px,4vw,64px);
+      background:var(--paper-2);border-right:1px solid var(--line);
+    }
+    .mt-scope .head-top{min-height:0}
+    .mt-scope h1{font-size:clamp(2.1rem,2.6vw,2.9rem);margin:auto 0 14px;max-width:15ch}
+    .mt-scope .sub{font-size:1rem;max-width:32ch}
+    .mt-scope .rail{margin-top:auto;padding-top:44px;max-width:260px}
+
+    /* right pane -- the form, window scrolls */
+    .mt-scope .body{grid-column:2;grid-row:1;width:100%;max-width:1180px;margin-inline:auto;padding:0}
+    .mt-scope .step[data-step="0"]{
+      display:grid;grid-template-columns:1fr 1fr;align-content:start;
+      gap:1px;background:var(--line-2);border-bottom:1px solid var(--line-2);
+    }
+    .mt-scope .step[data-step="0"] .sec{background:var(--paper);padding:28px clamp(28px,3vw,44px)}
+    .mt-scope .step[data-step="0"] .sec + .sec{border-top:0}
+    .mt-scope .step[data-step="0"] .sec:first-child,
+    .mt-scope .step[data-step="0"] .sec:last-child{grid-column:1 / -1}
+    .mt-scope .sec h2{font-size:1.12rem}
+    .mt-scope .step.contact{max-width:600px;margin-inline:auto;padding:56px clamp(28px,3vw,44px)}
+    .mt-scope .step.contact .sec{padding:0}
+    .mt-scope .step[data-step="result"]{min-height:calc(100vh - 92px);display:grid;place-items:center;padding:56px}
+    .mt-scope .result{max-width:620px}
+    .mt-scope .result .count{font-size:clamp(4rem,7vw,7rem)}
+    .mt-scope .msg{max-width:520px}
+
+    /* action bar -- pinned to the bottom of the work pane */
+    .mt-scope .bar{
+      grid-column:2;grid-row:2;position:sticky;bottom:0;z-index:5;
+      width:100%;max-width:1180px;margin-inline:auto;
+      background:var(--paper);border-top:1px solid var(--line);
+      padding:18px clamp(28px,3vw,44px) calc(18px + env(safe-area-inset-bottom));
+    }
+    .mt-scope .bar-inner{max-width:560px}
+  }
 </style>"""
 
 MATCH_PAGE_SCRIPT = r"""
@@ -850,11 +906,14 @@ MATCH_PAGE_SCRIPT = r"""
     try {
       var data = await post(payload);
       var n = data.count || 0, first = name.split(' ')[0];
+      $('mt-head').textContent = 'Your search is in' + (first ? ', ' + first : '') + '.';
       if (n > 0) {
+        $('mt-subhead').textContent = 'These homes aren’t listed publicly — Simone has the details on each.';
         $('mt-count').style.display = ''; $('mt-count').textContent = n;
         $('mt-result-h').textContent = (n === 1 ? 'home in our network matches' : 'homes in our network match') + ' your search';
         $('mt-result-p').textContent = 'These aren’t listed publicly. Contact Simone directly for details — or send a note below and he’ll be in touch.';
       } else {
+        $('mt-subhead').textContent = 'Simone will reach out the moment something fits what you’re looking for.';
         $('mt-count').style.display = 'none';
         $('mt-result-h').textContent = 'Thank you' + (first ? ', ' + first : '') + '.';
         $('mt-result-p').textContent = 'Your search is saved. Simone will reach out as soon as a new opportunity comes up that fits what you’re looking for — or send him a note below.';
