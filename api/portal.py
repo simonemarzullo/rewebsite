@@ -404,6 +404,27 @@ BUYER_MATCH_SCRIPT = r"""
     });
   }
 
+  // --- Contact index: trigger the build-index GitHub Action -------------
+  var ciBtn = document.getElementById('ci-refresh');
+  if (ciBtn) {
+    ciBtn.addEventListener('click', async function () {
+      var out = document.getElementById('ci-refresh-result');
+      ciBtn.disabled = true;
+      var prev = ciBtn.textContent;
+      ciBtn.textContent = 'Starting…';
+      try {
+        var data = await adminPost({action: 'refresh_contact_index'});
+        out.innerHTML = '<p class="bm-note">' + esc(data.summary) +
+          ' This page will show the new count once it finishes — reload in a few minutes.</p>';
+        ciBtn.textContent = 'Refreshing…';
+      } catch (err) {
+        out.innerHTML = '<p class="om-error" style="display:block">' + esc(err.message) + '</p>';
+        ciBtn.disabled = false;
+        ciBtn.textContent = prev;
+      }
+    });
+  }
+
   // --- Phase 2: LA County enrichment sweep (loops small batches) ---------
   var enStart = document.getElementById('bm-enrich-start');
   if (enStart) {
@@ -2823,6 +2844,46 @@ def fetch_enrich_state(conn):
         return row
 
 
+def fetch_contact_index_state(conn):
+    """Row from contact_index_state (build_index.py's status), with a live
+    count(*) from contact_properties. None if the table doesn't exist yet."""
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM contact_index_state WHERE id = 1")
+            row = dict(cur.fetchone() or {})
+            cur.execute("SELECT count(*) AS n FROM contact_properties")
+            row["count"] = cur.fetchone()["n"]
+            return row
+    except Exception:
+        conn.rollback()
+        return None
+
+
+def dispatch_build_index_workflow():
+    """Fire the 'build-index' GitHub Action. -> (ok: bool, message: str)."""
+    token = os.environ.get("GH_DISPATCH_TOKEN")
+    repo = os.environ.get("GH_REPO", "simonemarzullo/rewebsite")
+    if not token:
+        return (False, "GH_DISPATCH_TOKEN isn't set in the site's environment.")
+    url = f"https://api.github.com/repos/{repo}/actions/workflows/build-index.yml/dispatches"
+    req = urllib.request.Request(
+        url, data=json.dumps({"ref": "main"}).encode("utf-8"), method="POST")
+    req.add_header("Authorization", f"Bearer {token}")
+    req.add_header("Accept", "application/vnd.github+json")
+    req.add_header("X-GitHub-Api-Version", "2022-11-28")
+    req.add_header("User-Agent", "marzullore-admin")
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            if resp.status in (204, 201, 200):
+                return (True, "Refresh started — it runs on GitHub and takes a few minutes.")
+            return (False, f"GitHub returned {resp.status}.")
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace")[:200]
+        return (False, f"GitHub rejected the request ({e.code}). {detail}")
+    except Exception as e:
+        return (False, f"Couldn't reach GitHub: {e}")
+
+
 def save_enrich_state(conn, next_offset, seen_inc, updated_inc, nomatch_inc, wrapped,
                       db_total=None, next_link=None):
     # next_link is set explicitly every call (None clears it -> next run starts
@@ -4399,7 +4460,8 @@ def _enrichment_panel_html(enrich_state):
 
 
 def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listings,
-                     buyer_needs=None, enrich_state=None, counts=None, activity=None):
+                     buyer_needs=None, enrich_state=None, counts=None, activity=None,
+                     index_state=None):
     active_clients = [c for c in clients if c["active"]]
     history_clients = [c for c in clients if not c["active"]]
 
@@ -4440,6 +4502,14 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
     else:
         ring_pct = 0
     ring_txt = f"{ring_pct}%" if (db_total or passes) else "—"
+
+    ix = index_state or {}
+    ix_count = ix.get("count") or 0
+    ix_running = bool(ix.get("running"))
+    _ixf = ix.get("last_full_at")
+    ix_when = (("just now" if _relative_time(_ixf) == "now" else f"{_relative_time(_ixf)} ago")
+              if _ixf else ("building now" if ix_running else "never"))
+
     needs_active = len([n for n in (buyer_needs or []) if n.get("active")])
     last_match = "never"
     _lm = [n.get("last_matched_at") for n in (buyer_needs or []) if n.get("last_matched_at")]
@@ -4628,6 +4698,16 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
               <div class="lbl"><b>{ring_txt}</b><span>of pass {passes + 1}</span></div>
             </div>
           </div>
+        </div>
+        <div class="adm-panel">
+          <div class="db-section-title">Contact index</div>
+          <p class="adm-tagline" style="margin:0 0 12px">A local copy of every FollowUpBoss contact's property (address, ZIP/area, and the beds/baths/sq ft/type filled above). <strong>Buyer Match reads this</strong> instead of the FollowUpBoss API. Refresh it after you add or enrich a batch of contacts.</p>
+          <dl class="ac-statlist" style="margin-bottom:14px">
+            <div><dt>Properties indexed</dt><dd>{ix_count:,}</dd></div>
+            <div><dt>Last full refresh</dt><dd>{ix_when}</dd></div>
+          </dl>
+          <button type="button" class="btn-primary adm-btn-sm" id="ci-refresh"{' disabled' if ix_running else ''}>{'Refreshing…' if ix_running else 'Refresh from FollowUpBoss'}</button>
+          <div id="ci-refresh-result" style="margin-top:10px"></div>
         </div>
       </div>
       {enrichment_panel}
@@ -4890,6 +4970,7 @@ class handler(BaseHTTPRequestHandler):
                     conn.rollback()
                     print(f"portal(admin): enrich state unavailable (run db/schema.sql?): {e}")
                     enrich_state = None
+                index_state = fetch_contact_index_state(conn)
                 try:
                     admin_counts = fetch_admin_counts(conn)
                     admin_activity = fetch_admin_activity(conn)
@@ -4905,7 +4986,8 @@ class handler(BaseHTTPRequestHandler):
                 if conn:
                     conn.close()
             self._send_html(200, build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listings,
-                                                  buyer_needs, enrich_state, admin_counts, admin_activity))
+                                                  buyer_needs, enrich_state, admin_counts, admin_activity,
+                                                  index_state))
             return
 
         # Default: client dashboard (section == "dashboard" or unset)
@@ -5391,6 +5473,11 @@ class handler(BaseHTTPRequestHandler):
             # --- Buyer Match prospecting tool ---------------------------------
             if action == "fub_setup_fields":
                 self._send_json(200, {"ok": True, "summary": fub_setup_custom_fields()})
+                return
+
+            if action == "refresh_contact_index":
+                ok, msg = dispatch_build_index_workflow()
+                self._send_json(200 if ok else 502, {"ok": ok, "summary": msg, "error": None if ok else msg})
                 return
 
             if action == "buyer_need_run":
