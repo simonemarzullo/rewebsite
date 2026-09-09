@@ -2151,10 +2151,23 @@ def _offmarket_profile(l):
     }
 
 
+_PUBLIC_HARD_PREFIXES = ("Price", "Beds", "Baths", "Sq ft", "Lot", "Area")
+
+
+def _public_match_confirmed(checks):
+    """True only when every hard criterion the buyer actually set came back a
+    'hit' -- no 'no data' / 'unknown' / 'miss'. The admin matcher is lenient on
+    purpose; the buyer-facing count must not claim a match it can't verify."""
+    for c in checks or []:
+        if c.get("label", "").startswith(_PUBLIC_HARD_PREFIXES) and c.get("status") != "hit":
+            return False
+    return True
+
+
 def run_public_match(conn, criteria):
     """(total_count, note_or_None, matches). `matches` is a list shaped for
-    _match_address_line / log_matches_on_buyer -- off-market listings that clear
-    the gate + FUB Nurture prospects that clear it."""
+    _match_address_line / log_matches_on_buyer -- off-market listings + FUB
+    Nurture prospects where EVERY criterion the buyer gave is confirmed."""
     note = None
     matches = []
     try:
@@ -2163,18 +2176,21 @@ def run_public_match(conn, criteria):
                 continue
             prof = _offmarket_profile(l)
             r = score_buyer_match(criteria, prof)
-            if r["gate_ok"] and r["score"] >= BUYER_MATCH_MIN_SCORE:
-                print(f"portal(match): OFFMKT hit {prof.get('address')!r} score={r['score']} "
-                      f"checks={[(c['label'], c['status']) for c in r['checks']]}")
+            ok = r["gate_ok"] and r["score"] >= BUYER_MATCH_MIN_SCORE and _public_match_confirmed(r["checks"])
+            print(f"portal(match): OFFMKT {prof.get('address')!r} accept={ok} score={r['score']} "
+                  f"checks={[(c['label'], c['status']) for c in r['checks']]}")
+            if ok:
                 matches.append({"name": l.get("address") or "Off-market listing",
                                 "prof": {"address": prof["address"], "area": prof["area"]}})
     except Exception as e:
         print(f"portal(match): off-market scan failed: {e}")
     fub = run_buyer_match(criteria)
     for m in (fub.get("matches") or []):
-        print(f"portal(match): FUB hit {m.get('name')!r} addr={m.get('prof', {}).get('address')!r} "
+        ok = _public_match_confirmed(m.get("checks"))
+        print(f"portal(match): FUB {m.get('name')!r} addr={m.get('prof', {}).get('address')!r} accept={ok} "
               f"score={m.get('score')} checks={[(c['label'], c['status']) for c in m.get('checks', [])]}")
-    matches.extend(fub.get("matches") or [])
+        if ok:
+            matches.append(m)
     if fub.get("error"):
         note = fub["error"]
     return len(matches), note, matches
