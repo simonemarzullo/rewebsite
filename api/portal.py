@@ -2256,6 +2256,8 @@ def push_match_lead_to_fub(lead, criteria, count, oh):
         "person": person,
     }
     _status, body, err = _fub_request("POST", FUB_EVENTS_URL, payload)
+    print(f"portal(match): event POST http={_status} err={err!r} "
+          f"body_type={type(body).__name__} body_keys={list(body)[:14] if isinstance(body, dict) else body}")
     if body is None:
         return (None, f"FollowUpBoss push failed ({err})")
     pid = None
