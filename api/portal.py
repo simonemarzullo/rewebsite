@@ -2230,10 +2230,27 @@ def push_match_lead_to_fub(lead, criteria, count, oh):
         "person": person,
     }
     _status, body, err = _fub_request("POST", FUB_EVENTS_URL, payload)
-    if isinstance(body, dict):
-        pid = body.get("personId") or (body.get("person") or {}).get("id")
-        return (pid, "sent to FollowUpBoss")
-    return (None, f"FollowUpBoss push failed ({err})")
+    if body is None:
+        return (None, f"FollowUpBoss push failed ({err})")
+    pid = body.get("personId") or (body.get("person") or {}).get("id") if isinstance(body, dict) else None
+    if not pid:
+        pid = _fub_find_person_id(lead.get("email"), lead.get("phone"))
+    print(f"portal(match): lead event ok, personId={pid}")
+    return (pid, "sent to FollowUpBoss")
+
+
+def _fub_find_person_id(email, phone):
+    """Look up a FollowUpBoss person id by email, then phone -- fallback for
+    when the event response doesn't carry one back."""
+    for key, val in (("email", email), ("phone", phone)):
+        if not val:
+            continue
+        _s, body, _e = _fub_request(
+            "GET", f"{FUB_API_BASE}/people?" + urllib.parse.urlencode({key: val, "limit": 1}))
+        ppl = (body or {}).get("people") or []
+        if ppl and ppl[0].get("id"):
+            return ppl[0]["id"]
+    return None
 
 
 def push_match_message_to_fub(lead, message):
@@ -4943,9 +4960,11 @@ class handler(BaseHTTPRequestHandler):
                 conn.close()
         try:
             pid, _status = push_match_lead_to_fub(lead, criteria, count, oh)
+            wrote = 0
             if pid and matches:
                 buyer_label = lead.get("name") or lead.get("email") or lead.get("phone") or "buyer"
-                log_matches_on_buyer(pid, buyer_label, _criteria_sentence(criteria), matches)
+                wrote = log_matches_on_buyer(pid, buyer_label, _criteria_sentence(criteria), matches)
+            print(f"portal(match): pid={pid} matches={len(matches)} note_bullets={wrote}")
         except Exception as e:
             print(f"portal(match): lead push failed: {e}")
         self._send_json(200, {"ok": True, "count": count})
