@@ -2215,7 +2215,7 @@ def push_match_lead_to_fub(lead, criteria, count, oh):
         rep,
     ]
     person = _match_person(lead)
-    person["stage"] = os.environ.get("FUB_MATCH_STAGE", "Buyer Lead")
+    person["stage"] = os.environ.get("FUB_MATCH_STAGE", "Lead")
     person["tags"] = _match_lead_tags(lead, criteria, count, oh)
     person["background"] = "\n".join(bg)
     payload = {
