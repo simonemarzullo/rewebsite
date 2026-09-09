@@ -1018,8 +1018,9 @@ MATCH_PAGE_SCRIPT = r"""
     }
     var name = val('mt-name'), email = val('mt-email'), phone = val('mt-phone');
     var rep = repVal() === 'yes', agent = rep ? val('mt-agent-name') : '';
-    var ok = name && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) && phone && (!rep || agent);
-    if (!ok) { showErr('Please add your name, a valid email, a phone number' + (rep ? ', and your agent’s name.' : '.')); return; }
+    if (!name) { showErr('Please add your name.'); return; }
+    if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { showErr('That email doesn’t look right — fix it or leave it blank.'); return; }
+    if (rep && !agent) { showErr('Please add your agent’s name.'); return; }
     showErr('');
     lead = { name: name, email: email, phone: phone };
     var c = criteria();
@@ -2417,8 +2418,9 @@ def build_match_page_html(oh=""):
       <div class="step contact" data-step="1" hidden>
         <div class="sec">
           <div class="field-row"><label class="cap" for="mt-name">Full name</label><input class="in" id="mt-name" autocomplete="name"></div>
-          <div class="field-row"><label class="cap" for="mt-email">Email</label><input class="in" id="mt-email" type="email" inputmode="email" autocomplete="email"></div>
-          <div class="field-row"><label class="cap" for="mt-phone">Phone</label><input class="in" id="mt-phone" type="tel" inputmode="tel" autocomplete="tel"></div>
+          <div class="field-row"><label class="cap" for="mt-email">Email <span class="opt">&mdash; optional</span></label><input class="in" id="mt-email" type="email" inputmode="email" autocomplete="email"></div>
+          <div class="field-row"><label class="cap" for="mt-phone">Phone <span class="opt">&mdash; optional</span></label><input class="in" id="mt-phone" type="tel" inputmode="tel" autocomplete="tel"></div>
+          <p class="hint" style="margin:-4px 0 16px">Add at least one so Simone can reach you &mdash; but neither is required.</p>
           <div class="rep">
             <div class="rep-q">Are you exclusively represented by a buyer's agent?</div>
             <div class="seg" id="mt-rep" role="group" aria-label="Represented by a buyer's agent">
@@ -4885,8 +4887,11 @@ class handler(BaseHTTPRequestHandler):
         name = clean(data.get("name"), 120)
         email = clean(data.get("email"), 200).lower()
         phone = clean(data.get("phone"), 40)
-        if not name or not EMAIL_RE.match(email):
-            self._send_json(400, {"ok": False, "error": "Please enter your name and a valid email."})
+        if not name:
+            self._send_json(400, {"ok": False, "error": "Please enter your name."})
+            return
+        if email and not EMAIL_RE.match(email):
+            self._send_json(400, {"ok": False, "error": "Enter a valid email address, or leave it blank."})
             return
         lead = {"name": name, "email": email, "phone": phone}
 
@@ -4902,9 +4907,6 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(200, {"ok": True})
             return
 
-        if not phone:
-            self._send_json(400, {"ok": False, "error": "Please enter a phone number."})
-            return
         represented = clean(data.get("represented"), 8) == "yes"
         lead["represented"] = represented
         lead["agent_name"] = clean(data.get("agent_name"), 120) if represented else ""
