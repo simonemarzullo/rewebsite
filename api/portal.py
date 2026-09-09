@@ -2168,7 +2168,7 @@ def run_public_match(conn, criteria):
 
 
 def _match_lead_tags(lead, criteria, count, oh):
-    tags = ["Buyer Inquiry", "Match Tool"]
+    tags = ["Buyer Lead", "Buyer Inquiry", "Match Tool"]
     if oh:
         tags += ["Open House", f"Open House: {oh}"[:100]]
     if lead.get("represented"):
@@ -2215,6 +2215,7 @@ def push_match_lead_to_fub(lead, criteria, count, oh):
         rep,
     ]
     person = _match_person(lead)
+    person["stage"] = os.environ.get("FUB_MATCH_STAGE", "Buyer Lead")
     person["tags"] = _match_lead_tags(lead, criteria, count, oh)
     person["background"] = "\n".join(bg)
     payload = {
@@ -2234,7 +2235,7 @@ def push_match_message_to_fub(lead, message):
     if not os.environ.get("FUB_API_KEY") or not message:
         return False
     person = _match_person(lead)
-    person["tags"] = ["Buyer Inquiry", "Match Tool", "Sent a Message"]
+    person["tags"] = ["Buyer Lead", "Buyer Inquiry", "Match Tool", "Sent a Message"]
     payload = {
         "source": os.environ.get("FUB_SOURCE", "Simone Marzullo Website"),
         "system": os.environ.get("FUB_SYSTEM", "Simone Marzullo Website"),
