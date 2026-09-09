@@ -2147,24 +2147,27 @@ def _offmarket_profile(l):
 
 
 def run_public_match(conn, criteria):
-    """(total_count, note_or_None). Off-market listings that clear the gate +
-    FUB Nurture prospects that clear it."""
-    total = 0
+    """(total_count, note_or_None, matches). `matches` is a list shaped for
+    _match_address_line / log_matches_on_buyer -- off-market listings that clear
+    the gate + FUB Nurture prospects that clear it."""
     note = None
+    matches = []
     try:
         for l in fetch_all_offmarket_listings(conn):
             if not l.get("active"):
                 continue
-            r = score_buyer_match(criteria, _offmarket_profile(l))
+            prof = _offmarket_profile(l)
+            r = score_buyer_match(criteria, prof)
             if r["gate_ok"] and r["score"] >= BUYER_MATCH_MIN_SCORE:
-                total += 1
+                matches.append({"name": l.get("address") or "Off-market listing",
+                                "prof": {"address": prof["address"], "area": prof["area"]}})
     except Exception as e:
         print(f"portal(match): off-market scan failed: {e}")
     fub = run_buyer_match(criteria)
-    total += len(fub.get("matches") or [])
+    matches.extend(fub.get("matches") or [])
     if fub.get("error"):
         note = fub["error"]
-    return total, note
+    return len(matches), note, matches
 
 
 def _match_lead_tags(lead, criteria, count, oh):
@@ -2202,9 +2205,10 @@ def _match_person(lead):
 
 
 def push_match_lead_to_fub(lead, criteria, count, oh):
-    """Create/merge the buyer as a FollowUpBoss contact. -> note string."""
+    """Create/merge the buyer as a FollowUpBoss contact.
+    -> (fub_person_id_or_None, status_string)."""
     if not os.environ.get("FUB_API_KEY"):
-        return "saved (FollowUpBoss not configured)"
+        return (None, "saved (FollowUpBoss not configured)")
     summary = _criteria_sentence(criteria)
     rep = (f"Exclusively represented by {lead.get('agent_name') or 'a buyer’s agent'}"
            if lead.get("represented") else "Not exclusively represented by a buyer's agent")
@@ -2226,7 +2230,10 @@ def push_match_lead_to_fub(lead, criteria, count, oh):
         "person": person,
     }
     _status, body, err = _fub_request("POST", FUB_EVENTS_URL, payload)
-    return "sent to FollowUpBoss" if body is not None else f"FollowUpBoss push failed ({err})"
+    if isinstance(body, dict):
+        pid = body.get("personId") or (body.get("person") or {}).get("id")
+        return (pid, "sent to FollowUpBoss")
+    return (None, f"FollowUpBoss push failed ({err})")
 
 
 def push_match_message_to_fub(lead, message):
@@ -4923,19 +4930,22 @@ class handler(BaseHTTPRequestHandler):
             return
         oh = clean(data.get("oh"), 120)
 
-        count = 0
+        count, matches = 0, []
         conn = None
         try:
             conn = get_conn()
             if conn is not None:
-                count, _note = run_public_match(conn, criteria)
+                count, _note, matches = run_public_match(conn, criteria)
         except Exception as e:
             print(f"portal(match): search failed: {e}")
         finally:
             if conn:
                 conn.close()
         try:
-            push_match_lead_to_fub(lead, criteria, count, oh)
+            pid, _status = push_match_lead_to_fub(lead, criteria, count, oh)
+            if pid and matches:
+                buyer_label = lead.get("name") or lead.get("email") or lead.get("phone") or "buyer"
+                log_matches_on_buyer(pid, buyer_label, _criteria_sentence(criteria), matches)
         except Exception as e:
             print(f"portal(match): lead push failed: {e}")
         self._send_json(200, {"ok": True, "count": count})
