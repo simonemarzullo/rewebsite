@@ -2335,9 +2335,13 @@ def push_match_lead_to_fub(lead, criteria, count, oh):
         "message": f"New buyer search (/match): {summary} — {count} match(es) in our network. {rep}.",
         "person": person,
     }
+    _who = (lead.get("name") or "?").split()[0] + (
+        " +email" if lead.get("email") else "") + (" +phone" if lead.get("phone") else "")
     _status, body, err = _fub_request("POST", FUB_EVENTS_URL, payload)
+    print(f"portal(match): event POST http={_status} who={_who!r} "
+          f"body={('empty' if isinstance(body, dict) and not body else type(body).__name__)}"
+          f"{' keys=' + str(list(body)[:8]) if isinstance(body, dict) and body else ''}")
     if body is None:
-        print(f"portal(match): event POST FAILED http={_status} err={err!r}")
         return (None, f"FollowUpBoss push failed ({err})")
     pid = None
     if isinstance(body, dict) and body:
