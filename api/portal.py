@@ -2165,10 +2165,12 @@ def _public_match_confirmed(checks):
 
 
 def run_public_match(conn, criteria):
-    """(total_count, note_or_None, matches). `matches` is a list shaped for
-    _match_address_line / log_matches_on_buyer -- off-market listings + FUB
-    Nurture prospects where EVERY criterion the buyer gave is confirmed."""
-    note = None
+    """(total_count, note_or_None, matches). Public /match count -- scores the
+    off-market listings only (a single DB read). The FUB Nurture-pipeline scan
+    is deliberately NOT run here: it is 6+ paged API calls per hit on a public
+    endpoint, and after _public_match_confirmed those sparse prospects almost
+    never count anyway. That scan lives in the admin Buyer Match tool.
+    `matches` is shaped for _match_address_line / log_matches_on_buyer."""
     matches = []
     try:
         for l in fetch_all_offmarket_listings(conn):
@@ -2176,24 +2178,13 @@ def run_public_match(conn, criteria):
                 continue
             prof = _offmarket_profile(l)
             r = score_buyer_match(criteria, prof)
-            ok = r["gate_ok"] and r["score"] >= BUYER_MATCH_MIN_SCORE and _public_match_confirmed(r["checks"])
-            print(f"portal(match): OFFMKT {prof.get('address')!r} accept={ok} score={r['score']} "
-                  f"checks={[(c['label'], c['status']) for c in r['checks']]}")
-            if ok:
+            if (r["gate_ok"] and r["score"] >= BUYER_MATCH_MIN_SCORE
+                    and _public_match_confirmed(r["checks"])):
                 matches.append({"name": l.get("address") or "Off-market listing",
                                 "prof": {"address": prof["address"], "area": prof["area"]}})
     except Exception as e:
         print(f"portal(match): off-market scan failed: {e}")
-    fub = run_buyer_match(criteria)
-    for m in (fub.get("matches") or []):
-        ok = _public_match_confirmed(m.get("checks"))
-        print(f"portal(match): FUB {m.get('name')!r} addr={m.get('prof', {}).get('address')!r} accept={ok} "
-              f"score={m.get('score')} checks={[(c['label'], c['status']) for c in m.get('checks', [])]}")
-        if ok:
-            matches.append(m)
-    if fub.get("error"):
-        note = fub["error"]
-    return len(matches), note, matches
+    return len(matches), None, matches
 
 
 def _match_lead_tags(lead, criteria, count, oh):
@@ -2256,20 +2247,19 @@ def push_match_lead_to_fub(lead, criteria, count, oh):
         "person": person,
     }
     _status, body, err = _fub_request("POST", FUB_EVENTS_URL, payload)
-    print(f"portal(match): event POST http={_status} err={err!r} "
-          f"body_type={type(body).__name__} body_keys={list(body)[:14] if isinstance(body, dict) else body}")
     if body is None:
+        print(f"portal(match): event POST FAILED http={_status} err={err!r}")
         return (None, f"FollowUpBoss push failed ({err})")
     pid = None
-    if isinstance(body, dict):
-        pid = body.get("personId") or (body.get("person") or {}).get("id")
-        # the events endpoint actually returns the merged Person object itself
-        if not pid and body.get("id") and (body.get("firstName") or body.get("stage") or body.get("stageId")):
-            pid = body.get("id")
-    if not pid:
-        print(f"portal(match): event resp had no personId; keys={list(body)[:12] if isinstance(body, dict) else type(body).__name__}")
+    if isinstance(body, dict) and body:
+        pid = (body.get("personId") or (body.get("person") or {}).get("id")
+               # the events endpoint returns the merged Person object itself
+               or (body.get("id") if body.get("firstName") or body.get("stage") else None))
+    # only spend extra lookups when the event clearly succeeded but withheld the id
+    if not pid and isinstance(body, dict) and body:
         pid = _fub_find_person_id(lead.get("email"), lead.get("phone"), lead.get("name"))
-    print(f"portal(match): lead event ok, personId={pid}")
+    print(f"portal(match): event POST http={_status} personId={pid} "
+          f"body_empty={isinstance(body, dict) and not body}")
     return (pid, "sent to FollowUpBoss")
 
 
