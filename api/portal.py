@@ -2329,11 +2329,19 @@ def push_match_lead_to_fub(lead, criteria, count, oh):
     # tag below is enough to distinguish these.
     person["tags"] = _match_lead_tags(lead, criteria, count, oh)
     person["background"] = "\n".join(bg)
+    # FollowUpBoss dedups events by *content* (type + source + message), not by
+    # person -- two buyers with the same search an hour apart would produce an
+    # identical message and the 2nd would be dropped (204). Name + a timestamp
+    # make every submission distinct.
+    stamp = time.strftime("%b %d, %I:%M:%S %p")
     payload = {
         "source": os.environ.get("FUB_SOURCE", "Simone Marzullo Website"),
         "system": os.environ.get("FUB_SYSTEM", "Simone Marzullo Website"),
         "type": "Property Inquiry",
-        "message": f"New buyer search (/match): {summary} — {count} match(es) in our network. {rep}.",
+        "pageUrl": f"https://marzullore.com/match?ts={int(time.time() * 1000)}",
+        "pageTitle": "Buyer Search — marzullore.com/match",
+        "message": (f"New buyer search via /match — {lead.get('name') or 'a buyer'} "
+                    f"({stamp}). Looking for {summary}. {count} match(es) in our network. {rep}."),
         "person": person,
     }
     _who = (lead.get("name") or "?").split()[0] + (
