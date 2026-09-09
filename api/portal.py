@@ -1984,29 +1984,91 @@ def score_buyer_match(criteria, prof):
     return {"score": round(pct, 1), "checks": checks, "gate_ok": gate_ok}
 
 
-def run_buyer_match(criteria):
-    """-> {matches: [...], scanned: int, error: str|None}. Pure FUB read; safe
-    to call without a DB connection."""
-    people, scanned, err = fub_fetch_nurture_people()
-    fieldmap = _fub_fieldmap()
+def _index_profile(r):
+    """A contact_properties row -> the `prof` shape score_buyer_match wants."""
+    return {
+        "beds": _num(r.get("beds")), "baths": _num(r.get("baths")),
+        "sqft": _num(r.get("sqft")), "lot_size": None,
+        "year_built": r.get("year_built"),
+        "property_type": r.get("property_type") or "",
+        "asking_price": None,
+        "area": r.get("area") or "", "city": r.get("city") or "",
+        "zip": r.get("zip5") or "",
+        "address": r.get("street") or "",
+        "text": " ".join(r.get("tags") or []),
+    }
+
+
+def _index_candidates(conn, criteria, cap=1500):
+    """Rows from the contact_properties index, pre-filtered in SQL by the
+    buyer's structured criteria so score_buyer_match only sees a small set.
+    NULL (unknown) beds/baths/sqft are kept -- score_buyer_match decides."""
+    where, args = ["street <> ''"], {}
+    stage = os.environ.get("FUB_NURTURE_STAGE", "").strip()
+    if stage:
+        where.append("stage = %(stage)s")
+        args["stage"] = stage
+    want_zips, want_text = resolve_zips(criteria.get("areas") or [])
+    if want_zips:
+        where.append("zip5 = ANY(%(zips)s)")
+        args["zips"] = list(want_zips)
+    elif want_text:
+        ors = []
+        for i, t in enumerate(want_text):
+            ors.append(f"area ILIKE %(t{i})s OR city ILIKE %(t{i})s")
+            args[f"t{i}"] = f"%{t}%"
+        where.append("(" + " OR ".join(ors) + ")")
+    for col, key in (("beds", "beds"), ("baths", "baths")):
+        v = criteria.get(key)
+        if v:
+            where.append(f"({col} IS NULL OR {col} >= %({key})s)")
+            args[key] = v
+    if criteria.get("sqft"):
+        where.append("(sqft IS NULL OR sqft >= %(sqft)s)")
+        args["sqft"] = criteria["sqft"]
+    if criteria.get("sqft_max"):
+        where.append("(sqft IS NULL OR sqft <= %(sqft_max)s)")
+        args["sqft_max"] = criteria["sqft_max"]
+    sql = (
+        "SELECT fub_person_id, name, street, city, zip5, area, beds, baths, sqft, "
+        "year_built, property_type, tags FROM contact_properties WHERE "
+        + " AND ".join(where)
+        + " ORDER BY (beds IS NOT NULL)::int + (baths IS NOT NULL)::int "
+        "+ (sqft IS NOT NULL)::int DESC, fub_updated_at DESC NULLS LAST "
+        f"LIMIT {int(cap)}"
+    )
+    with conn.cursor() as cur:
+        cur.execute(sql, args)
+        cols = [d[0] for d in cur.description]
+        return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def run_buyer_match(conn, criteria):
+    """-> {matches: [...], scanned: int, error: str|None}. Scores the local
+    contact_properties index (built by scripts/build_index.py) -- no live
+    FollowUpBoss calls."""
     acct = os.environ.get("FUB_ACCOUNT_URL", "").rstrip("/")
+    try:
+        cands = _index_candidates(conn, criteria)
+    except Exception as e:
+        print(f"portal(buyer-match): contact index query failed: {e}")
+        return {"matches": [], "scanned": 0,
+                "error": "Contact index isn't available yet — run the "
+                         "\"Refresh index from FollowUpBoss\" job."}
     rows = []
-    for p in people:
-        prof = fub_prop_profile(p, fieldmap)
+    for r in cands:
+        prof = _index_profile(r)
         res = score_buyer_match(criteria, prof)
         if res["score"] < BUYER_MATCH_MIN_SCORE:
             continue
-        # Skip prospects we know nothing relevant about -- a row needs at least
-        # one real "hit", not just a pile of "no data" checks.
+        # a row needs at least one real "hit", not just a pile of "no data"
         if not any(c["status"] == "hit" for c in res["checks"]):
             continue
-        name = (_clean_str(p.get("name"))
-                or " ".join(filter(None, [p.get("firstName"), p.get("lastName")])).strip()
-                or f"Contact #{p.get('id')}")
+        pid = r.get("fub_person_id")
         rows.append({
-            "fub_id": p.get("id"),
-            "name": name,
-            "fub_url": f"{acct}/2/people/view/{p.get('id')}" if acct and p.get("id") else "",
+            "fub_id": pid,
+            "name": r.get("name") or f"Contact #{pid}",
+            "fub_url": f"{acct}/2/people/view/{pid}" if acct and pid else "",
             "score": res["score"],
             "checks": res["checks"],
             "prof": {
@@ -2017,7 +2079,7 @@ def run_buyer_match(criteria):
             },
         })
     rows.sort(key=lambda r: r["score"], reverse=True)
-    return {"matches": rows[:50], "scanned": scanned, "error": err}
+    return {"matches": rows[:50], "scanned": len(cands), "error": None}
 
 
 def push_buyer_need_to_fub(need, criteria):
@@ -5359,9 +5421,9 @@ class handler(BaseHTTPRequestHandler):
                     self._send_json(400, {"ok": False, "error": "Enter at least one buyer requirement (price, beds, area, ...)."})
                     return
                 fub_person_id, save_note = push_buyer_need_to_fub(need, criteria)
-                match = run_buyer_match(criteria)
+                match = run_buyer_match(conn, criteria)
                 new_id = create_buyer_need(conn, need, criteria, fub_person_id, len(match["matches"]))
-                notice = f"FollowUpBoss scan issue: {match['error']}" if match["error"] else None
+                notice = match["error"] or None
                 line = _criteria_sentence(criteria)
                 label = buyer_name + ("" if source == "self" else f" (via {need['agent_name'] or 'another agent'})")
                 # Always: save the matched addresses as a bulleted note on the buyer's own contact.
@@ -5385,7 +5447,7 @@ class handler(BaseHTTPRequestHandler):
                     if not n["active"]:
                         continue
                     crit = n["criteria"] or {}
-                    res = run_buyer_match(crit)
+                    res = run_buyer_match(conn, crit)
                     update_buyer_need_match(conn, n["id"], len(res["matches"]))
                     bname = n["buyer_name"] or f"Need #{n['id']}"
                     if n.get("fub_person_id") and res["matches"]:
