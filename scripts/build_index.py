@@ -129,6 +129,48 @@ def _pg_connect(url: str):
         connect_timeout=10)
 
 
+# The two tables this job owns -- kept in sync with db/schema.sql. Created
+# here too (idempotently) so the first run needs no manual DB step.
+_SCHEMA = """
+CREATE TABLE IF NOT EXISTS contact_properties (
+    fub_person_id  BIGINT PRIMARY KEY,
+    name           TEXT NOT NULL DEFAULT '',
+    owner_type     TEXT NOT NULL DEFAULT '',
+    stage          TEXT NOT NULL DEFAULT '',
+    street         TEXT NOT NULL DEFAULT '',
+    city           TEXT NOT NULL DEFAULT '',
+    zip5           TEXT NOT NULL DEFAULT '',
+    area           TEXT NOT NULL DEFAULT '',
+    beds           NUMERIC,
+    baths          NUMERIC,
+    sqft           INTEGER,
+    year_built     INTEGER,
+    property_type  TEXT NOT NULL DEFAULT '',
+    tags           TEXT[] NOT NULL DEFAULT '{}',
+    fub_updated_at TIMESTAMPTZ,
+    seen_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    indexed_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_contact_properties_zip5 ON contact_properties(zip5);
+CREATE INDEX IF NOT EXISTS idx_contact_properties_area ON contact_properties(area);
+CREATE INDEX IF NOT EXISTS idx_contact_properties_beds ON contact_properties(beds, baths);
+CREATE INDEX IF NOT EXISTS idx_contact_properties_type ON contact_properties(property_type);
+CREATE INDEX IF NOT EXISTS idx_contact_properties_stage ON contact_properties(stage);
+CREATE TABLE IF NOT EXISTS contact_index_state (
+    id            INTEGER PRIMARY KEY DEFAULT 1,
+    next_link     TEXT,
+    pass_started  TIMESTAMPTZ,
+    last_run_at   TIMESTAMPTZ,
+    last_full_at  TIMESTAMPTZ,
+    total_seen    INTEGER NOT NULL DEFAULT 0,
+    total_indexed INTEGER NOT NULL DEFAULT 0,
+    running       BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT contact_index_state_singleton CHECK (id = 1)
+);
+INSERT INTO contact_index_state (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+"""
+
+
 def main():
     pg_url = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
     api_key = os.environ.get("FUB_API_KEY")
@@ -140,6 +182,9 @@ def main():
     started = time.time()
 
     pg = _pg_connect(pg_url)
+    with pg.cursor() as cur:
+        cur.execute(_SCHEMA)
+    pg.commit()
     fmap = fub_fieldmap(headers)  # {'Bedrooms': 'customBedrooms', ...}; may be {}
 
     with pg.cursor() as cur:
