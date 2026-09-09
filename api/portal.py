@@ -2319,7 +2319,13 @@ def push_match_lead_to_fub(lead, criteria, count, oh):
         rep,
     ]
     person = _match_person(lead)
-    person["stage"] = os.environ.get("FUB_MATCH_STAGE", "Lead")
+    # NB: do NOT set person["stage"] here. FollowUpBoss stages a contact
+    # created through the Events API as "Lead" on its own AND fires the
+    # "New Lead" notification + lead routing for it -- but only when the
+    # inbound event does not carry a stage. Setting stage explicitly makes
+    # FUB treat the person as already-in-progress and skip the new-lead
+    # handling (this is what stopped the notifications). The "Buyer Lead"
+    # tag below is enough to distinguish these.
     person["tags"] = _match_lead_tags(lead, criteria, count, oh)
     person["background"] = "\n".join(bg)
     payload = {
