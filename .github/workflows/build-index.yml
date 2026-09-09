@@ -1,0 +1,45 @@
+name: build-index
+
+# Refresh the contact_properties table -- a local Postgres mirror of every
+# FollowUpBoss contact's property (address + enriched beds/baths/sqft/year/
+# type + ZIP/area). Read-only against FollowUpBoss. Buyer Match and the
+# public /match count read this table instead of the FollowUpBoss API.
+#
+# Manual only -- Actions tab -> "build-index" -> "Run workflow", or the
+# "Refresh index" button in /admin. Uses the same repo secrets as
+# enrich-sweep: POSTGRES_URL and FUB_API_KEY (required), FUB_SYSTEM /
+# FUB_SYSTEM_KEY / FUB_ENRICH_STAGE (optional).
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_minutes:
+        description: "Hard stop after N minutes (a full walk is only a few)"
+        default: "60"
+
+concurrency:
+  group: build-index
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install "psycopg2-binary==2.9.9"
+
+      - name: Build the contact index
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+          FUB_API_KEY: ${{ secrets.FUB_API_KEY }}
+          FUB_SYSTEM: ${{ secrets.FUB_SYSTEM }}
+          FUB_SYSTEM_KEY: ${{ secrets.FUB_SYSTEM_KEY }}
+          FUB_ENRICH_STAGE: ${{ secrets.FUB_ENRICH_STAGE }}
+          INDEX_MAX_MINUTES: ${{ github.event.inputs.max_minutes }}
+        run: python3 scripts/build_index.py

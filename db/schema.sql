@@ -242,3 +242,59 @@ ALTER TABLE fub_enrich_state ADD COLUMN IF NOT EXISTS next_link TEXT;
 -- alongside this but held back for a later phase -- see README's
 -- "Client dashboard and admin panel" section. Add them back here when
 -- that feature is actually built.
+
+-- contact_properties: a local mirror of every FollowUpBoss contact that has
+-- a property address, with the property data already enriched onto it from
+-- LA County (beds/baths/sqft/year/type) plus the ZIP/area it falls in.
+-- Built + refreshed read-only from FollowUpBoss by scripts/build_index.py
+-- (GitHub Actions "build-index", or the /admin "Refresh index" button).
+-- Buyer Match and the public /match count query THIS table instead of paging
+-- the FollowUpBoss API on every request. FollowUpBoss stays the source of
+-- truth for CRM data (tags/stage/notes/communication) -- this is a
+-- property-attribute index for fast matching, nothing edits it by hand.
+-- owner_type: 'entity' when the contact name looks like an LLC/Trust/Corp,
+--   else 'person'. area: the market name from the contact's ZIP/area tags,
+--   or derived from zip5 via the shared ZIP directory. seen_at: last time a
+--   walk touched this row -- a completed full pass deletes rows older than
+--   the pass start (contacts removed from FollowUpBoss).
+CREATE TABLE IF NOT EXISTS contact_properties (
+    fub_person_id  BIGINT PRIMARY KEY,
+    name           TEXT NOT NULL DEFAULT '',
+    owner_type     TEXT NOT NULL DEFAULT '',
+    stage          TEXT NOT NULL DEFAULT '',
+    street         TEXT NOT NULL DEFAULT '',
+    city           TEXT NOT NULL DEFAULT '',
+    zip5           TEXT NOT NULL DEFAULT '',
+    area           TEXT NOT NULL DEFAULT '',
+    beds           NUMERIC,
+    baths          NUMERIC,
+    sqft           INTEGER,
+    year_built     INTEGER,
+    property_type  TEXT NOT NULL DEFAULT '',
+    tags           TEXT[] NOT NULL DEFAULT '{}',
+    fub_updated_at TIMESTAMPTZ,
+    seen_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    indexed_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_contact_properties_zip5 ON contact_properties(zip5);
+CREATE INDEX IF NOT EXISTS idx_contact_properties_area ON contact_properties(area);
+CREATE INDEX IF NOT EXISTS idx_contact_properties_beds ON contact_properties(beds, baths);
+CREATE INDEX IF NOT EXISTS idx_contact_properties_type ON contact_properties(property_type);
+CREATE INDEX IF NOT EXISTS idx_contact_properties_stage ON contact_properties(stage);
+
+-- Single-row status/cursor for the build_index.py walk, mirrored on the
+-- /admin dashboard ("last refreshed 3h ago - 57,180 properties"). next_link
+-- resumes an interrupted run; a completed pass clears it and stamps
+-- last_full_at.
+CREATE TABLE IF NOT EXISTS contact_index_state (
+    id            INTEGER PRIMARY KEY DEFAULT 1,
+    next_link     TEXT,
+    pass_started  TIMESTAMPTZ,
+    last_run_at   TIMESTAMPTZ,
+    last_full_at  TIMESTAMPTZ,
+    total_seen    INTEGER NOT NULL DEFAULT 0,
+    total_indexed INTEGER NOT NULL DEFAULT 0,
+    running       BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT contact_index_state_singleton CHECK (id = 1)
+);
+INSERT INTO contact_index_state (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
