@@ -2235,6 +2235,9 @@ def push_match_lead_to_fub(lead, criteria, count, oh):
     pid = None
     if isinstance(body, dict):
         pid = body.get("personId") or (body.get("person") or {}).get("id")
+        # the events endpoint actually returns the merged Person object itself
+        if not pid and body.get("id") and (body.get("firstName") or body.get("stage") or body.get("stageId")):
+            pid = body.get("id")
     if not pid:
         print(f"portal(match): event resp had no personId; keys={list(body)[:12] if isinstance(body, dict) else type(body).__name__}")
         pid = _fub_find_person_id(lead.get("email"), lead.get("phone"), lead.get("name"))
