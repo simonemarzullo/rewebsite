@@ -1041,6 +1041,7 @@ MATCH_PAGE_SCRIPT = r"""
     var rep = repVal() === 'yes', agent = rep ? val('mt-agent-name') : '';
     if (!name) { showErr('Please add your name.'); return; }
     if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { showErr('That email doesn’t look right — fix it or leave it blank.'); return; }
+    if (!email && !phone) { showErr('Add an email or a phone number so Simone can reach you.'); return; }
     if (rep && !agent) { showErr('Please add your agent’s name.'); return; }
     showErr('');
     lead = { name: name, email: email, phone: phone };
@@ -2570,9 +2571,9 @@ def build_match_page_html(oh=""):
       <div class="step contact" data-step="1" hidden>
         <div class="sec">
           <div class="field-row"><label class="cap" for="mt-name">Full name</label><input class="in" id="mt-name" autocomplete="name"></div>
-          <div class="field-row"><label class="cap" for="mt-email">Email <span class="opt">&mdash; optional</span></label><input class="in" id="mt-email" type="email" inputmode="email" autocomplete="email"></div>
-          <div class="field-row"><label class="cap" for="mt-phone">Phone <span class="opt">&mdash; optional</span></label><input class="in" id="mt-phone" type="tel" inputmode="tel" autocomplete="tel"></div>
-          <p class="hint" style="margin:-4px 0 16px">Add at least one so Simone can reach you &mdash; but neither is required.</p>
+          <div class="field-row"><label class="cap" for="mt-email">Email</label><input class="in" id="mt-email" type="email" inputmode="email" autocomplete="email"></div>
+          <div class="field-row"><label class="cap" for="mt-phone">Phone</label><input class="in" id="mt-phone" type="tel" inputmode="tel" autocomplete="tel"></div>
+          <p class="hint" style="margin:-4px 0 16px">Give an email <em>or</em> a phone &mdash; whichever you prefer &mdash; so Simone can get back to you.</p>
           <div class="rep">
             <div class="rep-q">Are you exclusively represented by a buyer's agent?</div>
             <div class="seg" id="mt-rep" role="group" aria-label="Represented by a buyer's agent">
@@ -5107,6 +5108,13 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(400, {"ok": False, "error": "Enter a valid email address, or leave it blank."})
             return
         lead = {"name": name, "email": email, "phone": phone}
+
+        # FollowUpBoss cannot create a lead from a name alone -- an event with no
+        # email and no phone comes back 204 (ignored) and the lead never lands.
+        if action == "search" and not email and not phone:
+            self._send_json(400, {"ok": False,
+                                  "error": "Add an email or a phone number so Simone can reach you."})
+            return
 
         if action == "message":
             msg = clean(data.get("message"), 2000)
