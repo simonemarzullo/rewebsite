@@ -2232,21 +2232,34 @@ def push_match_lead_to_fub(lead, criteria, count, oh):
     _status, body, err = _fub_request("POST", FUB_EVENTS_URL, payload)
     if body is None:
         return (None, f"FollowUpBoss push failed ({err})")
-    pid = body.get("personId") or (body.get("person") or {}).get("id") if isinstance(body, dict) else None
+    pid = None
+    if isinstance(body, dict):
+        pid = body.get("personId") or (body.get("person") or {}).get("id")
     if not pid:
-        pid = _fub_find_person_id(lead.get("email"), lead.get("phone"))
+        print(f"portal(match): event resp had no personId; keys={list(body)[:12] if isinstance(body, dict) else type(body).__name__}")
+        pid = _fub_find_person_id(lead.get("email"), lead.get("phone"), lead.get("name"))
     print(f"portal(match): lead event ok, personId={pid}")
     return (pid, "sent to FollowUpBoss")
 
 
-def _fub_find_person_id(email, phone):
-    """Look up a FollowUpBoss person id by email, then phone -- fallback for
-    when the event response doesn't carry one back."""
+def _fub_find_person_id(email, phone, name=None):
+    """Look up a FollowUpBoss person id -- fallback for when the event response
+    doesn't carry one back. Tries email, then phone, then the newest contact
+    matching the name."""
     for key, val in (("email", email), ("phone", phone)):
         if not val:
             continue
         _s, body, _e = _fub_request(
             "GET", f"{FUB_API_BASE}/people?" + urllib.parse.urlencode({key: val, "limit": 1}))
+        ppl = (body or {}).get("people") or []
+        if ppl and ppl[0].get("id"):
+            return ppl[0]["id"]
+    if name and name.strip():
+        parts = name.split()
+        q = {"limit": 5, "sort": "-created", "firstName": parts[0]}
+        if len(parts) > 1:
+            q["lastName"] = " ".join(parts[1:])
+        _s, body, _e = _fub_request("GET", f"{FUB_API_BASE}/people?" + urllib.parse.urlencode(q))
         ppl = (body or {}).get("people") or []
         if ppl and ppl[0].get("id"):
             return ppl[0]["id"]
