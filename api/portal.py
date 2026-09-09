@@ -2071,6 +2071,11 @@ def push_buyer_need_to_fub(need, criteria):
     _status, body, err = _fub_request("POST", FUB_EVENTS_URL, payload)
     if isinstance(body, dict):
         pid = body.get("personId") or (body.get("person") or {}).get("id")
+        # the events endpoint returns the merged Person object itself (no personId key)
+        if not pid and body.get("id") and (body.get("firstName") or body.get("stage") or body.get("stageId")):
+            pid = body.get("id")
+        if not pid:
+            pid = _fub_find_person_id(need.get("buyer_email"), need.get("buyer_phone"), need.get("buyer_name"))
         return (pid, f"Added {need['buyer_name'] or 'the buyer'} to FollowUpBoss · tags: {', '.join(tags)}.")
     return (None, f"Saved locally and matched. FollowUpBoss add failed: {err or 'unknown error'}.")
 
