@@ -425,96 +425,91 @@ BUYER_MATCH_SCRIPT = r"""
     });
   }
 
-  // --- Phase 2: LA County enrichment sweep (loops small batches) ---------
-  var enStart = document.getElementById('bm-enrich-start');
-  if (enStart) {
-    var enStop = document.getElementById('bm-enrich-stop');
-    var enReset = document.getElementById('bm-enrich-reset');
-    var enOut = document.getElementById('bm-enrich-result');
-    var enLine = document.getElementById('bm-enrich-state');
-    var enBusy = false;
-    var enStopReq = false;
-    var enCtrl = null;
-
-    function enIdle() {
-      enBusy = false;
-      enStart.disabled = false; enStart.textContent = 'Start / resume sweep';
-      enStop.style.display = 'none';
-      enReset.style.display = ''; enReset.disabled = false;
-    }
-
-    async function enBatch() {
-      enCtrl = new AbortController();
-      var res = await fetch('/api/portal?section=admin', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({action: 'fub_enrich_run'}), signal: enCtrl.signal,
-      });
-      var d = await res.json();
-      if (!res.ok || !d.ok) throw new Error(d.error || 'Enrichment batch failed.');
-      return d;
-    }
-
-    async function enLoop() {
-      if (enBusy) return;
-      enBusy = true; enStopReq = false;
-      enStart.disabled = true; enStart.textContent = 'Sweeping…';
-      enStop.style.display = ''; enStop.disabled = false; enStop.textContent = 'Stop';
-      enReset.style.display = 'none';
-      var totUpd = 0, totProc = 0;
+  // --- LA County enrichment: trigger the enrich-sweep GitHub Action -----
+  var enBtn = document.getElementById('en-run');
+  if (enBtn) {
+    var enOut = document.getElementById('en-run-result');
+    enBtn.addEventListener('click', async function () {
+      enBtn.disabled = true;
+      var prev = enBtn.textContent;
+      enBtn.textContent = 'Starting…';
       try {
-        while (!enStopReq) {
-          var d = await enBatch();
-          totProc += d.processed || 0; totUpd += d.updated || 0;
-          var ex = (d.examples || []).map(function (e) {
-            return '<li>' + esc(e.name) + ' — filled ' + esc((e.filled || []).join(', '))
-              + (e.matched ? ' <span class="bm-match-meta">(' + esc(e.matched) + ')</span>' : '') + '</li>';
-          }).join('');
-          enOut.innerHTML = '<p class="bm-note">This run: filled ' + totUpd + ' of ' + totProc
-            + ' scanned. Last batch: ' + (d.updated || 0) + ' filled, ' + (d.no_match || 0)
-            + ' no LA County match, ' + (d.no_address || 0) + ' without a street address.</p>'
-            + (ex ? '<ul class="bm-note" style="margin-top:0">' + ex + '</ul>' : '');
-          if (d.totals) {
-            enLine.textContent = 'Resume at contact #' + d.next_offset + ' · ' + d.totals.passes
-              + ' full pass(es) done · ' + d.totals.updated + ' filled / ' + d.totals.seen
-              + ' scanned · ' + d.totals.no_match + ' with no LA County match';
-          }
-          if (d.done) {
-            enOut.innerHTML += '<p class="bm-note">Completed a full pass over the database.</p>';
-            break;
-          }
-          if (enStopReq) break;
-          await new Promise(function (r) { setTimeout(r, 300); });
-        }
-        if (enStopReq) enOut.innerHTML += '<p class="bm-note">Stopped. Progress up to the last finished batch is saved — Start resumes from there.</p>';
+        var data = await adminPost({action: 'run_enrich_sweep'});
+        enOut.innerHTML = '<p class="bm-note">' + esc(data.summary) + '</p>';
+        enBtn.textContent = 'Running…';
+        if (window.acPollProgress) window.acPollProgress(true);
       } catch (err) {
-        if (err && err.name === 'AbortError') {
-          enOut.innerHTML += '<p class="bm-note">Stopped. The batch in progress may still finish server-side; Start picks up from the saved point.</p>';
-        } else {
-          enOut.innerHTML += '<p class="om-error" style="display:block">' + esc(err.message) + '</p>';
-        }
-      } finally {
-        enIdle();
+        enOut.innerHTML = '<p class="om-error" style="display:block">' + esc(err.message) + '</p>';
+        enBtn.disabled = false;
+        enBtn.textContent = prev;
       }
-    }
-
-    enStart.addEventListener('click', enLoop);
-    enStop.addEventListener('click', function () {
-      enStopReq = true;
-      enStop.disabled = true; enStop.textContent = 'Stopping…';
-      if (enCtrl) { try { enCtrl.abort(); } catch (e) {} }
     });
-    enReset.addEventListener('click', async function () {
-      if (enBusy) { alert('Stop the sweep first.'); return; }
-      if (!confirm('Reset the sweep back to the start of the database?')) return;
+    var enReset = document.getElementById('bm-enrich-reset');
+    if (enReset) enReset.addEventListener('click', async function () {
+      if (!confirm('Reset the enrichment progress back to the start of the database? (Does not touch FollowUpBoss data.)')) return;
       try {
         await adminPost({action: 'fub_enrich_reset'});
-        enLine.textContent = 'Not run yet.';
-        enOut.innerHTML = '<p class="bm-note">Progress reset.</p>';
+        enOut.innerHTML = '<p class="bm-note">Progress reset. Click Run enrichment for a fresh pass.</p>';
+        if (window.acPollProgress) window.acPollProgress(false);
       } catch (err) {
         enOut.innerHTML = '<p class="om-error" style="display:block">' + esc(err.message) + '</p>';
       }
     });
   }
+
+  // --- Live progress: poll while the Enrichment section is on screen ----
+  (function () {
+    var enrichView = document.querySelector('.ac-view[data-view="enrich"]');
+    if (!enrichView) return;
+    var timer = null;
+    function set(id, val) { var el = document.getElementById(id); if (el != null && val != null) el.textContent = val; }
+    function nfmt(n) { try { return Number(n).toLocaleString(); } catch (e) { return n; } }
+    function apply(d) {
+      var running = false;
+      var e = d.enrich;
+      if (e) {
+        set('ep-filled', nfmt(e.filled)); set('ep-scanned', nfmt(e.scanned));
+        set('ep-nomatch', nfmt(e.no_match)); set('ep-passes', e.passes);
+        set('ep-ring-txt', (e.pct != null ? e.pct : 0) + '%');
+        set('ep-ring-sub', e.running ? 'in progress' : 'of last pass');
+        var ring = document.getElementById('ep-ring');
+        if (ring) { ring.dataset.pct = e.pct != null ? e.pct : 0; if (window.acDrawRings) window.acDrawRings(); }
+        var eb = document.getElementById('ep-status'); if (eb) eb.hidden = !e.running;
+        running = running || e.running;
+        var eline = document.getElementById('bm-enrich-state'); if (eline && e.line) eline.textContent = e.line;
+        var erb = document.getElementById('en-run');
+        if (erb) { if (e.running) { erb.disabled = true; erb.textContent = 'Running…'; }
+                   else if (erb.textContent === 'Running…') { erb.disabled = false; erb.textContent = 'Run enrichment'; } }
+      }
+      var ix = d.index;
+      if (ix) {
+        set('ci-count', nfmt(ix.count)); set('ci-when', ix.when);
+        var cb = document.getElementById('ci-status'); if (cb) cb.hidden = !ix.running;
+        running = running || ix.running;
+        var crb = document.getElementById('ci-refresh');
+        if (crb) { if (ix.running) { crb.disabled = true; crb.textContent = 'Refreshing…'; }
+                   else if (crb.disabled) { crb.disabled = false; crb.textContent = 'Refresh index from FollowUpBoss'; } }
+      }
+      return running;
+    }
+    async function tick() {
+      try {
+        var d = await adminPost({action: 'admin_progress'});
+        var running = apply(d);
+        schedule(running ? 7000 : 30000);
+      } catch (e) { schedule(30000); }
+    }
+    function schedule(ms) { clearTimeout(timer); timer = setTimeout(tick, ms); }
+    window.acPollProgress = function (soon) { clearTimeout(timer); timer = setTimeout(tick, soon ? 1500 : 0); };
+    // start polling only when the section is visible; the shell calls go()
+    var startedForEnrich = false;
+    function maybeStart() {
+      if (!enrichView.hidden && !startedForEnrich) { startedForEnrich = true; window.acPollProgress(false); }
+      if (enrichView.hidden && startedForEnrich) { startedForEnrich = false; clearTimeout(timer); }
+    }
+    document.querySelectorAll('[data-nav]').forEach(function (b) { b.addEventListener('click', function () { setTimeout(maybeStart, 30); }); });
+    maybeStart();
+  })();
 })();
 """
 
@@ -2878,15 +2873,77 @@ def fetch_contact_index_state(conn):
         return None
 
 
-def dispatch_build_index_workflow():
-    """Fire the 'build-index' GitHub Action. -> (ok: bool, message: str)."""
+def _recent(ts, minutes=3):
+    if not ts:
+        return False
+    try:
+        from datetime import datetime, timezone
+        now = datetime.now(ts.tzinfo) if getattr(ts, "tzinfo", None) else datetime.now(timezone.utc).replace(tzinfo=None)
+        return (now - ts).total_seconds() < minutes * 60
+    except Exception:
+        return False
+
+
+def _iso(ts):
+    try:
+        return ts.isoformat() if ts else None
+    except Exception:
+        return None
+
+
+def admin_progress_snapshot(conn):
+    """Live progress for the /admin Enrichment cards -- polled by the page
+    every few seconds while a GitHub Action is running."""
+    out = {"enrich": None, "index": None}
+    try:
+        st = fetch_enrich_state(conn)
+    except Exception:
+        conn.rollback()
+        st = None
+    if st:
+        db_total = st.get("db_total") or 0
+        pos = st.get("next_offset") or 0
+        passes = st.get("passes") or 0
+        running = _recent(st.get("last_run_at"))
+        if db_total and (pos or running):
+            pct = min(100, round(100 * pos / db_total))
+        elif passes and not running:
+            pct = 100
+        else:
+            pct = 0
+        out["enrich"] = {
+            "filled": st.get("total_updated") or 0,
+            "scanned": st.get("total_seen") or 0,
+            "no_match": st.get("total_no_match") or 0,
+            "passes": passes, "pos": pos, "db_total": db_total,
+            "pct": pct, "running": running,
+            "last_run_at": _iso(st.get("last_run_at")),
+            "line": _enrich_state_line(st),
+        }
+    ix = fetch_contact_index_state(conn)
+    if ix is not None:
+        _full = ix.get("last_full_at")
+        out["index"] = {
+            "count": ix.get("count") or 0,
+            "running": bool(ix.get("running")) or _recent(ix.get("last_run_at")),
+            "last_full_at": _iso(_full),
+            "when": (("just now" if _relative_time(_full) == "now" else f"{_relative_time(_full)} ago")
+                     if _full else "never"),
+        }
+    return out
+
+
+def dispatch_github_workflow(workflow_file, inputs=None):
+    """Fire a manual GitHub Action (workflow_dispatch). -> (ok: bool, message: str)."""
     token = os.environ.get("GH_DISPATCH_TOKEN")
     repo = os.environ.get("GH_REPO", "simonemarzullo/rewebsite")
     if not token:
         return (False, "GH_DISPATCH_TOKEN isn't set in the site's environment.")
-    url = f"https://api.github.com/repos/{repo}/actions/workflows/build-index.yml/dispatches"
-    req = urllib.request.Request(
-        url, data=json.dumps({"ref": "main"}).encode("utf-8"), method="POST")
+    url = f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_file}/dispatches"
+    body = {"ref": "main"}
+    if inputs:
+        body["inputs"] = {k: str(v) for k, v in inputs.items()}
+    req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), method="POST")
     req.add_header("Authorization", f"Bearer {token}")
     req.add_header("Accept", "application/vnd.github+json")
     req.add_header("X-GitHub-Api-Version", "2022-11-28")
@@ -2894,13 +2951,17 @@ def dispatch_build_index_workflow():
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             if resp.status in (204, 201, 200):
-                return (True, "Refresh started — it runs on GitHub and takes a few minutes.")
+                return (True, "Started — it runs on GitHub. Progress updates here as it goes.")
             return (False, f"GitHub returned {resp.status}.")
     except urllib.error.HTTPError as e:
         detail = e.read().decode("utf-8", "replace")[:200]
         return (False, f"GitHub rejected the request ({e.code}). {detail}")
     except Exception as e:
         return (False, f"Couldn't reach GitHub: {e}")
+
+
+def dispatch_build_index_workflow():
+    return dispatch_github_workflow("build-index.yml")
 
 
 def save_enrich_state(conn, next_offset, seen_inc, updated_inc, nomatch_inc, wrapped,
@@ -4093,6 +4154,9 @@ _ADMIN_CSS = """<style>
   .ac-statlist dt{font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ac-dim);font-weight:600}
   .ac-statlist dd{margin:0;font-family:var(--ac-mono);font-size:.98rem;color:var(--ac-ink);font-variant-numeric:tabular-nums}
 
+  .ac-live{font-family:var(--ac-mono);font-size:.58rem;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--red);margin-left:8px;vertical-align:middle;animation:acpulse 1.4s ease-in-out infinite}
+  @keyframes acpulse{0%,100%{opacity:1}50%{opacity:.4}}
   .ac-ring{position:relative;width:126px;height:126px;margin:0 auto}
   .ac-ring svg{transform:rotate(-90deg)}
   .ac-ring .rt{fill:none;stroke:var(--ac-panel-3);stroke-width:6}
@@ -4229,6 +4293,7 @@ _ADMIN_SHELL_JS = r"""
     });
   }
   drawRings();
+  window.acDrawRings = drawRings;
 
   // ---- Theme picker (same behaviour as the public site) ----
   function updateThemePickerUI(choice) {
@@ -4460,20 +4525,18 @@ def _enrichment_panel_html(enrich_state):
     return f"""
       <div class="adm-panel">
         <div class="db-section-title">Fill missing property data from public records</div>
-        <p class="adm-tagline" style="margin:0 0 12px">Sweeps {enrich_scope} in small batches and, for any contact with a street address but blank beds / baths / sq ft / year / type, looks the parcel up in the <strong>LA County Assessor</strong> public records and fills the gaps in FollowUpBoss. It only fills blanks — it never overwrites data you already have — and tags each contact it touches <em>Enriched: LA County Assessor</em>. LA County only.</p>
+        <p class="adm-tagline" style="margin:0 0 12px">Walks {enrich_scope} and, for any contact with a street address but blank beds / baths / sq ft / year / type, looks the parcel up in the <strong>LA County Assessor</strong> public records and fills the gaps in FollowUpBoss. It only fills blanks — it never overwrites data you already have — and tags each contact it touches <em>Enriched: LA County Assessor</em>. LA County only.</p>
         <p class="bm-note" id="bm-enrich-state">{html.escape(_enrich_state_line(enrich_state))}</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button type="button" class="btn-primary adm-btn-sm" id="bm-enrich-start">Start / resume sweep</button>
-          <button type="button" class="om-logout" id="bm-enrich-stop" style="display:none">Stop</button>
+          <button type="button" class="btn-primary adm-btn-sm" id="en-run">Run enrichment</button>
           <button type="button" class="om-logout" id="bm-enrich-reset">Reset progress</button>
         </div>
-        <div id="bm-enrich-result" style="margin-top:10px"></div>
+        <div id="en-run-result" style="margin-top:10px"></div>
         <p class="bm-note" style="margin-top:14px;border-top:1px solid var(--g3);padding-top:12px">
-          This runs only while this tab is open. For a large database, run it hands-off instead:
-          GitHub &rarr; the repo &rarr; <strong>Actions</strong> tab &rarr; <strong>enrich-sweep</strong> &rarr;
-          <strong>Run workflow</strong>. That version downloads the whole county parcel roll once and
-          finishes tens of thousands of contacts in one ~2-hour run, with your computer off. The
-          progress shown above updates either way.
+          Runs hands-off on GitHub (your computer can be off). A full pass over the whole
+          database is capped at 5&nbsp;hours per run — if it stops early, click <strong>Run
+          enrichment</strong> again and it resumes where it left off. The progress card above
+          updates live while it's running.
         </p>
       </div>"""
 
@@ -4704,28 +4767,28 @@ def build_admin_html(clients, toolbox_links, offmarket_buyers, offmarket_listing
       <div class="ac-vhead"><h1>Enrichment</h1><p>Backfill blank property fields on your FollowUpBoss contacts from LA County Assessor public records.</p></div>
       <div class="ac-grid2" style="margin-bottom:16px">
         <div class="adm-panel">
-          <div class="db-section-title">Progress</div>
+          <div class="db-section-title">Enrichment progress <span class="ac-live" id="ep-status" hidden>&#9679; running</span></div>
           <div class="ac-engine">
             <dl class="ac-statlist">
-              <div><dt>Contacts filled</dt><dd>{e_filled}</dd></div>
-              <div><dt>Scanned</dt><dd>{e_scanned}</dd></div>
-              <div><dt>No LA County match</dt><dd>{e_nomatch}</dd></div>
-              <div><dt>Full passes done</dt><dd>{passes}</dd></div>
+              <div><dt>Contacts filled</dt><dd id="ep-filled">{e_filled:,}</dd></div>
+              <div><dt>Scanned</dt><dd id="ep-scanned">{e_scanned:,}</dd></div>
+              <div><dt>No LA County match</dt><dd id="ep-nomatch">{e_nomatch:,}</dd></div>
+              <div><dt>Full passes done</dt><dd id="ep-passes">{passes}</dd></div>
             </dl>
-            <div class="ac-ring" data-pct="{ring_pct}">
+            <div class="ac-ring" id="ep-ring" data-pct="{ring_pct}">
               <svg viewBox="0 0 120 120" width="132" height="132"><circle class="rt" cx="60" cy="60" r="52"/><circle class="rp" cx="60" cy="60" r="52"/></svg>
-              <div class="lbl"><b>{ring_txt}</b><span>of pass {passes + 1}</span></div>
+              <div class="lbl"><b id="ep-ring-txt">{ring_txt}</b><span id="ep-ring-sub">of pass {passes + 1}</span></div>
             </div>
           </div>
         </div>
         <div class="adm-panel">
-          <div class="db-section-title">Contact index</div>
+          <div class="db-section-title">Contact index <span class="ac-live" id="ci-status" hidden>&#9679; refreshing</span></div>
           <p class="adm-tagline" style="margin:0 0 12px">A local copy of every FollowUpBoss contact's property (address, ZIP/area, and the beds/baths/sq ft/type filled above). <strong>Buyer Match reads this</strong> instead of the FollowUpBoss API. Refresh it after you add or enrich a batch of contacts.</p>
           <dl class="ac-statlist" style="margin-bottom:14px">
-            <div><dt>Properties indexed</dt><dd>{ix_count:,}</dd></div>
-            <div><dt>Last full refresh</dt><dd>{ix_when}</dd></div>
+            <div><dt>Properties indexed</dt><dd id="ci-count">{ix_count:,}</dd></div>
+            <div><dt>Last full refresh</dt><dd id="ci-when">{ix_when}</dd></div>
           </dl>
-          <button type="button" class="btn-primary adm-btn-sm" id="ci-refresh"{' disabled' if ix_running else ''}>{'Refreshing…' if ix_running else 'Refresh from FollowUpBoss'}</button>
+          <button type="button" class="btn-primary adm-btn-sm" id="ci-refresh"{' disabled' if ix_running else ''}>{'Refreshing…' if ix_running else 'Refresh index from FollowUpBoss'}</button>
           <div id="ci-refresh-result" style="margin-top:10px"></div>
         </div>
       </div>
@@ -5504,6 +5567,20 @@ class handler(BaseHTTPRequestHandler):
             if action == "refresh_contact_index":
                 ok, msg = dispatch_build_index_workflow()
                 self._send_json(200 if ok else 502, {"ok": ok, "summary": msg, "error": None if ok else msg})
+                return
+
+            if action == "run_enrich_sweep":
+                ok, msg = dispatch_github_workflow("enrich-sweep.yml", {"skip_area_tags": "true"})
+                self._send_json(200 if ok else 502, {"ok": ok, "summary": msg, "error": None if ok else msg})
+                return
+
+            if action == "admin_progress":
+                conn = get_conn()
+                try:
+                    self._send_json(200, {"ok": True, **admin_progress_snapshot(conn)})
+                finally:
+                    if conn:
+                        conn.close()
                 return
 
             if action == "buyer_need_run":
