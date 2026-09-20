@@ -21,23 +21,12 @@ def ev(label, payload, hdrs=None):
     print(f"\n[{label}] http={s} body={b[:300]!r}")
     return s, b
 base_person = lambda n: {"firstName": "Probe", "lastName": n, "emails": [{"value": f"probe.{n.lower()}.{ts}@gmail.com"}]}
-# A: minimal, no system/source fields
-ev("A minimal", {"type": "Property Inquiry", "person": base_person("Aaa")})
-# B: with source + system name only
-ev("B source+system", {"source": "Simone Marzullo Website", "system": "Simone Marzullo Website", "type": "Property Inquiry", "message": "probe B", "person": base_person("Bbb")})
-# C: full current payload shape
-p = base_person("Ccc"); p["tags"] = ["Buyer Lead", "Match Tool"]; p["background"] = "probe"
-ev("C full", {"source": "Simone Marzullo Website", "system": "Simone Marzullo Website", "type": "Property Inquiry",
-              "pageUrl": f"https://marzullore.com/match?ts={ts}", "pageTitle": "x", "message": "probe C", "person": p})
-# D: with X-System headers if any
-if sysh:
-    ev("D with X-System hdrs", {"source": "Simone Marzullo Website", "type": "Property Inquiry", "person": base_person("Ddd")}, sysh)
-# E: phone only
-ev("E phone only", {"type": "Property Inquiry", "person": {"firstName": "Probe", "lastName": "Eee", "phones": [{"value": f"310555{ts%10000:04d}"}]}})
-# F: name only
-ev("F name only", {"type": "Property Inquiry", "person": {"firstName": "Probe", "lastName": f"Fff{ts}"}})
-# G: General Inquiry type
-ev("G General Inquiry", {"type": "General Inquiry", "person": base_person("Ggg")})
+
+ev("S1 source only (SMW)", {"source": "Simone Marzullo Website", "type": "Property Inquiry", "person": base_person("Sss")})
+ev("S2 system only (SMW)", {"system": "Simone Marzullo Website", "type": "Property Inquiry", "person": base_person("Ttt")})
+ev("S3 source marzullore.com/match", {"source": "marzullore.com/match", "type": "Property Inquiry", "person": base_person("Uuu")})
+ev("S4 source Website", {"source": "Website", "type": "Property Inquiry", "person": base_person("Vvv")})
+ev("S5 source MarzulloRE Match Form + message + tags", {"source": "MarzulloRE Match Form", "type": "Property Inquiry", "message": "probe S5", "person": dict(base_person("Www"), tags=["Buyer Lead"])})
 # cleanup: delete probe people
 for q in ("Aaa","Bbb","Ccc","Ddd","Eee","Ggg"):
     pass
