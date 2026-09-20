@@ -77,6 +77,9 @@ MAX_FIELD_LEN = 500
 MIN_PASSWORD_LEN = 8
 FUB_EVENTS_URL = "https://api.followupboss.com/v1/events"
 FUB_API_BASE = "https://api.followupboss.com/v1"
+# FollowUpBoss silently drops (HTTP 204, no contact, no alert) events whose source is
+# "Simone Marzullo Website" -- probed 2026-09-20. /match uses its own source name.
+MATCH_FUB_SOURCE = os.environ.get("FUB_MATCH_SOURCE", "MarzulloRE Match Form")
 
 # --- Buyer Match prospecting tool -------------------------------------------
 # The fixed set of FollowUpBoss person custom fields the tool matches on and
@@ -2330,7 +2333,7 @@ def push_match_lead_to_fub(lead, criteria, count, oh):
     # make every submission distinct.
     stamp = time.strftime("%b %d, %I:%M:%S %p")
     payload = {
-        "source": os.environ.get("FUB_SOURCE", "Simone Marzullo Website"),
+        "source": MATCH_FUB_SOURCE,
         "system": os.environ.get("FUB_SYSTEM", "Simone Marzullo Website"),
         "type": "Property Inquiry",
         "pageUrl": f"https://marzullore.com/match?ts={int(time.time() * 1000)}",
@@ -2392,7 +2395,7 @@ def push_match_message_to_fub(lead, message):
     person = _match_person(lead)
     person["tags"] = ["Buyer Lead", "Buyer Inquiry", "Match Tool", "Sent a Message"]
     payload = {
-        "source": os.environ.get("FUB_SOURCE", "Simone Marzullo Website"),
+        "source": MATCH_FUB_SOURCE,
         "system": os.environ.get("FUB_SYSTEM", "Simone Marzullo Website"),
         "type": "General Inquiry",
         "message": f"Message from buyer search (/match): {message}",
