@@ -298,3 +298,13 @@ CREATE TABLE IF NOT EXISTS contact_index_state (
     CONSTRAINT contact_index_state_singleton CHECK (id = 1)
 );
 INSERT INTO contact_index_state (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
+-- Row-Level Security. The site only ever talks to this database as the
+-- `postgres` role over the pooler connection (which bypasses RLS), never
+-- through Supabase's public Data API -- so RLS ON with no policies simply
+-- locks the Data API out of these tables (Supabase's "rls_disabled_in_public"
+-- security alert). Idempotent; keep every new table in this list.
+ALTER TABLE buyer_needs         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fub_enrich_state    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_properties  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_index_state ENABLE ROW LEVEL SECURITY;
